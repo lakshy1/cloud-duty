@@ -887,7 +887,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
   border:none;background:rgba(10,10,12,.65);color:#fff;
   padding:7px 12px;border-radius:999px;font-size:.7rem;font-weight:700;
   letter-spacing:.08em;text-transform:uppercase;cursor:pointer;
-  border:1px solid rgba(255,255,255,.25);
+  border:1px solid rgba(255,255,255,.25);position:relative;
 }
 .profile-cover-saving{
   font-size:.68rem;color:#fff;opacity:.8;background:rgba(10,10,12,.55);
