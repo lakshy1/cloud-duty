@@ -47,6 +47,9 @@ export default function AuthClient() {
   const { theme, toggleTheme, mounted } = useTheme();
   const searchParams = useSearchParams();
   const supabase = getSupabaseBrowserClient();
+  const redirectBase =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (typeof window !== "undefined" ? window.location.origin : "");
   const paramMode = searchParams?.get("mode") === "signup" ? "signup" : "login";
   const [authMode, setAuthMode] = useState<AuthMode>(paramMode);
 
@@ -88,7 +91,7 @@ export default function AuthClient() {
     await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/auth?mode=login`,
+        redirectTo: `${redirectBase}/auth/callback?next=/auth?mode=login`,
       },
     });
   };
@@ -122,7 +125,7 @@ export default function AuthClient() {
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       loginEmail,
       {
-        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+        redirectTo: `${redirectBase}/auth/callback?next=/reset-password`,
       }
     );
     setLoginLoading(false);
@@ -216,7 +219,7 @@ export default function AuthClient() {
     await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/auth?mode=signup`,
+        redirectTo: `${redirectBase}/auth/callback?next=/auth?mode=signup`,
       },
     });
   };
@@ -237,6 +240,7 @@ export default function AuthClient() {
       email: signupEmail,
       password: signupPassword,
       options: {
+        emailRedirectTo: `${redirectBase}/auth/callback?next=/auth?mode=signup`,
         data: {
           first_name: firstName,
           last_name: lastName,
