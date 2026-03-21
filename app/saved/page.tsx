@@ -22,6 +22,32 @@ type PopupState = {
   savedCardRect: DOMRect | null;
 };
 
+type SavedPost = {
+  id?: string;
+  img?: string;
+  ava?: string;
+  author?: string;
+  handle?: string;
+  tag?: string;
+  title?: string;
+  summary?: string;
+  desc?: string;
+  details?: string;
+  views?: string;
+  likes?: string;
+  dislikes?: string;
+  comments?: string;
+  shares?: string;
+  created_at?: string;
+  impressions_count?: number;
+  likes_count?: number;
+  dislikes_count?: number;
+};
+
+type SavedPostRow = {
+  post: SavedPost | null;
+};
+
 const initialPopupInteractions: PopupInteractions = {
   like: false,
   dislike: false,
@@ -82,34 +108,36 @@ export default function SavedPostsPage() {
         setLoading(false);
         return;
       }
-      const mapped = data
+      const typedData = data as SavedPostRow[];
+      const mapped = typedData
         .map((row) => row.post)
         .filter(Boolean)
         .map((post) => {
+          const item = post as SavedPost;
           const impressions =
-            typeof post.impressions_count === "number" ? post.impressions_count : null;
+            typeof item.impressions_count === "number" ? item.impressions_count : null;
           return {
-            id: post.id,
-            img: post.img ?? "",
-            ava: post.ava ?? "",
-            author: post.author ?? "",
-            handle: post.handle ?? "",
-            tag: post.tag ?? "",
-            title: post.title ?? "",
-            summary: post.summary ?? post.desc ?? "",
-            details: post.desc ?? "",
-            views: impressions !== null ? formatCount(impressions) : (post.views ?? ""),
+            id: item.id,
+            img: item.img ?? "",
+            ava: item.ava ?? "",
+            author: item.author ?? "",
+            handle: item.handle ?? "",
+            tag: item.tag ?? "",
+            title: item.title ?? "",
+            summary: item.summary ?? item.desc ?? "",
+            details: item.desc ?? "",
+            views: impressions !== null ? formatCount(impressions) : (item.views ?? ""),
             likes:
-              typeof post.likes_count === "number"
-                ? formatCount(post.likes_count)
-                : (post.likes ?? ""),
+              typeof item.likes_count === "number"
+                ? formatCount(item.likes_count)
+                : (item.likes ?? ""),
             dislikes:
-              typeof post.dislikes_count === "number"
-                ? formatCount(post.dislikes_count)
+              typeof item.dislikes_count === "number"
+                ? formatCount(item.dislikes_count)
                 : undefined,
-            comments: post.comments ?? "",
-            shares: post.shares ?? "",
-            createdAt: post.created_at ?? undefined,
+            comments: item.comments ?? "",
+            shares: item.shares ?? "",
+            createdAt: item.created_at ?? undefined,
           };
         }) as CardData[];
       setCards(mapped);

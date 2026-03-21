@@ -217,7 +217,7 @@ export function CardItem({
     const matches = text.match(regex);
     if (!matches) return text;
     const parts = text.split(regex);
-    const nodes: Array<string | JSX.Element> = [];
+    const nodes: Array<React.ReactNode> = [];
     parts.forEach((part, index) => {
       if (part) nodes.push(part);
       const match = matches[index];

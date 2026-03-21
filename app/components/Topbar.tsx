@@ -12,7 +12,7 @@ type TopbarProps = {
   onThemeSelect: (nextTheme: ThemeName) => void;
   drawerOpen: boolean;
   onToggleDrawer: () => void;
-  searchInputRef?: React.RefObject<HTMLInputElement>;
+  searchInputRef?: React.RefObject<HTMLInputElement | null>;
   themeReady?: boolean;
 };
 
@@ -74,7 +74,7 @@ export function Topbar({
         .split(" ")
         .filter(Boolean)
         .slice(0, 2)
-        .map((part) => part.charAt(0).toUpperCase())
+        .map((part: string) => part.charAt(0).toUpperCase())
         .join("");
       setUserName(resolvedName);
       setInitials(initialsFromName || "U");

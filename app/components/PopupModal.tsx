@@ -23,8 +23,8 @@ type PopupModalProps = {
   onDislike: () => void;
   onSave: () => void;
   onReport: () => void;
-  panelRef: RefObject<HTMLDivElement>;
-  overlayRef: RefObject<HTMLDivElement>;
+  panelRef: RefObject<HTMLDivElement | null>;
+  overlayRef: RefObject<HTMLDivElement | null>;
 };
 
 export function PopupModal({

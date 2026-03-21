@@ -61,7 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         theme={theme as ThemeName}
         onThemeSelect={handleThemeSelect}
         drawerOpen={drawerOpen}
-        onToggleDrawer={() => setDrawerOpen((prev) => !prev)}
+        onToggleDrawer={() => setDrawerOpen(!drawerOpen)}
         searchInputRef={searchInputRef}
         themeReady={mounted}
       />

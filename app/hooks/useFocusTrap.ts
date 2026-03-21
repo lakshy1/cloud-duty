@@ -5,7 +5,7 @@ type FocusTrapOptions = {
 };
 
 export function useFocusTrap<T extends HTMLElement>(
-  ref: RefObject<T>,
+  ref: RefObject<T | null>,
   active: boolean,
   options?: FocusTrapOptions
 ) {

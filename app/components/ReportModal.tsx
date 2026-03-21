@@ -7,7 +7,7 @@ type ReportStatus = "" | "submitting" | "success" | "error";
 
 type ReportModalProps = {
   open: boolean;
-  panelRef: RefObject<HTMLDivElement>;
+  panelRef: RefObject<HTMLDivElement | null>;
   selectedReason: string | null;
   text: string;
   status: ReportStatus;

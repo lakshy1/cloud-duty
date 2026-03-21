@@ -7,7 +7,7 @@ import { useFocusTrap } from "../hooks/useFocusTrap";
 
 type MobileDrawerProps = {
   open: boolean;
-  panelRef: RefObject<HTMLElement>;
+  panelRef: RefObject<HTMLElement | null>;
   onClose: () => void;
   onCreate?: () => void;
   onSearch?: () => void;
@@ -25,7 +25,7 @@ export function MobileDrawer({ open, panelRef, onClose, onCreate, onSearch }: Mo
       <div className="m-drawer-backdrop" onClick={onClose} />
       <nav
         className="m-drawer-panel"
-        ref={panelRef as RefObject<HTMLDivElement>}
+        ref={panelRef as RefObject<HTMLDivElement | null>}
         role="dialog"
         aria-modal="true"
         aria-label="Mobile navigation"
