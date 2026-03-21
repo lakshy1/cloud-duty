@@ -15,7 +15,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { theme, setTheme, mounted } = useTheme();
   const { drawerOpen, setDrawerOpen, createOpen, setCreateOpen } = useUIState();
   const flashRef = useRef<HTMLDivElement | null>(null);
-  const drawerPanelRef = useRef<HTMLElement | null>(null);
+  const drawerPanelRef = useRef<HTMLElement>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
