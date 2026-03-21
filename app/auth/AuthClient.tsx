@@ -130,7 +130,13 @@ export default function AuthClient() {
     );
     setLoginLoading(false);
     if (resetError) {
-      setLoginError(resetError.message);
+      // Handle rate limit errors specifically
+      if (resetError.message.toLowerCase().includes('rate limit') ||
+          resetError.message.toLowerCase().includes('too many requests')) {
+        setLoginError("Too many password reset attempts. Please wait a few minutes before trying again.");
+      } else {
+        setLoginError(resetError.message);
+      }
       return;
     }
     setShowReset(false);
@@ -251,7 +257,13 @@ export default function AuthClient() {
     });
     setSignupLoading(false);
     if (signUpError) {
-      setSignupError(signUpError.message);
+      // Handle rate limit errors specifically
+      if (signUpError.message.toLowerCase().includes('rate limit') ||
+          signUpError.message.toLowerCase().includes('too many requests')) {
+        setSignupError("Too many signup attempts. Please wait a few minutes before trying again.");
+      } else {
+        setSignupError(signUpError.message);
+      }
       return;
     }
     setSignupMessage("Check your email to confirm your account, then sign in.");
