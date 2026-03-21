@@ -208,9 +208,11 @@ export default function ProfilePage() {
     });
     setLoading(false);
     if (error) {
+      console.error("Error saving username:", error);
       pushToast({ message: error.message, tone: "error" });
       return;
     }
+    console.log("Successfully saved username:", trimmed);
     setSavedUsername(trimmed);
     setEditUsername(false);
     pushToast({ message: "Profile updated.", tone: "success" });
@@ -240,9 +242,11 @@ export default function ProfilePage() {
     });
     setLoading(false);
     if (error) {
+      console.error("Error saving full name:", error);
       pushToast({ message: error.message, tone: "error" });
       return;
     }
+    console.log("Successfully saved full name:", nextFullName);
     setSavedFullName(nextFullName);
     setEditFullName(false);
     pushToast({ message: "Profile updated.", tone: "success" });

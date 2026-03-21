@@ -215,6 +215,12 @@ create policy "read own profile"
   for select
   using (auth.uid() = user_id);
 
+drop policy if exists "public read profiles for search" on public.profiles;
+create policy "public read profiles for search"
+  on public.profiles
+  for select
+  using (true);
+
 drop policy if exists "insert own profile" on public.profiles;
 create policy "insert own profile"
   on public.profiles

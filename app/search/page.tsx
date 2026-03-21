@@ -35,69 +35,78 @@ export default function SearchPage() {
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
 
-  useEffect(() => {
-    let active = true;
-    const loadProfiles = async () => {
-      setLoadingProfiles(true);
-      const supabase = getSupabaseBrowserClient();
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("user_id, username, full_name, avatar_url")
-        .order("username", { ascending: true });
-      if (!active) return;
-      if (error || !data) {
-        setProfiles([]);
-        setLoadingProfiles(false);
-        return;
-      }
-      setProfiles(data as ProfileResult[]);
+  const loadProfiles = async () => {
+    setLoadingProfiles(true);
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("user_id, username, full_name, avatar_url")
+      .order("username", { ascending: true });
+    if (error) {
+      console.error("Error loading profiles:", error);
+      setProfiles([]);
       setLoadingProfiles(false);
-    };
-    loadProfiles();
-    return () => {
-      active = false;
-    };
-  }, []);
+      return;
+    }
+    if (!data) {
+      console.warn("No profile data returned");
+      setProfiles([]);
+      setLoadingProfiles(false);
+      return;
+    }
+    console.log("Loaded profiles:", data);
+    setProfiles(data as ProfileResult[]);
+    setLoadingProfiles(false);
+  };
+
+  const loadPosts = async () => {
+    setLoadingPosts(true);
+    const supabase = getSupabaseBrowserClient();
+    const { data, error } = await supabase.from("posts").select("*").order("created_at", {
+      ascending: false,
+    });
+    if (error || !data) {
+      setPosts([]);
+      setLoadingPosts(false);
+      return;
+    }
+    const mapped = data.map((row) => {
+      return {
+        id: row.id,
+        img: row.img ?? "",
+        ava: row.ava ?? "",
+        author: row.author ?? "",
+        handle: row.handle ?? "",
+        tag: row.tag ?? "",
+        title: row.title ?? "",
+        summary: row.summary ?? row.desc ?? "",
+        details: row.desc ?? "",
+        views: row.views ?? "0",
+        likes: row.likes ?? "0",
+        dislikes: row.dislikes ?? undefined,
+        comments: row.comments ?? "0",
+        shares: row.shares ?? "0",
+        createdAt: row.created_at ?? undefined,
+      } as CardData;
+    });
+    setPosts(mapped);
+    setLoadingPosts(false);
+  };
 
   useEffect(() => {
-    let active = true;
-    const loadPosts = async () => {
-      setLoadingPosts(true);
-      const supabase = getSupabaseBrowserClient();
-      const { data, error } = await supabase.from("posts").select("*").order("created_at", {
-        ascending: false,
-      });
-      if (!active) return;
-      if (error || !data) {
-        setPosts([]);
-        setLoadingPosts(false);
-        return;
-      }
-      const mapped = data.map((row) => {
-        return {
-          id: row.id,
-          img: row.img ?? "",
-          ava: row.ava ?? "",
-          author: row.author ?? "",
-          handle: row.handle ?? "",
-          tag: row.tag ?? "",
-          title: row.title ?? "",
-          summary: row.summary ?? row.desc ?? "",
-          details: row.desc ?? "",
-          views: row.views ?? "0",
-          likes: row.likes ?? "0",
-          dislikes: row.dislikes ?? undefined,
-          comments: row.comments ?? "0",
-          shares: row.shares ?? "0",
-          createdAt: row.created_at ?? undefined,
-        } as CardData;
-      });
-      setPosts(mapped);
-      setLoadingPosts(false);
-    };
+    loadProfiles();
     loadPosts();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        loadProfiles();
+        loadPosts();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
-      active = false;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
