@@ -106,10 +106,6 @@ export default function Home() {
     checkSession();
   }, [router]);
 
-  if (!authChecked) {
-    return <Loader label="Checking session..." />;
-  }
-
   const popupData = popupIndex !== null ? cards[popupIndex] : null;
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredCards = normalizedQuery
@@ -753,6 +749,10 @@ export default function Home() {
     };
     log();
   }, [popupIndex, popupOpen]);
+
+  if (!authChecked) {
+    return <Loader label="Checking session..." />;
+  }
 
   return (
     <>
