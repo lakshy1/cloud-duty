@@ -20,6 +20,28 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Supabase Auth Setup
+
+Create a `.env.local` file at the project root with:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+```
+
+Enable and configure providers in the Supabase dashboard:
+
+- Google OAuth
+- LinkedIn (OIDC) OAuth
+- Apple OAuth
+- Phone auth (SMS) via a supported SMS provider
+
+Add `http://localhost:3000/auth/callback` to the redirect allow list for OAuth providers.
+
+## Remote Images (next/image)
+
+This app uses remote images (Unsplash, Pravatar, Futurecdn). When you add a new image host, you must allow it in `next.config.ts` under `images.remotePatterns`. Otherwise, Next.js will throw an error like `next-image-unconfigured-host` and the page can fail to render in development.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
