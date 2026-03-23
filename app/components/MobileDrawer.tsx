@@ -4,6 +4,7 @@ import { RefObject } from "react";
 import { usePathname } from "next/navigation";
 import { Icon } from "./Icon";
 import { useFocusTrap } from "../hooks/useFocusTrap";
+import { useUIState } from "../state/ui-state";
 
 type MobileDrawerProps = {
   open: boolean;
@@ -17,8 +18,18 @@ export function MobileDrawer({ open, panelRef, onClose, onCreate, onSearch }: Mo
   const pathname = usePathname();
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
+  const { isLoggedIn, setLoginPromptOpen } = useUIState();
 
   useFocusTrap(panelRef, open, { onEscape: onClose });
+
+  const requireAuth = (action: () => void) => {
+    onClose();
+    if (isLoggedIn) {
+      action();
+    } else {
+      setLoginPromptOpen(true);
+    }
+  };
 
   return (
     <div className={`m-drawer${open ? " open" : ""}`} id="mDrawer">
@@ -50,41 +61,50 @@ export function MobileDrawer({ open, panelRef, onClose, onCreate, onSearch }: Mo
           <Icon name="home" />
           Home
         </a>
-        <a className={`m-nav-item${isActive("/search") ? " active" : ""}`} href="/search" onClick={onClose}>
+        <button
+          className={`m-nav-item${isActive("/search") ? " active" : ""}`}
+          type="button"
+          onClick={() => requireAuth(() => onSearch?.())}
+        >
           <Icon name="search" />
           Search
-        </a>
-        <a className={`m-nav-item${isActive("/my-posts") ? " active" : ""}`} href="/my-posts" onClick={onClose}>
+        </button>
+        <button
+          className={`m-nav-item${isActive("/my-posts") ? " active" : ""}`}
+          type="button"
+          onClick={() => requireAuth(() => { window.location.href = "/my-posts"; })}
+        >
           <Icon name="file" />
           My Posts
-        </a>
-        <a className={`m-nav-item${isActive("/inbox") ? " active" : ""}`} href="/inbox" onClick={onClose}>
+        </button>
+        <button
+          className={`m-nav-item${isActive("/inbox") ? " active" : ""}`}
+          type="button"
+          onClick={() => requireAuth(() => { window.location.href = "/inbox"; })}
+        >
           <Icon name="messages" />
           Inbox
-        </a>
+        </button>
         <button
           className="m-nav-item"
-          onClick={() => {
-            onClose();
-            onCreate?.();
-          }}
+          onClick={() => requireAuth(() => onCreate?.())}
           type="button"
         >
           <Icon name="create" />
           Create
         </button>
         <div className="m-drawer-sep" />
-        <a
+        <button
           className={`m-nav-item${isActive("/notifications") ? " active" : ""}`}
-          href="/notifications"
-          onClick={onClose}
+          type="button"
+          onClick={() => requireAuth(() => { window.location.href = "/notifications"; })}
         >
           <Icon name="notifications" />
           Notifications
-        </a>
-        <a className={`m-nav-item${isActive("/profile") ? " active" : ""}`} href="/profile" onClick={onClose}>
+        </button>
+        <a className={`m-nav-item${isActive("/settings") ? " active" : ""}`} href="/settings" onClick={onClose}>
           <Icon name="settings" />
-          Profile
+          Settings
         </a>
       </nav>
     </div>

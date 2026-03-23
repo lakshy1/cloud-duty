@@ -13,7 +13,15 @@ export function Sidebar({ onCreate, onSearch }: SidebarProps) {
   const pathname = usePathname();
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
-  const { createOpen } = useUIState();
+  const { createOpen, isLoggedIn, setLoginPromptOpen } = useUIState();
+
+  const requireAuth = (action: () => void) => {
+    if (isLoggedIn) {
+      action();
+    } else {
+      setLoginPromptOpen(true);
+    }
+  };
 
   return (
     <aside className="sidebar">
@@ -24,31 +32,47 @@ export function Sidebar({ onCreate, onSearch }: SidebarProps) {
       <a className={`sb-btn${isActive("/") ? " active" : ""}`} href="/" aria-label="Home">
         <Icon name="home" />
       </a>
-      <a className={`sb-btn${isActive("/search") ? " active" : ""}`} href="/search" aria-label="Search">
+      <button
+        className={`sb-btn${isActive("/search") ? " active" : ""}`}
+        type="button"
+        aria-label="Search"
+        onClick={() => requireAuth(() => onSearch?.())}
+      >
         <Icon name="search" />
-      </a>
-      <a className={`sb-btn${isActive("/my-posts") ? " active" : ""}`} href="/my-posts" aria-label="My Posts">
+      </button>
+      <button
+        className={`sb-btn${isActive("/my-posts") ? " active" : ""}`}
+        type="button"
+        aria-label="My Posts"
+        onClick={() => requireAuth(() => { window.location.href = "/my-posts"; })}
+      >
         <Icon name="file" />
-      </a>
-      <a className={`sb-btn${isActive("/inbox") ? " active" : ""}`} href="/inbox" aria-label="Inbox">
+      </button>
+      <button
+        className={`sb-btn${isActive("/inbox") ? " active" : ""}`}
+        type="button"
+        aria-label="Inbox"
+        onClick={() => requireAuth(() => { window.location.href = "/inbox"; })}
+      >
         <Icon name="messages" />
-      </a>
+      </button>
       <button
         className={`sb-btn${createOpen ? " active" : ""}`}
-        onClick={onCreate}
+        onClick={() => requireAuth(() => onCreate?.())}
         type="button"
         aria-label="Create"
       >
         <Icon name="create" />
       </button>
       <div className="sb-sep" />
-      <a
+      <button
         className={`sb-btn${isActive("/notifications") ? " active" : ""}`}
-        href="/notifications"
+        type="button"
         aria-label="Notifications"
+        onClick={() => requireAuth(() => { window.location.href = "/notifications"; })}
       >
         <Icon name="notifications" />
-      </a>
+      </button>
       <a className={`sb-btn${isActive("/settings") ? " active" : ""}`} href="/settings" aria-label="Settings">
         <Icon name="settings" />
       </a>

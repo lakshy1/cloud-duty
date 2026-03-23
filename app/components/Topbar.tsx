@@ -24,7 +24,7 @@ export function Topbar({
   searchInputRef,
   themeReady = true,
 }: TopbarProps) {
-  const { searchQuery, setSearchQuery } = useUIState();
+  const { searchQuery, setSearchQuery, isLoggedIn } = useUIState();
   const [profOpen, setProfOpen] = useState(false);
   const profDropRef = useRef<HTMLDivElement | null>(null);
   const [initials, setInitials] = useState("?");
@@ -48,16 +48,12 @@ export function Topbar({
   }, []);
 
   useEffect(() => {
+    if (!isLoggedIn) return;
     const supabase = getSupabaseBrowserClient();
     const loadUser = async () => {
       const { data } = await supabase.auth.getSession();
       const user = data.session?.user ?? null;
-      if (!user) {
-        setUserName("Account");
-        setInitials("U");
-        setAvatarUrl(null);
-        return;
-      }
+      if (!user) return;
       const meta = user.user_metadata ?? {};
       const first = (meta.first_name ?? "").toString().trim();
       const last = (meta.last_name ?? "").toString().trim();
@@ -81,20 +77,12 @@ export function Topbar({
       setAvatarUrl(profile?.avatar_url || meta.avatar_url || null);
     };
     loadUser();
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      loadUser();
-    });
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+  }, [isLoggedIn]);
 
   const handleLogout = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
     await supabase.auth.signOut();
-    window.location.href = "/login";
+    window.location.href = "/";
   }, []);
 
   return (
@@ -161,68 +149,74 @@ export function Topbar({
         </button>
       </div>
 
-      <div className={`prof-drop${profOpen ? " open" : ""}`} id="profDrop" ref={profDropRef}>
-        <div
-          className="prof"
-          role="button"
-          tabIndex={0}
-          aria-haspopup="menu"
-          aria-expanded={profOpen}
-          aria-controls="profMenu"
-          onClick={(event) => {
-            event.stopPropagation();
-            setProfOpen((prev) => !prev);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
+      {isLoggedIn === false ? (
+        <a className="topbar-login-btn" href="/auth?mode=login">
+          Log In
+        </a>
+      ) : isLoggedIn === true ? (
+        <div className={`prof-drop${profOpen ? " open" : ""}`} id="profDrop" ref={profDropRef}>
+          <div
+            className="prof"
+            role="button"
+            tabIndex={0}
+            aria-haspopup="menu"
+            aria-expanded={profOpen}
+            aria-controls="profMenu"
+            onClick={(event) => {
+              event.stopPropagation();
               setProfOpen((prev) => !prev);
-            }
-          }}
-        >
-          <div className="prof-ava" aria-label={userName}>
-            {avatarUrl ? <img src={avatarUrl} alt={userName} /> : initials}
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setProfOpen((prev) => !prev);
+              }
+            }}
+          >
+            <div className="prof-ava" aria-label={userName}>
+              {avatarUrl ? <img src={avatarUrl} alt={userName} /> : initials}
+            </div>
+            <Icon name="chevron-down" className="prof-chev" />
           </div>
-          <Icon name="chevron-down" className="prof-chev" />
+          <div className="prof-menu" id="profMenu">
+            <a className="prof-opt" href="/profile">
+              <svg viewBox="0 0 24 24">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              Profile
+            </a>
+            <a className="prof-opt" href="/my-posts">
+              <svg viewBox="0 0 24 24">
+                <path d="M6 3h9l3 3v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+                <path d="M9 13h6" />
+                <path d="M9 17h6" />
+                <path d="M9 9h3" />
+              </svg>
+              My Posts
+            </a>
+            <a className="prof-opt" href="/saved">
+              <svg viewBox="0 0 24 24">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+              Saved Posts
+            </a>
+            <a className="prof-opt" href="/settings">
+              <Icon name="settings" />
+              Settings
+            </a>
+            <div className="prof-menu-sep" />
+            <button className="prof-opt danger" type="button" onClick={handleLogout}>
+              <svg viewBox="0 0 24 24">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              Log Out
+            </button>
+          </div>
         </div>
-        <div className="prof-menu" id="profMenu">
-          <a className="prof-opt" href="/profile">
-            <svg viewBox="0 0 24 24">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            Profile
-          </a>
-          <a className="prof-opt" href="/my-posts">
-            <svg viewBox="0 0 24 24">
-              <path d="M6 3h9l3 3v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
-              <path d="M9 13h6" />
-              <path d="M9 17h6" />
-              <path d="M9 9h3" />
-            </svg>
-            My Posts
-          </a>
-          <a className="prof-opt" href="/saved">
-            <svg viewBox="0 0 24 24">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
-            Saved Posts
-          </a>
-          <a className="prof-opt" href="/settings">
-            <Icon name="settings" />
-            Settings
-          </a>
-          <div className="prof-menu-sep" />
-          <button className="prof-opt danger" type="button" onClick={handleLogout}>
-            <svg viewBox="0 0 24 24">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            Log Out
-          </button>
-        </div>
-      </div>
+      ) : null}
     </header>
   );
 }

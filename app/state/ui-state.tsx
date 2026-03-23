@@ -24,6 +24,8 @@ type UIState = {
   createdPost: import("../data/card-data").CardData | null;
   searchQuery: string;
   toasts: Toast[];
+  isLoggedIn: boolean | null;
+  loginPromptOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
   setPopupOpen: (open: boolean) => void;
   setPopupIndex: (index: number | null) => void;
@@ -34,6 +36,8 @@ type UIState = {
   setSearchQuery: (value: string) => void;
   pushToast: (toast: Omit<Toast, "id"> & { id?: string }) => void;
   removeToast: (id: string) => void;
+  setIsLoggedIn: (v: boolean | null) => void;
+  setLoginPromptOpen: (open: boolean) => void;
 };
 
 const UIStateContext = createContext<UIState | null>(null);
@@ -48,6 +52,8 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
   const [createdPost, setCreatedPost] = useState<import("../data/card-data").CardData | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
 
   const pushToast = useCallback((toast: Omit<Toast, "id"> & { id?: string }) => {
     const id = toast.id ?? crypto.randomUUID();
@@ -69,6 +75,8 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       createdPost,
       searchQuery,
       toasts,
+      isLoggedIn,
+      loginPromptOpen,
       setDrawerOpen,
       setPopupOpen,
       setPopupIndex,
@@ -79,6 +87,8 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       setSearchQuery,
       pushToast,
       removeToast,
+      setIsLoggedIn,
+      setLoginPromptOpen,
     }),
     [
       drawerOpen,
@@ -90,6 +100,8 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       createdPost,
       searchQuery,
       toasts,
+      isLoggedIn,
+      loginPromptOpen,
       pushToast,
       removeToast,
     ]

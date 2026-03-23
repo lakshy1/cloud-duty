@@ -8,19 +8,34 @@ import { ThemeName, Topbar } from "./Topbar";
 import { Toasts } from "./Toasts";
 import { useUIState } from "../state/ui-state";
 import { CreatePostModal } from "./CreatePostModal";
+import { LoginPromptModal } from "./LoginPromptModal";
 import { useTheme } from "../theme-provider";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { theme, setTheme, mounted } = useTheme();
-  const { drawerOpen, setDrawerOpen, createOpen, setCreateOpen } = useUIState();
+  const {
+    drawerOpen, setDrawerOpen,
+    createOpen, setCreateOpen,
+    loginPromptOpen, setLoginPromptOpen,
+    setIsLoggedIn,
+  } = useUIState();
   const flashRef = useRef<HTMLDivElement | null>(null);
   const drawerPanelRef = useRef<HTMLElement>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    getSupabaseBrowserClient();
-  }, []);
+    const supabase = getSupabaseBrowserClient();
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      setIsLoggedIn(!!data.session);
+    };
+    checkAuth();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+    });
+    return () => subscription.unsubscribe();
+  }, [setIsLoggedIn]);
 
   const handleThemeSelect = useCallback(
     (nextTheme: ThemeName) => {
@@ -73,6 +88,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Toasts />
 
       <CreatePostModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      <LoginPromptModal open={loginPromptOpen} onClose={() => setLoginPromptOpen(false)} />
     </>
   );
 }

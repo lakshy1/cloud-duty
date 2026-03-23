@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { CardGrid } from "./components/CardGrid";
 import { AppShell } from "./components/AppShell";
 import { PaletteRow } from "./components/PaletteRow";
@@ -51,7 +50,6 @@ function sortByRecent(items: CardData[]) {
 }
 
 export default function Home() {
-  const router = useRouter();
   const [authChecked, setAuthChecked] = useState(false);
   const {
     popupIndex,
@@ -97,14 +95,11 @@ export default function Home() {
     const supabase = getSupabaseBrowserClient();
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        router.replace("/auth?mode=login");
-        return;
-      }
+      setUserId(data.session?.user.id ?? null);
       setAuthChecked(true);
     };
     checkSession();
-  }, [router]);
+  }, []);
 
   const popupData = popupIndex !== null ? cards[popupIndex] : null;
   const normalizedQuery = searchQuery.trim().toLowerCase();
