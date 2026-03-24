@@ -60,9 +60,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       />
 
       <main className="feed">
-        {children}
+        <div className="feed-body">
+          {children}
+        </div>
+        <Footer />
       </main>
-      <Footer />
       <Toasts />
 
       <CreatePostModal open={createOpen} onClose={() => setCreateOpen(false)} />
