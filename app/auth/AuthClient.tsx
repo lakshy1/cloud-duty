@@ -14,6 +14,34 @@ const providers: Array<{ label: string; provider: Provider; icon: "google" | "li
   { label: "Apple", provider: "apple", icon: "apple" },
 ];
 
+const COUNTRY_CODES = [
+  { code: "US", dial: "+1",   flag: "🇺🇸", name: "United States" },
+  { code: "CA", dial: "+1",   flag: "🇨🇦", name: "Canada" },
+  { code: "GB", dial: "+44",  flag: "🇬🇧", name: "United Kingdom" },
+  { code: "AU", dial: "+61",  flag: "🇦🇺", name: "Australia" },
+  { code: "IN", dial: "+91",  flag: "🇮🇳", name: "India" },
+  { code: "DE", dial: "+49",  flag: "🇩🇪", name: "Germany" },
+  { code: "FR", dial: "+33",  flag: "🇫🇷", name: "France" },
+  { code: "JP", dial: "+81",  flag: "🇯🇵", name: "Japan" },
+  { code: "BR", dial: "+55",  flag: "🇧🇷", name: "Brazil" },
+  { code: "MX", dial: "+52",  flag: "🇲🇽", name: "Mexico" },
+  { code: "AE", dial: "+971", flag: "🇦🇪", name: "UAE" },
+  { code: "SG", dial: "+65",  flag: "🇸🇬", name: "Singapore" },
+  { code: "KR", dial: "+82",  flag: "🇰🇷", name: "South Korea" },
+  { code: "CN", dial: "+86",  flag: "🇨🇳", name: "China" },
+  { code: "NL", dial: "+31",  flag: "🇳🇱", name: "Netherlands" },
+  { code: "ES", dial: "+34",  flag: "🇪🇸", name: "Spain" },
+  { code: "IT", dial: "+39",  flag: "🇮🇹", name: "Italy" },
+  { code: "SE", dial: "+46",  flag: "🇸🇪", name: "Sweden" },
+  { code: "ZA", dial: "+27",  flag: "🇿🇦", name: "South Africa" },
+  { code: "AR", dial: "+54",  flag: "🇦🇷", name: "Argentina" },
+];
+
+function formatE164(dial: string, local: string): string {
+  const digits = local.replace(/\D/g, "").replace(/^0+/, "");
+  return `${dial}${digits}`;
+}
+
 const passwordRules = [
   {
     id: "length",
@@ -72,6 +100,7 @@ export default function AuthClient() {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginPhone, setLoginPhone] = useState("");
+  const [loginDialCode, setLoginDialCode] = useState("+1");
   const [loginOtp, setLoginOtp] = useState("");
   const [loginOtpSent, setLoginOtpSent] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -128,7 +157,6 @@ export default function AuthClient() {
     );
     setLoginLoading(false);
     if (resetError) {
-      // Handle rate limit errors specifically
       if (resetError.message.toLowerCase().includes('rate limit') ||
           resetError.message.toLowerCase().includes('too many requests')) {
         setLoginError("Too many password reset attempts. Please wait a few minutes before trying again.");
@@ -146,8 +174,9 @@ export default function AuthClient() {
     setLoginLoading(true);
     setLoginError(null);
     setLoginMessage(null);
+    const fullPhone = formatE164(loginDialCode, loginPhone);
     const { error: otpError } = await supabase.auth.signInWithOtp({
-      phone: loginPhone,
+      phone: fullPhone,
       options: { shouldCreateUser: false },
     });
     setLoginLoading(false);
@@ -164,8 +193,9 @@ export default function AuthClient() {
     setLoginLoading(true);
     setLoginError(null);
     setLoginMessage(null);
+    const fullPhone = formatE164(loginDialCode, loginPhone);
     const { error: verifyError } = await supabase.auth.verifyOtp({
-      phone: loginPhone,
+      phone: fullPhone,
       token: loginOtp,
       type: "sms",
     });
@@ -182,7 +212,9 @@ export default function AuthClient() {
   const [lastName, setLastName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
+  const [signupDialCode, setSignupDialCode] = useState("+1");
   const [signupPassword, setSignupPassword] = useState("");
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [signupLoading, setSignupLoading] = useState(false);
   const [signupMessage, setSignupMessage] = useState<string | null>(null);
   const [signupError, setSignupError] = useState<string | null>(null);
@@ -191,6 +223,7 @@ export default function AuthClient() {
   const [profileFirstName, setProfileFirstName] = useState("");
   const [profileLastName, setProfileLastName] = useState("");
   const [profilePhone, setProfilePhone] = useState("");
+  const [profileDialCode, setProfileDialCode] = useState("+1");
 
   useEffect(() => {
     const loadUser = async () => {
@@ -218,6 +251,10 @@ export default function AuthClient() {
   );
   const isPasswordStrong = passwordStatus.every((rule) => rule.met);
 
+  const passwordsMatch =
+    signupConfirmPassword === "" || signupPassword === signupConfirmPassword;
+  const confirmMet = signupConfirmPassword !== "" && signupPassword === signupConfirmPassword;
+
   const handleOAuthSignup = async (provider: Provider) => {
     setSignupError(null);
     await supabase.auth.signInWithOAuth({
@@ -237,9 +274,14 @@ export default function AuthClient() {
       setSignupError("Please create a stronger password.");
       return;
     }
+    if (signupPassword !== signupConfirmPassword) {
+      setSignupError("Passwords do not match. Please re-enter your password.");
+      return;
+    }
     setSignupLoading(true);
     setSignupError(null);
     setSignupMessage(null);
+    const fullPhone = formatE164(signupDialCode, signupPhone);
     const { error: signUpError } = await supabase.auth.signUp({
       email: signupEmail,
       password: signupPassword,
@@ -248,14 +290,13 @@ export default function AuthClient() {
         data: {
           first_name: firstName,
           last_name: lastName,
-          phone: signupPhone,
+          phone: fullPhone,
           provider: "email",
         },
       },
     });
     setSignupLoading(false);
     if (signUpError) {
-      // Handle rate limit errors specifically
       if (signUpError.message.toLowerCase().includes('rate limit') ||
           signUpError.message.toLowerCase().includes('too many requests')) {
         setSignupError("Too many signup attempts. Please wait a few minutes before trying again.");
@@ -273,11 +314,12 @@ export default function AuthClient() {
     setSignupError(null);
     setSignupMessage(null);
     const provider = profileUser.app_metadata?.provider ?? "oauth";
+    const fullPhone = formatE164(profileDialCode, profilePhone);
     const { error: updateError } = await supabase.auth.updateUser({
       data: {
         first_name: profileFirstName,
         last_name: profileLastName,
-        phone: profilePhone,
+        phone: fullPhone,
         provider,
       },
     });
@@ -426,15 +468,29 @@ export default function AuthClient() {
               ) : (
                 <>
                   <label className="auth-label">
-                    US phone number
-                    <input
-                      className="auth-input"
-                      type="tel"
-                      placeholder="+1 (555) 123-4567"
-                      value={loginPhone}
-                      onChange={(event) => setLoginPhone(event.target.value)}
-                      required
-                    />
+                    Phone number
+                    <div className="auth-phone-group">
+                      <select
+                        className="auth-dial-select"
+                        value={loginDialCode}
+                        onChange={(event) => setLoginDialCode(event.target.value)}
+                        aria-label="Country code"
+                      >
+                        {COUNTRY_CODES.map((c) => (
+                          <option key={`${c.code}-${c.dial}`} value={c.dial}>
+                            {c.flag} {c.dial}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        className="auth-input"
+                        type="tel"
+                        placeholder="555 123 4567"
+                        value={loginPhone}
+                        onChange={(event) => setLoginPhone(event.target.value)}
+                        required
+                      />
+                    </div>
                   </label>
                   {loginOtpSent ? (
                     <label className="auth-label">
@@ -569,15 +625,29 @@ export default function AuthClient() {
                   </label>
                 </div>
                 <label className="auth-label">
-                  US phone number
-                  <input
-                    className="auth-input"
-                    type="tel"
-                    placeholder="+1 (555) 123-4567"
-                    value={profilePhone}
-                    onChange={(event) => setProfilePhone(event.target.value)}
-                    required
-                  />
+                  Phone number
+                  <div className="auth-phone-group">
+                    <select
+                      className="auth-dial-select"
+                      value={profileDialCode}
+                      onChange={(event) => setProfileDialCode(event.target.value)}
+                      aria-label="Country code"
+                    >
+                      {COUNTRY_CODES.map((c) => (
+                        <option key={`${c.code}-${c.dial}`} value={c.dial}>
+                          {c.flag} {c.dial}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      className="auth-input"
+                      type="tel"
+                      placeholder="555 123 4567"
+                      value={profilePhone}
+                      onChange={(event) => setProfilePhone(event.target.value)}
+                      required
+                    />
+                  </div>
                 </label>
 
                 <button className="auth-primary" type="submit" disabled={signupLoading}>
@@ -628,15 +698,29 @@ export default function AuthClient() {
                   />
                 </label>
                 <label className="auth-label">
-                  US phone number
-                  <input
-                    className="auth-input"
-                    type="tel"
-                    placeholder="+1 (555) 123-4567"
-                    value={signupPhone}
-                    onChange={(event) => setSignupPhone(event.target.value)}
-                    required
-                  />
+                  Phone number
+                  <div className="auth-phone-group">
+                    <select
+                      className="auth-dial-select"
+                      value={signupDialCode}
+                      onChange={(event) => setSignupDialCode(event.target.value)}
+                      aria-label="Country code"
+                    >
+                      {COUNTRY_CODES.map((c) => (
+                        <option key={`${c.code}-${c.dial}`} value={c.dial}>
+                          {c.flag} {c.dial}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      className="auth-input"
+                      type="tel"
+                      placeholder="555 123 4567"
+                      value={signupPhone}
+                      onChange={(event) => setSignupPhone(event.target.value)}
+                      required
+                    />
+                  </div>
                 </label>
                 <label className="auth-label">
                   Password
@@ -649,7 +733,27 @@ export default function AuthClient() {
                     required
                   />
                 </label>
-                <button className="auth-primary" type="submit" disabled={signupLoading}>
+                <label className="auth-label">
+                  Re-enter password
+                  <input
+                    className={`auth-input${signupConfirmPassword && !passwordsMatch ? " auth-input--error" : confirmMet ? " auth-input--ok" : ""}`}
+                    type="password"
+                    placeholder="Confirm your password"
+                    value={signupConfirmPassword}
+                    onChange={(event) => setSignupConfirmPassword(event.target.value)}
+                    required
+                  />
+                  {signupConfirmPassword && !passwordsMatch ? (
+                    <span className="auth-field-hint auth-field-hint--error">Passwords do not match</span>
+                  ) : confirmMet ? (
+                    <span className="auth-field-hint auth-field-hint--ok">Passwords match</span>
+                  ) : null}
+                </label>
+                <button
+                  className="auth-primary"
+                  type="submit"
+                  disabled={signupLoading || (signupConfirmPassword !== "" && !passwordsMatch)}
+                >
                   {signupLoading ? "Creating..." : "Create account"}
                 </button>
               </form>
