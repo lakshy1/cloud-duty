@@ -2696,12 +2696,19 @@ body[data-route="inbox"] .feed{overflow:hidden}
 
 /* Auth duo layout */
 .auth-page--duo{
-  padding:36px 16px;
+  min-height:100svh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:14px 16px;
+  box-sizing:border-box;
 }
 .auth-dual{
   position:relative;
   width:min(980px,96vw);
-  min-height:760px;
+  height:min(720px,calc(100svh - 28px));
+  min-height:560px;
   margin:0 auto;
   background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
   border:1px solid color-mix(in srgb, var(--accent) 18%, transparent);
@@ -2726,7 +2733,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
 .auth-dual__panel-inner{
   width:100%;
   max-width:420px;
-  padding:40px 48px;
+  padding:26px 44px;
 }
 .auth-dual__panel--signin{
   left:0;
@@ -2875,9 +2882,9 @@ body[data-route="inbox"] .feed{overflow:hidden}
 .auth-dual .auth-title{
   font-size:32px;
   letter-spacing:-.01em;
-  margin-bottom:10px;
+  margin-bottom:6px;
 }
-.auth-dual .auth-form-head{gap:14px}
+.auth-dual .auth-form-head{gap:10px}
 .auth-dual .auth-head-row{gap:20px}
 .auth-dual .auth-panel-inner{line-height:1.6}
 .auth-dual .auth-title + .auth-subtitle{
@@ -2923,7 +2930,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
   letter-spacing:.28em;
   text-transform:uppercase;
   color:color-mix(in srgb, var(--muted) 85%, var(--text));
-  margin:10px 0 4px;
+  margin:6px 0 2px;
 }
 .auth-divider--pro::before,
 .auth-divider--pro::after{
@@ -2932,18 +2939,18 @@ body[data-route="inbox"] .feed{overflow:hidden}
 }
 .auth-dual .auth-tabs{
   gap:8px;
-  margin:8px 0 2px;
+  margin:4px 0 2px;
 }
 .auth-dual .auth-tab{
   text-transform:uppercase;
   letter-spacing:.18em;
   font-size:.66rem;
 }
-.auth-dual .auth-form{gap:12px}
+.auth-dual .auth-form{gap:10px}
 .auth-dual .auth-label{gap:6px}
 .auth-dual .auth-input{height:46px;border-radius:16px}
 .auth-dual .auth-dial-select{height:46px;border-radius:16px}
-.auth-dual .auth-primary{height:50px;border-radius:16px;margin-top:4px}
+.auth-dual .auth-primary{height:46px;border-radius:16px;margin-top:2px}
 .auth-dual .auth-hint{margin-top:2px}
 .auth-dual .auth-hint{line-height:1.45}
 
@@ -2953,7 +2960,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
 }
 @media (max-width: 640px){
   .auth-dual .auth-title{font-size:24px}
-  .auth-dual .auth-form{gap:12px}
+  .auth-dual .auth-form{gap:10px}
   .auth-dual .auth-socials--pro{gap:10px}
   .auth-dual .auth-tabs{flex-direction:row}
 }
