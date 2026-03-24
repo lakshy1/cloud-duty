@@ -3008,6 +3008,25 @@ body[data-route="inbox"] .feed{overflow:hidden}
   border-color:rgba(0,0,0,.12);
   color:#1a1410;
 }
+[data-theme="minimal"] .auth-message{
+  background:rgba(34,130,70,.08);
+  border-color:rgba(34,130,70,.22);
+  color:#1a5c30;
+}
+[data-theme="minimal"] .auth-error{
+  background:rgba(201,97,74,.09);
+  border-color:rgba(201,97,74,.25);
+  color:#8b2c20;
+}
+[data-theme="minimal"] .auth-label{
+  color:#6b5a4e;
+}
+[data-theme="minimal"] .auth-checklist li{
+  color:#6b5a4e;
+}
+[data-theme="minimal"] .auth-check{
+  color:#6b5a4e;
+}
 .auth-slide-glow{
   width:85%;
   height:85%;
