@@ -1392,7 +1392,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
   .footbar{font-size:.58rem;margin-left:-8px;margin-right:-8px}
 
   /* feed full width, below fixed header, full height to bottom */
-  .feed{left:0 !important;top:var(--hdr-h);bottom:0;padding:10px 8px}
+  .feed{left:0 !important;top:var(--hdr-h);bottom:0;padding:10px 8px 0}
   .pal-row{display:none}
 
   /* SINGLE column, taller cards for better readability */
