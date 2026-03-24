@@ -937,7 +937,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
   background:rgba(10,10,12,.45);
   border-color:rgba(255,255,255,.25);
 }
-.profile-upload-input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.profile-upload-input{display:none}
 .profile-upload-btn{
   border-radius:999px;border:1px solid rgba(255,255,255,.25);
   background:rgba(255,255,255,.12);color:#fff;

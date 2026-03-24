@@ -460,26 +460,27 @@ export default function ProfilePage() {
           >
             <div className="profile-cover-bg" aria-hidden="true" />
             <div className="profile-cover-main">
+              <input
+                ref={avatarInputRef}
+                className="profile-upload-input"
+                type="file"
+                accept="image/*"
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  if (!file) return;
+                  if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+                  setAvatarFile(file);
+                  setAvatarPreview(URL.createObjectURL(file));
+                  handleAvatarUpload(file);
+                  event.target.value = "";
+                }}
+              />
               <button
                 className="profile-avatar profile-avatar--xl profile-avatar-btn"
                 type="button"
                 onClick={() => avatarInputRef.current?.click()}
                 aria-label="Edit profile photo"
               >
-                <input
-                  ref={avatarInputRef}
-                  className="profile-upload-input"
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0] ?? null;
-                    if (!file) return;
-                    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
-                    setAvatarFile(file);
-                    setAvatarPreview(URL.createObjectURL(file));
-                    handleAvatarUpload(file);
-                  }}
-                />
                 {avatarPreview || avatarUrl ? (
                   <img src={avatarPreview || avatarUrl || ""} alt={displayFullName} />
                 ) : (
@@ -575,26 +576,27 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="profile-cover-edit">
+              <input
+                ref={coverInputRef}
+                className="profile-upload-input"
+                type="file"
+                accept="image/*"
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  if (!file) return;
+                  if (coverPreview) URL.revokeObjectURL(coverPreview);
+                  setCoverFile(file);
+                  setCoverPreview(URL.createObjectURL(file));
+                  handleCoverUpload(file);
+                  event.target.value = "";
+                }}
+              />
               <button
                 className="profile-cover-edit-btn"
                 type="button"
                 onClick={() => coverInputRef.current?.click()}
                 aria-label="Edit cover photo"
               >
-                <input
-                  ref={coverInputRef}
-                  className="profile-upload-input"
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0] ?? null;
-                    if (!file) return;
-                    if (coverPreview) URL.revokeObjectURL(coverPreview);
-                    setCoverFile(file);
-                    setCoverPreview(URL.createObjectURL(file));
-                    handleCoverUpload(file);
-                  }}
-                />
                 Edit cover
               </button>
               {coverUploading && <div className="profile-cover-saving">Saving...</div>}
