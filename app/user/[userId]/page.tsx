@@ -376,7 +376,7 @@ export default function UserProfilePage() {
                   src={profile.avatar_url}
                   alt={displayName}
                   fill
-                  sizes="80px"
+                  sizes="120px"
                   className="up-avatar-img"
                 />
               ) : (

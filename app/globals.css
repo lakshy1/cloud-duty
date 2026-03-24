@@ -3391,17 +3391,17 @@ body[data-route="inbox"] .feed{overflow:hidden}
 
 /* Avatar pulls up by half its height into the cover */
 .up-avatar{
-  margin-top:-38px;
-  width:76px;height:76px;border-radius:50%;
-  border:3px solid var(--surface);overflow:hidden;flex-shrink:0;
+  margin-top:-60px;
+  width:120px;height:120px;border-radius:50%;
+  border:4px solid var(--surface);overflow:hidden;flex-shrink:0;
   background:color-mix(in srgb,var(--accent) 20%,var(--bg));
-  box-shadow:0 2px 16px rgba(0,0,0,.20);
+  box-shadow:0 4px 20px rgba(0,0,0,.22);
   display:flex;align-items:center;justify-content:center;
   position:relative;z-index:2;
 }
 .up-avatar-img{object-fit:cover;width:100%;height:100%}
 .up-avatar-initials{
-  font-size:1.5rem;font-weight:800;color:var(--accent);letter-spacing:-.03em;
+  font-size:2.4rem;font-weight:800;color:var(--accent);letter-spacing:-.03em;
 }
 
 /* Action buttons sit in the header with natural top padding */
@@ -3452,7 +3452,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
   border-left:1px solid var(--border);border-right:1px solid var(--border);
   border-bottom:1px solid var(--border);
   border-radius:0 0 20px 20px;
-  padding:28px 28px 36px;
+  padding:28px 28px calc(var(--ftr-h) + 52px);
 }
 .up-posts-header{
   display:flex;align-items:center;gap:10px;margin-bottom:22px;
@@ -3515,17 +3515,17 @@ body[data-route="inbox"] .feed{overflow:hidden}
 
 /* ── Responsive ── */
 @media(max-width:640px){
-  .up-cover{height:140px;border-radius:14px 14px 0 0}
-  .up-header{padding:0 16px 18px;gap:10px}
-  .up-avatar{width:64px;height:64px;margin-top:-32px}
-  .up-avatar-initials{font-size:1.2rem}
+  .up-cover{height:150px;border-radius:14px 14px 0 0}
+  .up-header{padding:0 16px 20px;gap:10px}
+  .up-avatar{width:88px;height:88px;margin-top:-44px}
+  .up-avatar-initials{font-size:1.7rem}
   .up-header-actions{padding-top:10px}
   .up-name{font-size:1.15rem}
   .up-handle{font-size:.8rem}
   .up-stat{font-size:.8rem;padding-right:12px}
   .up-stat strong{font-size:.95rem}
   .up-stat-sep{margin-right:12px}
-  .up-posts-section{padding:18px 14px 26px;border-radius:0 0 14px 14px}
+  .up-posts-section{padding:18px 14px calc(var(--ftr-h) + 48px);border-radius:0 0 14px 14px}
 }
 
 @media (max-width:480px){
