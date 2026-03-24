@@ -37,7 +37,10 @@ const COUNTRY_CODES = [
   { code: "AR", dial: "+54",  flag: "🇦🇷", name: "Argentina" },
 ];
 
-function formatE164(dial: string, local: string): string {
+const DIAL_MAP = new Map(COUNTRY_CODES.map((c) => [c.code, c.dial]));
+
+function formatE164(countryCode: string, local: string): string {
+  const dial = DIAL_MAP.get(countryCode) ?? "+1";
   const digits = local.replace(/\D/g, "").replace(/^0+/, "");
   return `${dial}${digits}`;
 }
@@ -100,7 +103,7 @@ export default function AuthClient() {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginPhone, setLoginPhone] = useState("");
-  const [loginDialCode, setLoginDialCode] = useState("+1");
+  const [loginCountry, setLoginCountry] = useState("US");
   const [loginOtp, setLoginOtp] = useState("");
   const [loginOtpSent, setLoginOtpSent] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -174,7 +177,7 @@ export default function AuthClient() {
     setLoginLoading(true);
     setLoginError(null);
     setLoginMessage(null);
-    const fullPhone = formatE164(loginDialCode, loginPhone);
+    const fullPhone = formatE164(loginCountry, loginPhone);
     const { error: otpError } = await supabase.auth.signInWithOtp({
       phone: fullPhone,
       options: { shouldCreateUser: false },
@@ -193,7 +196,7 @@ export default function AuthClient() {
     setLoginLoading(true);
     setLoginError(null);
     setLoginMessage(null);
-    const fullPhone = formatE164(loginDialCode, loginPhone);
+    const fullPhone = formatE164(loginCountry, loginPhone);
     const { error: verifyError } = await supabase.auth.verifyOtp({
       phone: fullPhone,
       token: loginOtp,
@@ -212,7 +215,7 @@ export default function AuthClient() {
   const [lastName, setLastName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
-  const [signupDialCode, setSignupDialCode] = useState("+1");
+  const [signupCountry, setSignupCountry] = useState("US");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [signupLoading, setSignupLoading] = useState(false);
@@ -223,7 +226,7 @@ export default function AuthClient() {
   const [profileFirstName, setProfileFirstName] = useState("");
   const [profileLastName, setProfileLastName] = useState("");
   const [profilePhone, setProfilePhone] = useState("");
-  const [profileDialCode, setProfileDialCode] = useState("+1");
+  const [profileCountry, setProfileCountry] = useState("US");
 
   useEffect(() => {
     const loadUser = async () => {
@@ -281,7 +284,7 @@ export default function AuthClient() {
     setSignupLoading(true);
     setSignupError(null);
     setSignupMessage(null);
-    const fullPhone = formatE164(signupDialCode, signupPhone);
+    const fullPhone = formatE164(signupCountry, signupPhone);
     const { error: signUpError } = await supabase.auth.signUp({
       email: signupEmail,
       password: signupPassword,
@@ -314,7 +317,7 @@ export default function AuthClient() {
     setSignupError(null);
     setSignupMessage(null);
     const provider = profileUser.app_metadata?.provider ?? "oauth";
-    const fullPhone = formatE164(profileDialCode, profilePhone);
+    const fullPhone = formatE164(profileCountry, profilePhone);
     const { error: updateError } = await supabase.auth.updateUser({
       data: {
         first_name: profileFirstName,
@@ -472,13 +475,13 @@ export default function AuthClient() {
                     <div className="auth-phone-group">
                       <select
                         className="auth-dial-select"
-                        value={loginDialCode}
-                        onChange={(event) => setLoginDialCode(event.target.value)}
+                        value={loginCountry}
+                        onChange={(event) => setLoginCountry(event.target.value)}
                         aria-label="Country code"
                       >
                         {COUNTRY_CODES.map((c) => (
-                          <option key={`${c.code}-${c.dial}`} value={c.dial}>
-                            {c.flag} {c.dial}
+                          <option key={c.code} value={c.code}>
+                            {c.dial} ({c.code})
                           </option>
                         ))}
                       </select>
@@ -629,13 +632,13 @@ export default function AuthClient() {
                   <div className="auth-phone-group">
                     <select
                       className="auth-dial-select"
-                      value={profileDialCode}
-                      onChange={(event) => setProfileDialCode(event.target.value)}
+                      value={profileCountry}
+                      onChange={(event) => setProfileCountry(event.target.value)}
                       aria-label="Country code"
                     >
                       {COUNTRY_CODES.map((c) => (
-                        <option key={`${c.code}-${c.dial}`} value={c.dial}>
-                          {c.flag} {c.dial}
+                        <option key={c.code} value={c.code}>
+                          {c.dial} ({c.code})
                         </option>
                       ))}
                     </select>
@@ -702,13 +705,13 @@ export default function AuthClient() {
                   <div className="auth-phone-group">
                     <select
                       className="auth-dial-select"
-                      value={signupDialCode}
-                      onChange={(event) => setSignupDialCode(event.target.value)}
+                      value={signupCountry}
+                      onChange={(event) => setSignupCountry(event.target.value)}
                       aria-label="Country code"
                     >
                       {COUNTRY_CODES.map((c) => (
-                        <option key={`${c.code}-${c.dial}`} value={c.dial}>
-                          {c.flag} {c.dial}
+                        <option key={c.code} value={c.code}>
+                          {c.dial} ({c.code})
                         </option>
                       ))}
                     </select>
