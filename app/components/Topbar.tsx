@@ -149,11 +149,7 @@ export function Topbar({
         </button>
       </div>
 
-      {isLoggedIn === false ? (
-        <a className="topbar-login-btn" href="/auth?mode=login">
-          Log In
-        </a>
-      ) : isLoggedIn === true ? (
+      {isLoggedIn === true ? (
         <div className={`prof-drop${profOpen ? " open" : ""}`} id="profDrop" ref={profDropRef}>
           <div
             className="prof"
@@ -216,7 +212,11 @@ export function Topbar({
             </button>
           </div>
         </div>
-      ) : null}
+      ) : (
+        <a className="topbar-login-btn" href="/auth?mode=login">
+          Log In
+        </a>
+      )}
     </header>
   );
 }
