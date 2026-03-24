@@ -326,10 +326,8 @@ export default function UserProfilePage() {
   if (loading) {
     return (
       <AppShell>
-        <div className="page-shell">
-          <div className="page-card" style={{ minHeight: 320, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Loader label="Loading profile" />
-          </div>
+        <div className="up-loading">
+          <Loader label="Loading profile" />
         </div>
       </AppShell>
     );
@@ -338,20 +336,18 @@ export default function UserProfilePage() {
   if (notFound || !profile) {
     return (
       <AppShell>
-        <div className="page-shell">
-          <div className="page-card user-profile-not-found">
-            <div className="user-profile-nf-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="12" cy="8" r="4" />
-                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-              </svg>
-            </div>
-            <h2>Profile not found</h2>
-            <p>This user doesn&apos;t exist or hasn&apos;t set up their profile yet.</p>
-            <button className="pp-act-primary" onClick={() => router.back()}>
-              Go back
-            </button>
+        <div className="up-not-found">
+          <div className="up-nf-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+            </svg>
           </div>
+          <h2>Profile not found</h2>
+          <p>This user doesn&apos;t exist or hasn&apos;t set up their profile yet.</p>
+          <button className="up-back-btn" onClick={() => router.back()} type="button">
+            ← Go back
+          </button>
         </div>
       </AppShell>
     );
@@ -359,87 +355,115 @@ export default function UserProfilePage() {
 
   return (
     <AppShell>
-      <div className="page-shell">
-        <div className="user-profile-card">
-          <div
-            className="user-profile-cover"
-            style={profile.cover_url ? { backgroundImage: `url(${profile.cover_url})` } : undefined}
-          >
-            <div className="user-profile-cover-bg" aria-hidden="true" />
-            <div className="user-profile-cover-content">
-              <div className="user-profile-avatar-wrap">
-                {profile.avatar_url ? (
-                  <Image
-                    src={profile.avatar_url}
-                    alt={displayName}
-                    fill
-                    sizes="96px"
-                    className="user-profile-avatar-img"
-                  />
-                ) : (
-                  <span className="user-profile-avatar-initials">{initials(displayName)}</span>
-                )}
-              </div>
-              <div className="user-profile-identity">
-                <div className="user-profile-name">{displayName}</div>
-                {handle && <div className="user-profile-handle">{handle}</div>}
-              </div>
-              <div className="user-profile-actions">
-                {currentUserId === targetUserId ? (
-                  <button
-                    className="pp-act-secondary"
-                    onClick={() => router.push("/profile")}
-                    type="button"
-                  >
-                    Edit Profile
-                  </button>
-                ) : (
-                  <FollowButton targetUserId={targetUserId} size="md" />
-                )}
-              </div>
-            </div>
-          </div>
+      <div className="up-page">
 
-          <div className="user-profile-stats">
-            <div className="user-profile-stat">
-              <div className="user-profile-stat-val">{formatCount(stats.posts)}</div>
-              <div className="user-profile-stat-label">Posts</div>
-            </div>
-            <div className="user-profile-stat">
-              <div className="user-profile-stat-val">{formatCount(stats.followers)}</div>
-              <div className="user-profile-stat-label">Followers</div>
-            </div>
-            <div className="user-profile-stat">
-              <div className="user-profile-stat-val">{formatCount(stats.following)}</div>
-              <div className="user-profile-stat-label">Following</div>
-            </div>
-            <div className="user-profile-stat">
-              <div className="user-profile-stat-val">{formatCount(stats.likes)}</div>
-              <div className="user-profile-stat-label">Likes</div>
-            </div>
-          </div>
+        {/* ── Cover photo ── */}
+        <div
+          className="up-cover"
+          style={profile.cover_url ? { backgroundImage: `url(${profile.cover_url})` } : undefined}
+          aria-hidden="true"
+        >
+          <div className="up-cover-fade" />
+        </div>
 
-          <div className="user-profile-posts-section">
-            {posts.length === 0 ? (
-              <div className="user-profile-empty">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <path d="M3 9h18M9 21V9" />
-                </svg>
-                <p>No posts yet</p>
-              </div>
-            ) : (
-              <CardGrid
-                cards={posts}
-                savedIds={savedIds}
-                onToggleSave={toggleSave}
-                reactions={reactions}
-                onToggleReaction={toggleReaction}
-                onOpenPopup={(index, _rect) => openPopup(index)}
-                onOpenReport={() => {}}
+        {/* ── Profile header ── */}
+        <div className="up-header">
+          {/* Avatar — overhangs the cover */}
+          <div className="up-avatar">
+            {profile.avatar_url ? (
+              <Image
+                src={profile.avatar_url}
+                alt={displayName}
+                fill
+                sizes="112px"
+                className="up-avatar-img"
               />
+            ) : (
+              <span className="up-avatar-initials">{initials(displayName)}</span>
             )}
           </div>
+
+          {/* Action buttons aligned top-right */}
+          <div className="up-header-actions">
+            {currentUserId === targetUserId ? (
+              <button
+                className="up-edit-btn"
+                onClick={() => router.push("/profile")}
+                type="button"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                Edit Profile
+              </button>
+            ) : (
+              <FollowButton targetUserId={targetUserId} size="md" />
+            )}
+          </div>
+
+          {/* Name, handle, stats */}
+          <div className="up-identity">
+            <h1 className="up-name">{displayName}</h1>
+            {handle && <div className="up-handle">{handle}</div>}
+          </div>
+
+          <div className="up-stats">
+            <div className="up-stat">
+              <strong>{formatCount(stats.posts)}</strong>
+              <span>Posts</span>
+            </div>
+            <div className="up-stat-sep" aria-hidden="true" />
+            <div className="up-stat">
+              <strong>{formatCount(stats.followers)}</strong>
+              <span>Followers</span>
+            </div>
+            <div className="up-stat-sep" aria-hidden="true" />
+            <div className="up-stat">
+              <strong>{formatCount(stats.following)}</strong>
+              <span>Following</span>
+            </div>
+            <div className="up-stat-sep" aria-hidden="true" />
+            <div className="up-stat">
+              <strong>{formatCount(stats.likes)}</strong>
+              <span>Likes</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Posts section ── */}
+        <div className="up-posts-section">
+          <div className="up-posts-header">
+            <div className="up-posts-title">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M3 9h18M9 21V9" />
+              </svg>
+              Posts
+            </div>
+            <span className="up-posts-badge">{stats.posts}</span>
+          </div>
+
+          {posts.length === 0 ? (
+            <div className="up-empty">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M3 9h18M9 21V9" />
+              </svg>
+              <p>No posts yet</p>
+              <span>When {displayName} posts something, it will appear here.</span>
+            </div>
+          ) : (
+            <CardGrid
+              cards={posts}
+              savedIds={savedIds}
+              onToggleSave={toggleSave}
+              reactions={reactions}
+              onToggleReaction={toggleReaction}
+              onOpenPopup={(index, _rect) => openPopup(index)}
+              onOpenReport={() => {}}
+            />
+          )}
         </div>
       </div>
 
