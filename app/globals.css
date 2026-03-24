@@ -392,7 +392,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
 
 /* ══ FOOTER ═════════════════════════════════════════════════ */
 .footbar{
-  margin-top:auto;flex-shrink:0;
+  flex-shrink:0;
   margin-left:-18px;margin-right:-18px;
   min-height:var(--ftr-h);
   background:var(--ftr-bg);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
@@ -409,7 +409,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
   display:flex;flex-direction:column;
 }
 .feed-body{
-  min-height:calc(100vh - var(--hdr-h) - var(--ftr-h));
+  min-height:calc(100dvh - var(--hdr-h) - var(--ftr-h));
   display:flex;flex-direction:column;
 }
 .feed::-webkit-scrollbar{width:6px}
@@ -1396,7 +1396,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
 
   /* feed full width, below fixed header, full height */
   .feed{left:0 !important;top:var(--hdr-h);bottom:0;padding:10px 8px 0}
-  .feed-body{min-height:calc(100vh - var(--hdr-h) - var(--ftr-h))}
+  .feed-body{min-height:calc(100dvh - var(--hdr-h) - var(--ftr-h))}
   .pal-row{display:none}
 
   /* SINGLE column, taller cards for better readability */
