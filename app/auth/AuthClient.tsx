@@ -289,7 +289,7 @@ export default function AuthClient() {
       email: signupEmail,
       password: signupPassword,
       options: {
-        emailRedirectTo: `${redirectBase}/auth/callback?next=/auth?mode=signup`,
+        emailRedirectTo: `${redirectBase}/auth/callback?next=/email-confirmed`,
         data: {
           first_name: firstName,
           last_name: lastName,
