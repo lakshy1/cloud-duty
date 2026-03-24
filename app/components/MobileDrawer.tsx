@@ -64,7 +64,7 @@ export function MobileDrawer({ open, panelRef, onClose, onCreate, onSearch }: Mo
         <button
           className={`m-nav-item${isActive("/search") ? " active" : ""}`}
           type="button"
-          onClick={() => requireAuth(() => onSearch?.())}
+          onClick={() => requireAuth(() => { window.location.href = "/search"; })}
         >
           <Icon name="search" />
           Search

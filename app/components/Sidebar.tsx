@@ -36,7 +36,7 @@ export function Sidebar({ onCreate, onSearch }: SidebarProps) {
         className={`sb-btn${isActive("/search") ? " active" : ""}`}
         type="button"
         aria-label="Search"
-        onClick={() => requireAuth(() => onSearch?.())}
+        onClick={() => requireAuth(() => { window.location.href = "/search"; })}
       >
         <Icon name="search" />
       </button>
