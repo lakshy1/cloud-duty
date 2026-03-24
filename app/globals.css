@@ -392,7 +392,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
 
 /* ══ FOOTER ═════════════════════════════════════════════════ */
 .footbar{
-  margin-top:auto;
+  margin-top:32px;
   margin-left:-18px;margin-right:-18px;
   min-height:var(--ftr-h);
   background:var(--ftr-bg);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
@@ -592,7 +592,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
   gap:12px;text-align:center;
 }
 .loader-screen{
-  min-height:calc(100vh - var(--hdr-h) - var(--ftr-h));
+  min-height:300px;
   padding:24px;
 }
 .loader-spinner{
@@ -618,7 +618,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
 .notif-time{font-size:.7rem;color:var(--muted)}
 .inbox-card{
   padding:16px;
-  min-height:calc(100vh - var(--hdr-h) - var(--ftr-h) - 48px);
+  min-height:500px;
   margin-bottom:16px;
   overflow:hidden;
 }
@@ -1021,7 +1021,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
   .inbox-chat{min-height:auto}
   .inbox-card{
     padding:12px;
-    min-height:calc(100vh - var(--hdr-h) - var(--ftr-h) - 40px);
+    min-height:400px;
     margin-bottom:12px;
   }
   .inbox-back{display:inline-flex}
@@ -3355,7 +3355,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
 
 /* ── Page shell ── */
 .up-page{
-  width:100%;min-height:100%;display:flex;flex-direction:column;
+  width:100%;display:flex;flex-direction:column;
 }
 
 /* ── Cover photo ── */
