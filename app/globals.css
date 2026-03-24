@@ -3,7 +3,7 @@
 
 /* ══ LAYOUT CONSTANTS ═══════════════════════════════════════ */
 :root{
-  --sb-w:72px;--hdr-h:68px;--ftr-h:36px;
+  --sb-w:72px;--hdr-h:64px;--ftr-h:36px;
   --fs-xs:0.7rem;
   --fs-sm:0.8rem;
   --fs-md:0.95rem;
@@ -150,12 +150,12 @@ body[data-route="inbox"] .feed{overflow:hidden}
 .sb-logo{
   width:46px;height:46px;border-radius:13px;background:var(--btn-bg);
   display:grid;place-items:center;cursor:pointer;flex-shrink:0;
-  margin-bottom:2px;box-shadow:0 2px 12px var(--btn-glow);
+  margin-bottom:0;box-shadow:0 2px 12px var(--btn-glow);
   transition:background .4s,box-shadow .4s;
 }
 .sb-logo{text-decoration:none;color:inherit}
 .sb-logo svg{width:24px;height:24px}
-.sb-sep{width:44px;height:1px;background:var(--sb-sep);margin:4px 0;flex-shrink:0;transition:background .4s}
+.sb-sep{width:44px;height:1px;background:var(--sb-sep);margin:2px 0;flex-shrink:0;transition:background .4s}
 .sb-btn{
   width:52px;height:52px;border-radius:13px;display:grid;place-items:center;
   cursor:pointer;position:relative;color:var(--sb-icon);flex-shrink:0;
