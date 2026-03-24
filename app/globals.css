@@ -405,7 +405,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
 /* ══ FEED ════════════════════════════════════════════════════ */
 .feed{
   position:fixed;top:var(--hdr-h);bottom:0;left:var(--sb-w);right:0;
-  overflow-y:auto;overflow-x:hidden;padding:18px 18px 0;
+  overflow-y:auto;overflow-x:hidden;padding:18px 18px var(--ftr-h);
   display:flex;flex-direction:column;
   min-height:calc(100vh - var(--hdr-h));
 }
@@ -3452,7 +3452,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
   border-left:1px solid var(--border);border-right:1px solid var(--border);
   border-bottom:1px solid var(--border);
   border-radius:0 0 20px 20px;
-  padding:28px 28px calc(var(--ftr-h) + 52px);
+  padding:28px 28px 40px;
 }
 .up-posts-header{
   display:flex;align-items:center;gap:10px;margin-bottom:22px;
@@ -3525,7 +3525,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
   .up-stat{font-size:.8rem;padding-right:12px}
   .up-stat strong{font-size:.95rem}
   .up-stat-sep{margin-right:12px}
-  .up-posts-section{padding:18px 14px calc(var(--ftr-h) + 48px);border-radius:0 0 14px 14px}
+  .up-posts-section{padding:18px 14px 36px;border-radius:0 0 14px 14px}
 }
 
 @media (max-width:480px){
