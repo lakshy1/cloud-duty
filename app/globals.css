@@ -3308,6 +3308,138 @@ body[data-route="inbox"] .feed{overflow:hidden}
   text-decoration:underline;
 }
 
+/* ─────────────────────────────────────────────
+   Follow Button
+───────────────────────────────────────────── */
+.follow-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:8px 18px;border-radius:999px;font-size:.78rem;font-weight:700;
+  letter-spacing:.02em;cursor:pointer;border:1.5px solid var(--accent);
+  background:var(--accent);color:#fff;transition:all .18s ease;
+  white-space:nowrap;
+}
+.follow-btn svg{width:14px;height:14px;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;fill:none;flex-shrink:0}
+.follow-btn:hover{opacity:.85;transform:scale(.97)}
+.follow-btn:disabled{opacity:.55;cursor:wait}
+.follow-btn--following{
+  background:transparent;
+  color:var(--text);
+  border-color:var(--border);
+}
+.follow-btn--following:hover{
+  border-color:color-mix(in srgb,var(--accent) 50%,var(--border));
+  color:var(--accent);
+}
+.follow-btn--sm{padding:5px 13px;font-size:.72rem}
+
+/* ─────────────────────────────────────────────
+   Profile row actions (search results)
+───────────────────────────────────────────── */
+.profile-row-actions{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0}
+
+/* ─────────────────────────────────────────────
+   Popup modal: clickable author + follow
+───────────────────────────────────────────── */
+.pp-author--clickable{cursor:pointer;border-radius:10px;transition:background .15s}
+.pp-author--clickable:hover{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+
+/* ─────────────────────────────────────────────
+   Card author: clickable states
+───────────────────────────────────────────── */
+.u-row--clickable{cursor:pointer;border-radius:8px;padding:2px 4px;margin:-2px -4px;transition:background .14s}
+.u-row--clickable:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.b-author--clickable{cursor:pointer;border-radius:10px;padding:4px 6px;margin:-4px -6px;transition:background .15s}
+.b-author--clickable:hover{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+
+/* ─────────────────────────────────────────────
+   User Profile Page
+───────────────────────────────────────────── */
+.user-profile-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  overflow:hidden;max-width:920px;margin:0 auto;
+}
+.user-profile-cover{
+  position:relative;height:200px;background:linear-gradient(135deg,
+    color-mix(in srgb,var(--accent) 18%,var(--bg)),
+    color-mix(in srgb,var(--accent) 8%,var(--surface)));
+  background-size:cover;background-position:center;
+}
+.user-profile-cover-bg{
+  position:absolute;inset:0;
+  background:linear-gradient(to bottom,transparent 50%,color-mix(in srgb,var(--bg) 60%,transparent) 100%);
+}
+.user-profile-cover-content{
+  position:absolute;bottom:0;left:0;right:0;
+  display:flex;align-items:flex-end;gap:16px;padding:16px 24px;
+  flex-wrap:wrap;
+}
+.user-profile-avatar-wrap{
+  position:relative;width:88px;height:88px;border-radius:50%;
+  border:3px solid var(--surface);overflow:hidden;flex-shrink:0;
+  background:color-mix(in srgb,var(--accent) 20%,var(--bg));
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:-8px;
+}
+.user-profile-avatar-img{object-fit:cover}
+.user-profile-avatar-initials{
+  font-size:1.6rem;font-weight:800;color:var(--accent);letter-spacing:-.03em;
+}
+.user-profile-identity{flex:1;min-width:0;padding-bottom:4px}
+.user-profile-name{
+  font-size:1.15rem;font-weight:800;color:var(--text);letter-spacing:-.02em;
+  text-shadow:0 1px 6px color-mix(in srgb,var(--bg) 60%,transparent);
+}
+.user-profile-handle{
+  font-size:.82rem;color:var(--muted);font-weight:500;margin-top:2px;
+}
+.user-profile-actions{display:flex;align-items:center;gap:8px;padding-bottom:4px;flex-shrink:0}
+
+.user-profile-stats{
+  display:flex;gap:0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+}
+.user-profile-stat{
+  flex:1;display:flex;flex-direction:column;align-items:center;padding:18px 8px;gap:3px;
+  border-right:1px solid var(--border);
+}
+.user-profile-stat:last-child{border-right:none}
+.user-profile-stat-val{font-size:1.25rem;font-weight:800;color:var(--text);letter-spacing:-.03em}
+.user-profile-stat-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:600}
+
+.user-profile-posts-section{padding:24px}
+
+.user-profile-empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;padding:60px 20px;color:var(--muted);
+}
+.user-profile-empty svg{width:44px;height:44px;stroke:currentColor;stroke-width:1.5;fill:none;opacity:.5}
+.user-profile-empty p{font-size:.9rem;font-weight:500;margin:0}
+
+.user-profile-not-found{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;padding:80px 24px;text-align:center;
+}
+.user-profile-nf-icon{
+  width:64px;height:64px;border-radius:50%;
+  background:color-mix(in srgb,var(--accent) 10%,transparent);
+  display:flex;align-items:center;justify-content:center;
+}
+.user-profile-nf-icon svg{
+  width:32px;height:32px;stroke:var(--accent);stroke-width:1.5;fill:none;
+}
+.user-profile-not-found h2{font-size:1.25rem;font-weight:800;color:var(--text);margin:0}
+.user-profile-not-found p{font-size:.9rem;color:var(--muted);margin:0;max-width:320px}
+
+@media(max-width:600px){
+  .user-profile-cover{height:160px}
+  .user-profile-cover-content{padding:12px 16px;gap:12px}
+  .user-profile-avatar-wrap{width:68px;height:68px}
+  .user-profile-avatar-initials{font-size:1.2rem}
+  .user-profile-name{font-size:.95rem}
+  .user-profile-handle{font-size:.75rem}
+  .user-profile-stat-val{font-size:1rem}
+  .user-profile-posts-section{padding:16px}
+}
+
 @media (max-width:480px){
   .email-confirmed-card{
     padding:40px 28px 36px;

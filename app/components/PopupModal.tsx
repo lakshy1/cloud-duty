@@ -1,9 +1,11 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { RefObject } from "react";
 import type { CardData } from "../data/card-data";
 import { useFocusTrap } from "../hooks/useFocusTrap";
+import { FollowButton } from "./FollowButton";
 
 export type PopupInteractions = {
   like: boolean;
@@ -40,6 +42,14 @@ export function PopupModal({
   overlayRef,
 }: PopupModalProps) {
   useFocusTrap(panelRef, open, { onEscape: onClose });
+  const router = useRouter();
+
+  const handleViewProfile = () => {
+    if (data?.userId) {
+      onClose();
+      router.push(`/user/${data.userId}`);
+    }
+  };
 
   return (
     <>
@@ -72,7 +82,14 @@ export function PopupModal({
           ) : null}
         </div>
         <div className="pp-right">
-          <div className="pp-author">
+          <div
+            className={`pp-author${data?.userId ? " pp-author--clickable" : ""}`}
+            onClick={data?.userId ? handleViewProfile : undefined}
+            role={data?.userId ? "button" : undefined}
+            tabIndex={data?.userId ? 0 : undefined}
+            onKeyDown={data?.userId ? (e) => e.key === "Enter" && handleViewProfile() : undefined}
+            aria-label={data?.userId ? `View ${data.author}'s profile` : undefined}
+          >
             {data ? (
               <Image
                 className="pp-ava"
@@ -179,8 +196,16 @@ export function PopupModal({
           </div>
 
           <div className="pp-actions">
-            <button className="pp-act-primary">Follow Creator</button>
-            <button className="pp-act-secondary">Share {"->"}</button>
+            <FollowButton targetUserId={data?.userId} size="md" className="pp-act-primary" />
+            {data?.userId ? (
+              <button className="pp-act-secondary" onClick={handleViewProfile} type="button">
+                View Profile {"->"}
+              </button>
+            ) : (
+              <button className="pp-act-secondary" type="button">
+                Share {"->"}
+              </button>
+            )}
           </div>
         </div>
       </div>

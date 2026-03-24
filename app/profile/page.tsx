@@ -150,22 +150,27 @@ export default function ProfilePage() {
     let active = true;
     const loadStats = async () => {
       const supabase = getSupabaseBrowserClient();
-      const { count: postsCount } = await supabase
-        .from("posts")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id);
-      const { data: likeRows } = await supabase
-        .from("posts")
-        .select("likes_count")
-        .eq("user_id", user.id);
+      const [postsRes, likeRows, followersRes] = await Promise.all([
+        supabase
+          .from("posts")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id),
+        supabase.from("posts").select("likes_count").eq("user_id", user.id),
+        supabase
+          .from("follows")
+          .select("follower_id", { count: "exact", head: true })
+          .eq("following_id", user.id),
+      ]);
       if (!active) return;
       const likesTotal =
-        likeRows?.reduce((sum, row) => sum + (typeof row.likes_count === "number" ? row.likes_count : 0), 0) ??
-        0;
+        likeRows.data?.reduce(
+          (sum, row) => sum + (typeof row.likes_count === "number" ? row.likes_count : 0),
+          0
+        ) ?? 0;
       setStats({
-        posts: postsCount ?? 0,
+        posts: postsRes.count ?? 0,
         likes: likesTotal,
-        followers: 0,
+        followers: followersRes.count ?? 0,
       });
     };
     loadStats();

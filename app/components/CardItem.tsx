@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { CardData } from "../data/card-data";
 
 type CardItemProps = {
@@ -32,6 +33,7 @@ export function CardItem({
   onOpenPopup,
   onOpenReport,
 }: CardItemProps) {
+  const router = useRouter();
   const cardRef = useRef<HTMLDivElement | null>(null);
   const innerRef = useRef<HTMLDivElement | null>(null);
   const timerRef = useRef<HTMLDivElement | null>(null);
@@ -318,7 +320,18 @@ export function CardItem({
             </div>
 
             <div className="card-foot">
-              <div className="u-row">
+              <div
+                className={`u-row${data.userId ? " u-row--clickable" : ""}`}
+                onClick={
+                  data.userId
+                    ? (event) => {
+                        event.stopPropagation();
+                        router.push(`/user/${data.userId}`);
+                      }
+                    : undefined
+                }
+                title={data.userId ? `View ${data.author}'s profile` : undefined}
+              >
                 <Image className="u-ava" src={data.ava} alt={data.author} width={28} height={28} />
                 <span className="u-name">
                   {renderHighlight(data.handle)}
@@ -345,7 +358,18 @@ export function CardItem({
           </div>
 
           <div className="card-back">
-            <div className="b-author">
+            <div
+              className={`b-author${data.userId ? " b-author--clickable" : ""}`}
+              onClick={
+                data.userId
+                  ? (event) => {
+                      event.stopPropagation();
+                      router.push(`/user/${data.userId}`);
+                    }
+                  : undefined
+              }
+              title={data.userId ? `View ${data.author}'s profile` : undefined}
+            >
               <Image className="b-ava" src={data.ava} alt={data.author} width={32} height={32} />
               <div className="b-author-info">
                 <div className="b-author-name">{renderHighlight(data.author)}</div>

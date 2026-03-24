@@ -1,5 +1,6 @@
 export type CardData = {
   id?: string;
+  userId?: string;
   img: string;
   ava: string;
   author: string;

@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { CardGrid } from "../components/CardGrid";
 import { Loader } from "../components/Loader";
+import { FollowButton } from "../components/FollowButton";
+import { PopupModal, PopupInteractions } from "../components/PopupModal";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 import type { CardData } from "../data/card-data";
 
@@ -27,13 +30,55 @@ function initialsFrom(name?: string | null) {
     .join("");
 }
 
+function formatCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return `${n}`;
+}
+
+const initialPopupInteractions: PopupInteractions = {
+  like: false,
+  dislike: false,
+  save: false,
+  likePop: false,
+  dislikePop: false,
+  saveSweep: false,
+};
+
 export default function SearchPage() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterMode>("posts");
   const [profiles, setProfiles] = useState<ProfileResult[]>([]);
   const [posts, setPosts] = useState<CardData[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
+
+  const [popupIndex, setPopupIndex] = useState<number | null>(null);
+  const [popupOpen, setPopupOpen] = useState(false);
+  const [popupInteractions, setPopupInteractions] = useState<PopupInteractions>(initialPopupInteractions);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [reactions, setReactions] = useState<Map<string, "like" | "dislike">>(new Map());
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  const popupPanelRef = useRef<HTMLDivElement | null>(null);
+  const popupOverlayRef = useRef<HTMLDivElement | null>(null);
+  const isOpenRef = useRef(false);
+
+  const filteredPostsRef = useRef<CardData[]>([]);
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    const supabase = getSupabaseBrowserClient();
+    supabase.from("saved_posts").select("post_id").then(({ data }) => {
+      if (data) setSavedIds(new Set(data.map((r) => r.post_id)));
+    });
+  }, [currentUserId]);
 
   const loadProfiles = async () => {
     setLoadingProfiles(true);
@@ -42,19 +87,11 @@ export default function SearchPage() {
       .from("profiles")
       .select("user_id, username, full_name, avatar_url")
       .order("username", { ascending: true });
-    if (error) {
-      console.error("Error loading profiles:", error);
+    if (error || !data) {
       setProfiles([]);
       setLoadingProfiles(false);
       return;
     }
-    if (!data) {
-      console.warn("No profile data returned");
-      setProfiles([]);
-      setLoadingProfiles(false);
-      return;
-    }
-    console.log("Loaded profiles:", data);
     setProfiles(data as ProfileResult[]);
     setLoadingProfiles(false);
   };
@@ -71,8 +108,10 @@ export default function SearchPage() {
       return;
     }
     const mapped = data.map((row) => {
+      const impressions = typeof row.impressions_count === "number" ? row.impressions_count : null;
       return {
         id: row.id,
+        userId: row.user_id ?? undefined,
         img: row.img ?? "",
         ava: row.ava ?? "",
         author: row.author ?? "",
@@ -81,9 +120,15 @@ export default function SearchPage() {
         title: row.title ?? "",
         summary: row.summary ?? row.desc ?? "",
         details: row.desc ?? "",
-        views: row.views ?? "0",
-        likes: row.likes ?? "0",
-        dislikes: row.dislikes ?? undefined,
+        views: impressions !== null ? formatCount(impressions) : (row.views ?? "0"),
+        likes:
+          typeof row.likes_count === "number"
+            ? formatCount(row.likes_count)
+            : (row.likes ?? "0"),
+        dislikes:
+          typeof row.dislikes_count === "number"
+            ? formatCount(row.dislikes_count)
+            : undefined,
         comments: row.comments ?? "0",
         shares: row.shares ?? "0",
         createdAt: row.created_at ?? undefined,
@@ -141,6 +186,155 @@ export default function SearchPage() {
     });
   }, [normalizedQuery, posts]);
 
+  useEffect(() => {
+    filteredPostsRef.current = filteredPosts;
+  }, [filteredPosts]);
+
+  const applyPanelGeometry = useCallback(() => {
+    const panel = popupPanelRef.current;
+    if (!panel) return;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const mobile = vw <= 580;
+    if (mobile) {
+      panel.style.left = "0px";
+      panel.style.top = `${vh * 0.1}px`;
+      panel.style.width = `${vw}px`;
+      panel.style.height = `${vh * 0.9}px`;
+      panel.style.borderRadius = "22px 22px 0 0";
+    } else {
+      const w = Math.min(vw * 0.84, 880);
+      const h = Math.min(vh * 0.84, 590);
+      panel.style.left = `${(vw - w) / 2}px`;
+      panel.style.top = `${(vh - h) / 2}px`;
+      panel.style.width = `${w}px`;
+      panel.style.height = `${h}px`;
+      panel.style.borderRadius = "24px";
+    }
+  }, []);
+
+  const openPopup = useCallback(
+    (index: number) => {
+      if (isOpenRef.current) return;
+      isOpenRef.current = true;
+      setPopupIndex(index);
+      setPopupOpen(true);
+      setPopupInteractions({ ...initialPopupInteractions });
+
+      const panel = popupPanelRef.current;
+      const overlay = popupOverlayRef.current;
+      if (!panel || !overlay) return;
+
+      panel.classList.remove("ready", "content-visible");
+      applyPanelGeometry();
+      panel.style.opacity = "0";
+      panel.style.transform = "scale(0.94)";
+      panel.style.transition = "";
+      overlay.classList.add("active");
+
+      requestAnimationFrame(() => {
+        panel.style.transition =
+          "opacity 0.22s ease, transform 0.28s cubic-bezier(0.34,1.4,0.64,1)";
+        panel.style.opacity = "1";
+        panel.style.transform = "scale(1)";
+        setTimeout(() => {
+          panel.classList.add("ready", "content-visible");
+        }, 160);
+      });
+    },
+    [applyPanelGeometry]
+  );
+
+  const closePopup = useCallback(() => {
+    if (!isOpenRef.current) return;
+    isOpenRef.current = false;
+    setPopupOpen(false);
+
+    const panel = popupPanelRef.current;
+    const overlay = popupOverlayRef.current;
+    if (!panel || !overlay) return;
+
+    panel.classList.remove("ready", "content-visible");
+    overlay.classList.remove("active");
+    panel.style.transition = "opacity 0.18s ease, transform 0.2s ease";
+    panel.style.opacity = "0";
+    panel.style.transform = "scale(0.96)";
+
+    setTimeout(() => {
+      panel.style.cssText = "left:-9999px;opacity:0;";
+      setPopupIndex(null);
+    }, 220);
+  }, []);
+
+  const toggleSave = useCallback(
+    async (postId: string) => {
+      if (!currentUserId) return;
+      const wasSaved = savedIds.has(postId);
+      const next = new Set(savedIds);
+      if (wasSaved) next.delete(postId);
+      else next.add(postId);
+      setSavedIds(next);
+      const supabase = getSupabaseBrowserClient();
+      const { error } = wasSaved
+        ? await supabase.from("saved_posts").delete().eq("post_id", postId)
+        : await supabase.from("saved_posts").insert({ post_id: postId, user_id: currentUserId });
+      if (error) setSavedIds(savedIds);
+    },
+    [currentUserId, savedIds]
+  );
+
+  const toggleReaction = useCallback(
+    async (postId: string, reaction: "like" | "dislike") => {
+      if (!currentUserId) return;
+      const supabase = getSupabaseBrowserClient();
+      const next = new Map(reactions);
+      const current = reactions.get(postId);
+      if (current === reaction) next.delete(postId);
+      else next.set(postId, reaction);
+      setReactions(next);
+      await supabase.rpc("log_reaction", { p_post_id: postId, p_reaction: reaction });
+    },
+    [currentUserId, reactions]
+  );
+
+  const handlePopupLike = useCallback(() => {
+    const postId = popupIndex !== null ? filteredPostsRef.current[popupIndex]?.id : undefined;
+    if (postId) toggleReaction(postId, "like");
+    setPopupInteractions((prev) => ({
+      like: !prev.like,
+      dislike: !prev.like ? false : prev.dislike,
+      save: prev.save,
+      likePop: !prev.like,
+      dislikePop: false,
+      saveSweep: prev.saveSweep,
+    }));
+  }, [popupIndex, toggleReaction]);
+
+  const handlePopupDislike = useCallback(() => {
+    const postId = popupIndex !== null ? filteredPostsRef.current[popupIndex]?.id : undefined;
+    if (postId) toggleReaction(postId, "dislike");
+    setPopupInteractions((prev) => ({
+      like: !prev.dislike ? false : prev.like,
+      dislike: !prev.dislike,
+      save: prev.save,
+      likePop: false,
+      dislikePop: !prev.dislike,
+      saveSweep: prev.saveSweep,
+    }));
+  }, [popupIndex, toggleReaction]);
+
+  const handlePopupSave = useCallback(() => {
+    const postId = popupIndex !== null ? filteredPostsRef.current[popupIndex]?.id : undefined;
+    if (postId) toggleSave(postId);
+    setPopupInteractions((prev) => ({
+      ...prev,
+      save: !prev.save,
+      saveSweep: !prev.save,
+    }));
+  }, [popupIndex, toggleSave]);
+
+  const popupData = popupIndex !== null ? filteredPostsRef.current[popupIndex] : null;
+
   return (
     <AppShell>
       <div className="page-shell search-page">
@@ -190,7 +384,7 @@ export default function SearchPage() {
                 : `${filteredPosts.length} Posts`}
             </span>
             {normalizedQuery ? (
-              <span className="search-meta-query">Results for “{query.trim()}”</span>
+              <span className="search-meta-query">Results for &quot;{query.trim()}&quot;</span>
             ) : (
               <span className="search-meta-query">Type to start searching.</span>
             )}
@@ -208,22 +402,37 @@ export default function SearchPage() {
                 <div className="profile-list">
                   {filteredProfiles.map((profile) => (
                     <div className="profile-row" key={profile.user_id}>
-                      <div className="profile-row-avatar">
+                      <div
+                        className="profile-row-avatar"
+                        onClick={() => router.push(`/user/${profile.user_id}`)}
+                        style={{ cursor: "pointer" }}
+                      >
                         {profile.avatar_url ? (
                           <Image src={profile.avatar_url} alt={profile.username ?? "Profile"} fill />
                         ) : (
                           <span>{initialsFrom(profile.full_name ?? profile.username)}</span>
                         )}
                       </div>
-                      <div className="profile-row-info">
+                      <div
+                        className="profile-row-info"
+                        onClick={() => router.push(`/user/${profile.user_id}`)}
+                        style={{ cursor: "pointer" }}
+                      >
                         <div className="profile-row-username">
                           {profile.username ? `@${profile.username}` : "@user"}
                         </div>
                         <div className="profile-row-name">{profile.full_name ?? "CloudDuty User"}</div>
                       </div>
-                      <button className="profile-row-cta" type="button">
-                        View
-                      </button>
+                      <div className="profile-row-actions">
+                        <FollowButton targetUserId={profile.user_id} size="sm" />
+                        <button
+                          className="profile-row-cta"
+                          type="button"
+                          onClick={() => router.push(`/user/${profile.user_id}`)}
+                        >
+                          View
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -240,14 +449,32 @@ export default function SearchPage() {
               ) : (
                 <CardGrid
                   cards={filteredPosts}
-                  onOpenPopup={(_index, _rect) => {}}
-                  onOpenReport={(_index) => {}}
+                  highlightQuery={normalizedQuery}
+                  savedIds={savedIds}
+                  onToggleSave={toggleSave}
+                  reactions={reactions}
+                  onToggleReaction={toggleReaction}
+                  onOpenPopup={(index, _rect) => openPopup(index)}
+                  onOpenReport={() => {}}
                 />
               )}
             </div>
           )}
         </section>
       </div>
+
+      <PopupModal
+        open={popupOpen}
+        data={popupData}
+        interactions={popupInteractions}
+        onClose={closePopup}
+        onLike={handlePopupLike}
+        onDislike={handlePopupDislike}
+        onSave={handlePopupSave}
+        onReport={() => {}}
+        panelRef={popupPanelRef}
+        overlayRef={popupOverlayRef}
+      />
     </AppShell>
   );
 }

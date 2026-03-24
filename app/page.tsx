@@ -526,6 +526,7 @@ export default function Home() {
           typeof row.impressions_count === "number" ? row.impressions_count : null;
         return {
           id: row.id,
+          userId: row.user_id ?? undefined,
           img: row.img ?? "",
           ava: row.ava ?? "",
           author: row.author ?? "",
@@ -643,6 +644,7 @@ export default function Home() {
             typeof inserted.impressions_count === "number" ? inserted.impressions_count : null;
           const newCard: CardData = {
             id: inserted.id,
+            userId: (inserted as { user_id?: string }).user_id ?? undefined,
             img: inserted.img ?? "",
             ava: inserted.ava ?? "",
             author: inserted.author ?? "",
