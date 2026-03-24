@@ -418,10 +418,10 @@ export default function SearchPage() {
                         onClick={() => router.push(`/user/${profile.user_id}`)}
                         style={{ cursor: "pointer" }}
                       >
+                        <div className="profile-row-name">{profile.full_name ?? "CloudDuty User"}</div>
                         <div className="profile-row-username">
                           {profile.username ? `@${profile.username}` : "@user"}
                         </div>
-                        <div className="profile-row-name">{profile.full_name ?? "CloudDuty User"}</div>
                       </div>
                       <div className="profile-row-actions">
                         <FollowButton targetUserId={profile.user_id} size="sm" />
