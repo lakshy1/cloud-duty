@@ -154,7 +154,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
   transition:background .4s,box-shadow .4s;
 }
 .sb-logo{text-decoration:none;color:inherit}
-.sb-logo svg{width:24px;height:24px}
+.sb-logo svg{width:28px;height:28px}
 .sb-sep{width:44px;height:1px;background:var(--sb-sep);margin:2px 0;flex-shrink:0;transition:background .4s}
 .sb-btn{
   width:52px;height:52px;border-radius:13px;display:grid;place-items:center;
@@ -372,7 +372,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
 /* profile */
 .prof{display:flex;align-items:center;gap:5px;cursor:pointer;flex-shrink:0}
 .prof-ava{
-  width:44px;height:44px;border-radius:50%;
+  width:40px;height:40px;border-radius:50%;
   background:var(--ava-bg);
   display:grid;place-items:center;
   font-size:.62rem;font-weight:700;color:#fff;transition:background .4s;
