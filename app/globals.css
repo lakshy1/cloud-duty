@@ -3,7 +3,7 @@
 
 /* ══ LAYOUT CONSTANTS ═══════════════════════════════════════ */
 :root{
-  --sb-w:72px;--hdr-h:71px;--ftr-h:36px;
+  --sb-w:72px;--hdr-h:74px;--ftr-h:36px;
   --fs-xs:0.7rem;
   --fs-sm:0.8rem;
   --fs-md:0.95rem;
@@ -192,9 +192,9 @@ body[data-route="inbox"] .feed{overflow:hidden}
 }
 /* search — glassy pill, expands on focus */
 .search-bar{
-  width:300px;flex-shrink:0;
+  width:320px;flex-shrink:0;
   display:flex;align-items:center;gap:8px;
-  height:40px;padding:0 14px;
+  height:44px;padding:0 16px;
   background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.02));
   border:1px solid rgba(255,255,255,.12);
   border-radius:999px;
@@ -372,7 +372,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
 /* profile */
 .prof{display:flex;align-items:center;gap:5px;cursor:pointer;flex-shrink:0}
 .prof-ava{
-  width:34px;height:34px;border-radius:50%;
+  width:38px;height:38px;border-radius:50%;
   background:var(--ava-bg);
   display:grid;place-items:center;
   font-size:.62rem;font-weight:700;color:#fff;transition:background .4s;
