@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
-import { useTheme } from "../theme-provider";
 
 export default function ResetPasswordPage() {
-  const { theme, toggleTheme } = useTheme();
   const supabase = getSupabaseBrowserClient();
 
   const [password, setPassword] = useState("");
@@ -78,20 +76,6 @@ export default function ResetPasswordPage() {
                 <p className="auth-kicker">Reset password</p>
                 <h2 className="auth-title">Set a new password</h2>
               </div>
-              <button
-                className={`theme-slider auth-theme${theme === "obsidian" ? " on" : ""}`}
-                type="button"
-                role="switch"
-                aria-checked={theme === "obsidian"}
-                aria-label="Toggle theme"
-                onClick={toggleTheme}
-              >
-                <span className="theme-track" />
-                <span className="theme-thumb">
-                  <span className="theme-glyph sun" aria-hidden="true" />
-                  <span className="theme-glyph moon" aria-hidden="true" />
-                </span>
-              </button>
             </div>
           </div>
 

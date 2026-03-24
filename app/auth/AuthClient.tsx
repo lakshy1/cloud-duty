@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { Provider, User } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
-import { useTheme } from "../theme-provider";
 
 type AuthMode = "login" | "signup";
 type LoginMode = "password" | "phone";
@@ -44,7 +43,6 @@ const passwordRules = [
 ];
 
 export default function AuthClient() {
-  const { theme, toggleTheme, mounted } = useTheme();
   const searchParams = useSearchParams();
   const supabase = getSupabaseBrowserClient();
   const redirectBase =
@@ -303,21 +301,6 @@ export default function AuthClient() {
                 <div>
                   <h2 className="auth-title">Login</h2>
                 </div>
-                <button
-                  className={`theme-slider auth-theme${mounted && theme === "obsidian" ? " on" : ""}`}
-                  type="button"
-                  role="switch"
-                  aria-checked={mounted && theme === "obsidian"}
-                  aria-label="Toggle theme"
-                  suppressHydrationWarning
-                  onClick={toggleTheme}
-                >
-                  <span className="theme-track" />
-                  <span className="theme-thumb">
-                    <span className="theme-glyph sun" aria-hidden="true" />
-                    <span className="theme-glyph moon" aria-hidden="true" />
-                  </span>
-                </button>
               </div>
             </div>
 
@@ -513,21 +496,6 @@ export default function AuthClient() {
                 <div>
                   <h2 className="auth-title">Signup</h2>
                 </div>
-                <button
-                  className={`theme-slider auth-theme${mounted && theme === "obsidian" ? " on" : ""}`}
-                  type="button"
-                  role="switch"
-                  aria-checked={mounted && theme === "obsidian"}
-                  aria-label="Toggle theme"
-                  suppressHydrationWarning
-                  onClick={toggleTheme}
-                >
-                  <span className="theme-track" />
-                  <span className="theme-thumb">
-                    <span className="theme-glyph sun" aria-hidden="true" />
-                    <span className="theme-glyph moon" aria-hidden="true" />
-                  </span>
-                </button>
               </div>
             </div>
 

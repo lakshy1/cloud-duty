@@ -5,24 +5,16 @@ import { getSupabaseBrowserClient } from "../lib/supabase/client";
 import { Icon } from "./Icon";
 import { useUIState } from "../state/ui-state";
 
-export type ThemeName = "minimal" | "obsidian";
-
 type TopbarProps = {
-  theme: ThemeName;
-  onThemeSelect: (nextTheme: ThemeName) => void;
   drawerOpen: boolean;
   onToggleDrawer: () => void;
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
-  themeReady?: boolean;
 };
 
 export function Topbar({
-  theme,
-  onThemeSelect,
   drawerOpen,
   onToggleDrawer,
   searchInputRef,
-  themeReady = true,
 }: TopbarProps) {
   const { searchQuery, setSearchQuery, isLoggedIn } = useUIState();
   const [profOpen, setProfOpen] = useState(false);
@@ -30,11 +22,6 @@ export function Topbar({
   const [initials, setInitials] = useState("?");
   const [userName, setUserName] = useState("Account");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-
-  const handleThemeToggle = useCallback(() => {
-    const nextTheme: ThemeName = theme === "minimal" ? "obsidian" : "minimal";
-    onThemeSelect(nextTheme);
-  }, [onThemeSelect, theme]);
 
   useEffect(() => {
     const onDocClick = (event: MouseEvent) => {
@@ -127,27 +114,6 @@ export function Topbar({
       </div>
 
       <div className="topbar-space" />
-
-      <div className="theme-switch">
-        <button
-          className={`theme-slider${themeReady && theme === "obsidian" ? " on" : ""}`}
-          type="button"
-          role="switch"
-          aria-checked={themeReady && theme === "obsidian"}
-          aria-label="Toggle dark mode"
-          suppressHydrationWarning
-          onClick={(event) => {
-            event.stopPropagation();
-            handleThemeToggle();
-          }}
-        >
-          <span className="theme-track" />
-          <span className="theme-thumb">
-            <span className="theme-glyph sun" aria-hidden="true" />
-            <span className="theme-glyph moon" aria-hidden="true" />
-          </span>
-        </button>
-      </div>
 
       {isLoggedIn === true ? (
         <div className={`prof-drop${profOpen ? " open" : ""}`} id="profDrop" ref={profDropRef}>
