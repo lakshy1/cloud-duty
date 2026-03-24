@@ -37,3 +37,7 @@ externalPort = 80
 
 [userenv.shared]
 NEXT_PUBLIC_SITE_URL = "https://cloudduty.netlify.app"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 60000
