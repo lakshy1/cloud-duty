@@ -368,46 +368,47 @@ export default function UserProfilePage() {
 
         {/* ── Profile header ── */}
         <div className="up-header">
-          {/* Avatar — overhangs the cover */}
-          <div className="up-avatar">
-            {profile.avatar_url ? (
-              <Image
-                src={profile.avatar_url}
-                alt={displayName}
-                fill
-                sizes="112px"
-                className="up-avatar-img"
-              />
-            ) : (
-              <span className="up-avatar-initials">{initials(displayName)}</span>
-            )}
+          {/* Top row: avatar on left, action button on right */}
+          <div className="up-header-top">
+            <div className="up-avatar">
+              {profile.avatar_url ? (
+                <Image
+                  src={profile.avatar_url}
+                  alt={displayName}
+                  fill
+                  sizes="80px"
+                  className="up-avatar-img"
+                />
+              ) : (
+                <span className="up-avatar-initials">{initials(displayName)}</span>
+              )}
+            </div>
+            <div className="up-header-actions">
+              {currentUserId === targetUserId ? (
+                <button
+                  className="up-edit-btn"
+                  onClick={() => router.push("/profile")}
+                  type="button"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                  Edit Profile
+                </button>
+              ) : (
+                <FollowButton targetUserId={targetUserId} size="md" />
+              )}
+            </div>
           </div>
 
-          {/* Action buttons aligned top-right */}
-          <div className="up-header-actions">
-            {currentUserId === targetUserId ? (
-              <button
-                className="up-edit-btn"
-                onClick={() => router.push("/profile")}
-                type="button"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </svg>
-                Edit Profile
-              </button>
-            ) : (
-              <FollowButton targetUserId={targetUserId} size="md" />
-            )}
-          </div>
-
-          {/* Name, handle, stats */}
+          {/* Name + handle */}
           <div className="up-identity">
             <h1 className="up-name">{displayName}</h1>
             {handle && <div className="up-handle">{handle}</div>}
           </div>
 
+          {/* Stats row */}
           <div className="up-stats">
             <div className="up-stat">
               <strong>{formatCount(stats.posts)}</strong>

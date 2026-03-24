@@ -3362,46 +3362,51 @@ body[data-route="inbox"] .feed{overflow:hidden}
 
 /* ── Cover photo ── */
 .up-cover{
-  position:relative;height:260px;flex-shrink:0;
+  position:relative;height:185px;flex-shrink:0;
   background:linear-gradient(135deg,
-    color-mix(in srgb,var(--accent) 22%,var(--bg)) 0%,
-    color-mix(in srgb,var(--accent) 8%,var(--surface)) 60%,
+    color-mix(in srgb,var(--accent) 30%,var(--bg)) 0%,
+    color-mix(in srgb,var(--accent) 10%,var(--surface)) 70%,
     var(--surface) 100%);
   background-size:cover;background-position:center;
-  border-radius:20px 20px 0 0;overflow:hidden;
+  border-radius:18px 18px 0 0;overflow:hidden;
 }
 .up-cover-fade{
   position:absolute;inset:0;
-  background:linear-gradient(to bottom,transparent 40%,color-mix(in srgb,var(--bg) 55%,transparent) 100%);
+  background:linear-gradient(to bottom,transparent 50%,rgba(0,0,0,.18) 100%);
 }
 
 /* ── Profile header ── */
 .up-header{
-  position:relative;
+  display:flex;flex-direction:column;gap:14px;
   background:var(--surface);
   border-left:1px solid var(--border);border-right:1px solid var(--border);
   border-bottom:1px solid var(--border);
-  padding:0 32px 24px;
+  padding:0 28px 22px;
 }
 
-/* Avatar — positioned to overhang the cover */
+/* Top row: avatar (left, overhangs cover) + action button (right) */
+.up-header-top{
+  display:flex;align-items:flex-start;justify-content:space-between;
+}
+
+/* Avatar pulls up by half its height into the cover */
 .up-avatar{
-  position:absolute;top:-52px;left:32px;
-  width:104px;height:104px;border-radius:50%;
-  border:4px solid var(--surface);overflow:hidden;flex-shrink:0;
+  margin-top:-38px;
+  width:76px;height:76px;border-radius:50%;
+  border:3px solid var(--surface);overflow:hidden;flex-shrink:0;
   background:color-mix(in srgb,var(--accent) 20%,var(--bg));
-  box-shadow:0 4px 24px rgba(0,0,0,.18);
+  box-shadow:0 2px 16px rgba(0,0,0,.20);
   display:flex;align-items:center;justify-content:center;
+  position:relative;z-index:2;
 }
 .up-avatar-img{object-fit:cover;width:100%;height:100%}
 .up-avatar-initials{
-  font-size:2rem;font-weight:800;color:var(--accent);letter-spacing:-.03em;
+  font-size:1.5rem;font-weight:800;color:var(--accent);letter-spacing:-.03em;
 }
 
-/* Actions: pinned top-right */
+/* Action buttons sit in the header with natural top padding */
 .up-header-actions{
-  position:absolute;top:20px;right:32px;
-  display:flex;align-items:center;gap:10px;
+  display:flex;align-items:center;gap:10px;padding-top:14px;
 }
 .up-edit-btn{
   display:inline-flex;align-items:center;gap:7px;
@@ -3415,32 +3420,29 @@ body[data-route="inbox"] .feed{overflow:hidden}
   width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none;flex-shrink:0;
 }
 
-/* Name + handle — offset to clear avatar */
-.up-identity{
-  padding-top:68px;
-}
+/* Name + handle */
+.up-identity{margin-top:2px}
 .up-name{
-  font-size:1.55rem;font-weight:800;color:var(--text);
-  letter-spacing:-.03em;margin:0 0 4px;line-height:1.15;
+  font-size:1.35rem;font-weight:800;color:var(--text);
+  letter-spacing:-.03em;margin:0 0 3px;line-height:1.2;
 }
 .up-handle{
-  font-size:.88rem;color:var(--muted);font-weight:500;
+  font-size:.84rem;color:var(--muted);font-weight:500;
 }
 
-/* Inline stats row */
+/* Stats row */
 .up-stats{
-  display:flex;align-items:center;gap:0;margin-top:18px;flex-wrap:wrap;
+  display:flex;align-items:center;flex-wrap:wrap;gap:0;
 }
 .up-stat{
-  display:flex;align-items:baseline;gap:5px;padding:0 20px 0 0;
-  font-size:.88rem;color:var(--muted);
+  display:flex;align-items:baseline;gap:5px;padding-right:16px;
+  font-size:.85rem;color:var(--muted);
 }
-.up-stat:first-child{padding-left:0}
 .up-stat strong{
-  font-size:1.1rem;font-weight:800;color:var(--text);letter-spacing:-.03em;
+  font-size:1.05rem;font-weight:800;color:var(--text);letter-spacing:-.02em;
 }
 .up-stat-sep{
-  width:1px;height:16px;background:var(--border);margin-right:20px;flex-shrink:0;
+  width:1px;height:14px;background:var(--border);margin-right:16px;flex-shrink:0;
 }
 
 /* ── Posts section ── */
@@ -3512,19 +3514,18 @@ body[data-route="inbox"] .feed{overflow:hidden}
 .up-back-btn:hover{background:var(--bg)}
 
 /* ── Responsive ── */
-@media(max-width:680px){
-  .up-cover{height:190px;border-radius:16px 16px 0 0}
-  .up-header{padding:0 20px 20px}
-  .up-avatar{width:80px;height:80px;top:-40px;left:20px}
-  .up-avatar-initials{font-size:1.4rem}
-  .up-header-actions{top:14px;right:20px}
-  .up-identity{padding-top:54px}
-  .up-name{font-size:1.2rem}
-  .up-stat{font-size:.82rem}
-  .up-stat strong{font-size:1rem}
-  .up-stat-sep{margin-right:14px}
-  .up-stat{padding-right:14px}
-  .up-posts-section{padding:20px 16px 28px;border-radius:0 0 16px 16px}
+@media(max-width:640px){
+  .up-cover{height:140px;border-radius:14px 14px 0 0}
+  .up-header{padding:0 16px 18px;gap:10px}
+  .up-avatar{width:64px;height:64px;margin-top:-32px}
+  .up-avatar-initials{font-size:1.2rem}
+  .up-header-actions{padding-top:10px}
+  .up-name{font-size:1.15rem}
+  .up-handle{font-size:.8rem}
+  .up-stat{font-size:.8rem;padding-right:12px}
+  .up-stat strong{font-size:.95rem}
+  .up-stat-sep{margin-right:12px}
+  .up-posts-section{padding:18px 14px 26px;border-radius:0 0 14px 14px}
 }
 
 @media (max-width:480px){
