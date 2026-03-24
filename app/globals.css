@@ -3009,14 +3009,14 @@ body[data-route="inbox"] .feed{overflow:hidden}
   color:#1a1410;
 }
 [data-theme="minimal"] .auth-message{
-  background:rgba(34,130,70,.08);
-  border-color:rgba(34,130,70,.22);
-  color:#1a5c30;
+  background:rgba(34,130,70,.09);
+  border-color:rgba(34,130,70,.25);
+  color:#1a5c30 !important;
 }
 [data-theme="minimal"] .auth-error{
   background:rgba(201,97,74,.09);
-  border-color:rgba(201,97,74,.25);
-  color:#8b2c20;
+  border-color:rgba(201,97,74,.28);
+  color:#8b2c20 !important;
 }
 [data-theme="minimal"] .auth-label{
   color:#6b5a4e;
