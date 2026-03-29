@@ -34,6 +34,7 @@
   --sw-bd:rgba(192,132,252,.26);--ftr-fg:rgba(255,255,255,.2);
   --surface:rgba(255,255,255,.06);--border:rgba(255,255,255,.07);
   --flip-bar:#c084fc;
+  --lp-panel-bg:#16103a;--lp-panel-border:rgba(192,132,252,.22);
 }
 
 /* ══ THEME: NEON (cyber green/teal dark mode) ═══════════════ */
@@ -58,6 +59,7 @@
   --sw-bd:rgba(0,255,170,.22);--ftr-fg:rgba(0,255,170,.22);
   --surface:rgba(0,255,170,.05);--border:rgba(0,255,170,.08);
   --flip-bar:#00ffaa;
+  --lp-panel-bg:#021a13;--lp-panel-border:rgba(0,255,170,.2);
 }
 
 /* ══ THEME: OBSIDIAN (sophisticated dark, amber/gold) ══════ */
@@ -82,6 +84,7 @@
   --sw-bd:rgba(201,169,110,.2);--ftr-fg:rgba(255,255,255,.16);
   --surface:rgba(255,255,255,.04);--border:rgba(255,255,255,.06);
   --flip-bar:#c9a96e;
+  --lp-panel-bg:#1c1c20;--lp-panel-border:rgba(255,255,255,.1);
 }
 
 /* ══ THEME: MINIMAL (warm stone light) ═════════════════════ */
@@ -105,6 +108,7 @@
   --sw-bd:rgba(176,141,106,.26);--ftr-fg:rgba(26,20,16,.26);
   --surface:rgba(0,0,0,.03);--border:rgba(0,0,0,.07);
   --flip-bar:#b08d6a;
+  --lp-panel-bg:#ffffff;--lp-panel-border:rgba(0,0,0,.12);
 }
 
 /* ══ BASE ══════════════════════════════════════════════════ */
@@ -3224,13 +3228,13 @@ body[data-route="inbox"] .feed{overflow:hidden}
 
 .login-prompt-panel{
   position:relative;
-  background:var(--surface,#fff);
-  border:1px solid var(--border,rgba(0,0,0,.1));
+  background:var(--lp-panel-bg,#fff);
+  border:1px solid var(--lp-panel-border,rgba(0,0,0,.1));
   border-radius:24px;
   padding:40px 36px 36px;
   max-width:380px;width:100%;
   display:flex;flex-direction:column;align-items:center;gap:12px;
-  box-shadow:0 24px 60px rgba(0,0,0,.18);
+  box-shadow:0 24px 60px rgba(0,0,0,.28);
   animation:lp-slide-up .22s cubic-bezier(.34,1.42,.64,1) both;
 }
 @keyframes lp-slide-up{
@@ -3281,20 +3285,6 @@ body[data-route="inbox"] .feed{overflow:hidden}
   transition:color .15s;
 }
 .login-prompt-link:hover{color:var(--text)}
-
-[data-theme="minimal"] .login-prompt-panel{
-  background:#ffffff;border-color:rgba(0,0,0,.12);
-  box-shadow:0 24px 60px rgba(0,0,0,.20);
-}
-[data-theme="minimal"] .login-prompt-btn{
-  background:#1a1410;color:#f5f2ee;
-}
-[data-theme="obsidian"] .login-prompt-panel{
-  background:#1c1c20;border-color:rgba(255,255,255,.1);
-}
-[data-theme="obsidian"] .login-prompt-btn{
-  background:#fff;color:#1a1410;
-}
 
 /* ── Email confirmed page ── */
 .email-confirmed-page{
