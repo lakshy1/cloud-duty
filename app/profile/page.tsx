@@ -2,10 +2,21 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import Image from "next/image";
 import { AppShell } from "../components/AppShell";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 import { useUIState } from "../state/ui-state";
 import { Loader } from "../components/Loader";
+
+type ProfilePost = {
+  id: string;
+  title: string;
+  summary: string;
+  img: string | null;
+  tag: string | null;
+  likes_count: number | null;
+  created_at: string | null;
+};
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
@@ -35,6 +46,8 @@ export default function ProfilePage() {
   const [savedSkills, setSavedSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState("");
   const [editSkills, setEditSkills] = useState(false);
+  const [myPosts, setMyPosts] = useState<ProfilePost[]>([]);
+  const [postsLoading, setPostsLoading] = useState(true);
   const { pushToast } = useUIState();
 
   useEffect(() => {
@@ -199,6 +212,23 @@ export default function ProfilePage() {
     return () => {
       active = false;
     };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) { setPostsLoading(false); return; }
+    let active = true;
+    const supabase = getSupabaseBrowserClient();
+    supabase
+      .from("posts")
+      .select("id,title,summary,img,tag,likes_count,created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (!active) return;
+        setMyPosts((data ?? []) as ProfilePost[]);
+        setPostsLoading(false);
+      });
+    return () => { active = false; };
   }, [user?.id]);
 
   const handleSaveUsername = async () => {
@@ -676,25 +706,6 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="page-kv">
-            <div>
-              <p className="page-label">Full name</p>
-              <p className="page-value">{displayFullName || "Not set"}</p>
-            </div>
-            <div>
-              <p className="page-label">Email</p>
-              <p className="page-value">{user?.email ?? "Not available"}</p>
-            </div>
-            <div>
-              <p className="page-label">Phone</p>
-              <p className="page-value">{meta.phone ?? "Not set"}</p>
-            </div>
-            <div>
-              <p className="page-label">Provider</p>
-              <p className="page-value">{meta.provider ?? "email"}</p>
-            </div>
-          </div>
-
           {/* ── About / Bio ── */}
           <div className="prof-section">
             <div className="prof-section-head">
@@ -781,6 +792,59 @@ export default function ProfilePage() {
               </div>
             ) : (
               <p className="prof-bio-empty">Add skills to showcase your expertise.</p>
+            )}
+          </div>
+
+          {/* ── My Posts ── */}
+          <div className="prof-section prof-posts-section">
+            <div className="prof-section-head">
+              <div className="prof-section-title">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                My Posts
+              </div>
+              {myPosts.length > 0 && (
+                <a href="/my-posts" className="profile-mini-btn" style={{ textDecoration: "none" }}>
+                  Manage
+                </a>
+              )}
+            </div>
+            {postsLoading ? (
+              <div style={{ padding: "24px 0" }}><Loader /></div>
+            ) : myPosts.length === 0 ? (
+              <p className="prof-bio-empty">You haven&apos;t published any posts yet.</p>
+            ) : (
+              <div className="prof-post-grid">
+                {myPosts.map((post) => (
+                  <a key={post.id} href="/my-posts" className="prof-post-card">
+                    {post.img ? (
+                      <div className="prof-post-thumb">
+                        <Image src={post.img} alt={post.title} fill sizes="220px" style={{ objectFit: "cover" }} />
+                      </div>
+                    ) : (
+                      <div className="prof-post-thumb prof-post-thumb-placeholder">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                      </div>
+                    )}
+                    <div className="prof-post-body">
+                      {post.tag && <span className="prof-post-tag">{post.tag}</span>}
+                      <p className="prof-post-title">{post.title}</p>
+                      <div className="prof-post-meta">
+                        {post.likes_count != null && (
+                          <span className="prof-post-likes">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                            {post.likes_count}
+                          </span>
+                        )}
+                        {post.created_at && (
+                          <span className="prof-post-date">
+                            {new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
             )}
           </div>
             </>

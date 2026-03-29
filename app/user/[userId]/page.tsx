@@ -99,7 +99,7 @@ export default function UserProfilePage() {
       }
       setProfile({ ...profileData, bio: null, skills: null });
 
-      supabase
+      void supabase
         .from("profiles")
         .select("bio, skills")
         .eq("user_id", targetUserId)
@@ -108,8 +108,7 @@ export default function UserProfilePage() {
           if (active && extra) {
             setProfile((prev) => prev ? { ...prev, bio: extra.bio ?? null, skills: extra.skills ?? null } : prev);
           }
-        })
-        .catch(() => {});
+        });
 
       const [postsRes, followersRes, followingRes, likesRes] = await Promise.all([
         supabase
