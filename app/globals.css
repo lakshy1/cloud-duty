@@ -3282,6 +3282,13 @@ body[data-route="inbox"] .feed{overflow:hidden}
 }
 .login-prompt-link:hover{color:var(--text)}
 
+[data-theme="minimal"] .login-prompt-panel{
+  background:#ffffff;border-color:rgba(0,0,0,.12);
+  box-shadow:0 24px 60px rgba(0,0,0,.20);
+}
+[data-theme="minimal"] .login-prompt-btn{
+  background:#1a1410;color:#f5f2ee;
+}
 [data-theme="obsidian"] .login-prompt-panel{
   background:#1c1c20;border-color:rgba(255,255,255,.1);
 }
