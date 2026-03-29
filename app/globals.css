@@ -3507,7 +3507,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
     color-mix(in srgb,var(--accent) 15%,var(--surface)) 60%,
     var(--surface) 100%);
   background-size:cover;background-position:center top;
-  border-radius:20px 20px 0 0;overflow:hidden;
+  border-radius:0;overflow:hidden;
 }
 .up-cover-fade{
   position:absolute;inset:0;
@@ -3520,8 +3520,8 @@ body[data-route="inbox"] .feed{overflow:hidden}
   border-left:1px solid var(--border);
   border-right:1px solid var(--border);
   border-bottom:1px solid var(--border);
-  border-radius:0 0 20px 20px;
-  padding:0 30px 0;
+  border-radius:0 0 16px 16px;
+  padding:0 28px 0;
   display:flex;flex-direction:column;
 }
 
@@ -3600,8 +3600,8 @@ body[data-route="inbox"] .feed{overflow:hidden}
 .up-stats-bar{
   display:flex;align-items:center;flex-wrap:wrap;
   border-top:1px solid var(--divider);
-  margin:4px -30px 0;
-  padding:13px 30px;
+  margin:4px -28px 0;
+  padding:13px 28px;
   gap:0;
 }
 .up-stat{
@@ -3692,17 +3692,17 @@ a.up-stat:hover strong{ color:var(--accent)}
 
 /* ── Responsive ── */
 @media(max-width:640px){
-  .up-cover{height:160px;border-radius:16px 16px 0 0}
-  .up-profile-card{padding:0 18px 0}
-  .up-avatar{width:96px;height:96px;margin-top:-48px;border-width:4px}
-  .up-avatar-initials{font-size:2rem}
-  .up-header-actions{padding-top:12px}
-  .up-name{font-size:1.22rem}
-  .up-handle{font-size:.82rem}
-  .up-stats-bar{margin:4px -18px 0;padding:12px 18px}
-  .up-stat strong{font-size:.9rem}
+  .up-cover{height:200px;border-radius:0}
+  .up-profile-card{padding:0 20px 0;border-radius:0 0 14px 14px}
+  .up-avatar{width:116px;height:116px;margin-top:-58px;border-width:4px}
+  .up-avatar-initials{font-size:2.2rem}
+  .up-header-actions{padding-top:14px}
+  .up-name{font-size:1.35rem}
+  .up-handle{font-size:.84rem}
+  .up-stats-bar{margin:4px -20px 0;padding:12px 20px;flex-wrap:wrap;gap:2px 0}
+  .up-stat strong{font-size:.92rem}
   .up-stat-dot{margin:0 10px}
-  .up-posts-section{padding:18px 16px 36px;border-radius:16px;margin-top:14px}
+  .up-posts-section{padding:20px 18px 36px;border-radius:14px;margin-top:14px}
 }
 
 @media (max-width:480px){
