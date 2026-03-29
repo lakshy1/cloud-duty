@@ -3572,7 +3572,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
 .up-bio{
   font-size:.91rem;line-height:1.72;color:var(--text);
   white-space:pre-wrap;word-break:break-word;
-  margin:0 0 14px;max-width:620px;
+  margin:0 0 14px;width:100%;
 }
 
 /* ── Skills row ── */
