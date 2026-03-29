@@ -374,7 +374,7 @@ export default function UserProfilePage() {
     <AppShell>
       <div className="up-page">
 
-        {/* ── Cover photo ── */}
+        {/* ── Cover banner ── */}
         <div
           className="up-cover"
           style={profile.cover_url ? { backgroundImage: `url(${profile.cover_url})` } : undefined}
@@ -383,17 +383,18 @@ export default function UserProfilePage() {
           <div className="up-cover-fade" />
         </div>
 
-        {/* ── Profile header ── */}
-        <div className="up-header">
-          {/* Top row: avatar on left, action button on right */}
-          <div className="up-header-top">
+        {/* ── Unified profile card ── */}
+        <div className="up-profile-card">
+
+          {/* Avatar row: avatar overlaps cover, actions aligned right */}
+          <div className="up-avatar-row">
             <div className="up-avatar">
               {profile.avatar_url ? (
                 <Image
                   src={profile.avatar_url}
                   alt={displayName}
                   fill
-                  sizes="120px"
+                  sizes="132px"
                   className="up-avatar-img"
                 />
               ) : (
@@ -422,26 +423,40 @@ export default function UserProfilePage() {
           {/* Name + handle */}
           <div className="up-identity">
             <h1 className="up-name">{displayName}</h1>
-            {handle && <div className="up-handle">{handle}</div>}
+            {handle && <p className="up-handle">{handle}</p>}
           </div>
 
-          {/* Stats row */}
-          <div className="up-stats">
-            <div className="up-stat">
+          {/* Bio — inline in the card, no separate box */}
+          {profile.bio && (
+            <p className="up-bio">{profile.bio}</p>
+          )}
+
+          {/* Skills — pills, inline in the card */}
+          {profile.skills && profile.skills.length > 0 && (
+            <div className="up-skills-row">
+              {profile.skills.map((sk, i) => (
+                <span className="up-skill-pill" key={sk + i}>{sk}</span>
+              ))}
+            </div>
+          )}
+
+          {/* Stats bar */}
+          <div className="up-stats-bar">
+            <a className="up-stat" href="#posts">
               <strong>{formatCount(stats.posts)}</strong>
               <span>Posts</span>
-            </div>
-            <div className="up-stat-sep" aria-hidden="true" />
-            <div className="up-stat">
+            </a>
+            <span className="up-stat-dot" aria-hidden="true" />
+            <a className="up-stat" href="#posts">
               <strong>{formatCount(stats.followers)}</strong>
               <span>Followers</span>
-            </div>
-            <div className="up-stat-sep" aria-hidden="true" />
-            <div className="up-stat">
+            </a>
+            <span className="up-stat-dot" aria-hidden="true" />
+            <a className="up-stat" href="#posts">
               <strong>{formatCount(stats.following)}</strong>
               <span>Following</span>
-            </div>
-            <div className="up-stat-sep" aria-hidden="true" />
+            </a>
+            <span className="up-stat-dot" aria-hidden="true" />
             <div className="up-stat">
               <strong>{formatCount(stats.likes)}</strong>
               <span>Likes</span>
@@ -449,34 +464,8 @@ export default function UserProfilePage() {
           </div>
         </div>
 
-        {/* ── About section ── */}
-        {profile.bio && (
-          <div className="up-section up-about">
-            <div className="up-section-head">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-              <span>About</span>
-            </div>
-            <p className="up-bio-text">{profile.bio}</p>
-          </div>
-        )}
-
-        {/* ── Skills section ── */}
-        {profile.skills && profile.skills.length > 0 && (
-          <div className="up-section up-skills-section">
-            <div className="up-section-head">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-              <span>Skills</span>
-            </div>
-            <div className="up-skills-list">
-              {profile.skills.map((sk, i) => (
-                <span className="up-skill-pill" key={sk + i}>{sk}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* ── Posts section ── */}
-        <div className="up-posts-section">
+        <div className="up-posts-section" id="posts">
           <div className="up-posts-header">
             <div className="up-posts-title">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -485,7 +474,9 @@ export default function UserProfilePage() {
               </svg>
               Posts
             </div>
-            <span className="up-posts-badge">{stats.posts}</span>
+            {stats.posts > 0 && (
+              <span className="up-posts-badge">{stats.posts}</span>
+            )}
           </div>
 
           {posts.length === 0 ? (
