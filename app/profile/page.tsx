@@ -95,27 +95,38 @@ export default function ProfilePage() {
 
   const ensureProfile = async (userId: string) => {
     const supabase = getSupabaseBrowserClient();
-    const { data } = await supabase
+    let data: Record<string, unknown> | null = null;
+    const { data: fullData, error: fullError } = await supabase
       .from("profiles")
       .select("username, full_name, avatar_url, cover_url, bio, skills")
       .eq("user_id", userId)
       .maybeSingle();
-    if (data?.avatar_url) setAvatarUrl(data.avatar_url);
-    if (data?.cover_url) setCoverUrl(data.cover_url);
-    if (data?.bio) { setBio(data.bio); setSavedBio(data.bio); }
-    if (Array.isArray(data?.skills) && data.skills.length > 0) {
-      setSkills(data.skills); setSavedSkills(data.skills);
+    if (fullError) {
+      const { data: basicData } = await supabase
+        .from("profiles")
+        .select("username, full_name, avatar_url, cover_url")
+        .eq("user_id", userId)
+        .maybeSingle();
+      data = basicData as Record<string, unknown> | null;
+    } else {
+      data = fullData as Record<string, unknown> | null;
+    }
+    if (data?.avatar_url) setAvatarUrl(data.avatar_url as string);
+    if (data?.cover_url) setCoverUrl(data.cover_url as string);
+    if (data?.bio) { setBio(data.bio as string); setSavedBio(data.bio as string); }
+    if (Array.isArray(data?.skills) && (data.skills as string[]).length > 0) {
+      setSkills(data.skills as string[]); setSavedSkills(data.skills as string[]);
     }
     if (data?.full_name) {
-      setFullNameInput(data.full_name);
-      setSavedFullName(data.full_name);
+      setFullNameInput(data.full_name as string);
+      setSavedFullName(data.full_name as string);
     } else if (metaFullName) {
       setFullNameInput(metaFullName);
       setSavedFullName(metaFullName);
     }
     if (data?.username) {
-      setUsername(data.username);
-      setSavedUsername(data.username);
+      setUsername(data.username as string);
+      setSavedUsername(data.username as string);
       setEditUsername(false);
       return;
     }

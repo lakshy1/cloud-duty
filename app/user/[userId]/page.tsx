@@ -85,19 +85,31 @@ export default function UserProfilePage() {
     const supabase = getSupabaseBrowserClient();
 
     const load = async () => {
+      try {
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("user_id, username, full_name, avatar_url, cover_url, bio, skills")
+        .select("user_id, username, full_name, avatar_url, cover_url")
         .eq("user_id", targetUserId)
         .maybeSingle();
 
       if (!active) return;
       if (!profileData) {
         setNotFound(true);
-        setLoading(false);
         return;
       }
-      setProfile(profileData as ProfileData);
+      setProfile({ ...profileData, bio: null, skills: null });
+
+      supabase
+        .from("profiles")
+        .select("bio, skills")
+        .eq("user_id", targetUserId)
+        .maybeSingle()
+        .then(({ data: extra }) => {
+          if (active && extra) {
+            setProfile((prev) => prev ? { ...prev, bio: extra.bio ?? null, skills: extra.skills ?? null } : prev);
+          }
+        })
+        .catch(() => {});
 
       const [postsRes, followersRes, followingRes, likesRes] = await Promise.all([
         supabase
@@ -159,7 +171,11 @@ export default function UserProfilePage() {
         following: followingRes.count ?? 0,
         likes: totalLikes,
       });
-      setLoading(false);
+      } catch {
+        if (active) setNotFound(true);
+      } finally {
+        if (active) setLoading(false);
+      }
     };
 
     load();

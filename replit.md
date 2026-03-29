@@ -43,7 +43,7 @@ A Next.js 16 social platform for developers. Hosted at https://cloudduty.netlify
 
 ### Supabase Tables
 - `posts` — id, user_id, title, summary, desc, img, ava, author, handle, tag, impressions_count, likes_count, dislikes_count, created_at
-- `profiles` — user_id, username, full_name, avatar_url, cover_url
+- `profiles` — user_id, username, full_name, avatar_url, cover_url, bio (optional), skills text[] (optional)
 - `saved_posts` — id, user_id, post_id
 - `post_reactions` — user_id, post_id, reaction (like|dislike)
 - `post_impressions` — id, post_id, user_id
@@ -65,6 +65,7 @@ A Next.js 16 social platform for developers. Hosted at https://cloudduty.netlify
 
 ## Important Setup Notes
 - **follows table**: Run `supabase/follows.sql` in the Supabase SQL editor to create the follow system
+- **bio & skills columns**: Run `supabase/profile-bio-skills.sql` to enable bio/skills on profiles. The app gracefully falls back if these columns don't exist (About/Skills sections remain hidden or show empty)
 - **Email confirmation**: Set Site URL + redirect allowlist in Supabase dashboard for production
 - **Supabase RLS**: All tables have Row Level Security enabled with appropriate policies
 
