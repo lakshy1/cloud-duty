@@ -3571,3 +3571,127 @@ body[data-route="inbox"] .feed{overflow:hidden}
     padding:40px 28px 36px;
   }
 }
+
+/* ══ PROFILE: About & Skills edit (profile/page) ══════════════════ */
+.prof-section{
+  border-top:1px solid var(--divider);
+  padding:20px 0 4px;
+}
+.prof-section-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:12px;
+}
+.prof-section-title{
+  display:flex;align-items:center;gap:8px;
+  font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--label);
+}
+.prof-section-title svg{
+  width:15px;height:15px;fill:none;stroke:currentColor;
+  stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  color:var(--accent);
+}
+.prof-section-actions{display:flex;gap:8px}
+
+/* bio textarea */
+.prof-bio-edit{display:flex;flex-direction:column;gap:8px}
+.prof-bio-textarea{
+  width:100%;resize:vertical;min-height:100px;
+  background:color-mix(in srgb,var(--accent) 4%,var(--bg));
+  border:1px solid var(--border);border-radius:12px;
+  color:var(--text);font-family:var(--font-body),sans-serif;
+  font-size:.88rem;line-height:1.6;padding:12px 14px;
+  transition:border-color .2s;outline:none;
+}
+.prof-bio-textarea:focus{border-color:color-mix(in srgb,var(--accent) 60%,var(--border))}
+.prof-bio-footer{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+}
+.prof-bio-count{font-size:.68rem;color:var(--muted)}
+.prof-bio-text{
+  font-size:.9rem;line-height:1.75;color:var(--text);white-space:pre-wrap;
+}
+.prof-bio-empty{
+  font-size:.82rem;color:var(--muted);font-style:italic;
+}
+
+/* skills editing */
+.prof-skills-edit{display:flex;flex-direction:column;gap:10px}
+.prof-skill-input-row{display:flex;gap:8px;align-items:center}
+.prof-skill-input{
+  flex:1;height:38px;padding:0 14px;
+  background:color-mix(in srgb,var(--accent) 4%,var(--bg));
+  border:1px solid var(--border);border-radius:999px;
+  color:var(--text);font-family:var(--font-body),sans-serif;font-size:.85rem;
+  outline:none;transition:border-color .2s;
+}
+.prof-skill-input:focus{border-color:color-mix(in srgb,var(--accent) 60%,var(--border))}
+.prof-skill-hint{font-size:.68rem;color:var(--muted)}
+
+/* skill tag pills */
+.prof-skills-tags{display:flex;flex-wrap:wrap;gap:8px}
+.prof-skill-tag{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 14px;border-radius:999px;
+  background:color-mix(in srgb,var(--accent) 12%,var(--surface));
+  border:1px solid color-mix(in srgb,var(--accent) 25%,var(--border));
+  color:var(--accent);font-size:.75rem;font-weight:700;letter-spacing:.04em;
+  transition:background .2s,border-color .2s;
+}
+.prof-skill-tag.editing{padding-right:8px}
+.prof-skill-remove{
+  background:none;border:none;cursor:pointer;padding:0;
+  color:var(--muted);font-size:.9rem;line-height:1;
+  transition:color .15s;display:flex;align-items:center;
+}
+.prof-skill-remove:hover{color:var(--accent)}
+
+/* ══ PUBLIC PROFILE: About & Skills sections ═══════════════════════ */
+.up-section{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:18px;padding:22px 24px;margin:0 18px 14px;
+  transition:background .4s,border-color .4s;
+}
+.up-section-head{
+  display:flex;align-items:center;gap:9px;
+  margin-bottom:14px;
+  font-size:.73rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--label);
+}
+.up-section-head svg{
+  width:15px;height:15px;fill:none;stroke:var(--accent);
+  stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;
+}
+
+/* About text */
+.up-bio-text{
+  font-size:.92rem;line-height:1.78;color:var(--text);
+  white-space:pre-wrap;word-break:break-word;
+}
+
+/* Skills pills */
+.up-skills-list{display:flex;flex-wrap:wrap;gap:8px}
+.up-skill-pill{
+  padding:6px 16px;border-radius:999px;
+  background:color-mix(in srgb,var(--accent) 10%,var(--surface));
+  border:1px solid color-mix(in srgb,var(--accent) 28%,var(--border));
+  color:var(--accent);
+  font-size:.75rem;font-weight:700;letter-spacing:.05em;
+  position:relative;
+  transition:background .2s,transform .15s;
+}
+.up-skill-pill::before{
+  content:"";
+  display:inline-block;width:5px;height:5px;border-radius:50%;
+  background:var(--accent);margin-right:7px;
+  vertical-align:middle;opacity:.7;
+}
+.up-skill-pill:hover{
+  background:color-mix(in srgb,var(--accent) 18%,var(--surface));
+  transform:translateY(-1px);
+}
+
+@media(max-width:580px){
+  .up-section{margin:0 0 12px;padding:18px 16px;border-radius:14px}
+  .prof-section{padding:16px 0 2px}
+}

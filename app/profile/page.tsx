@@ -28,6 +28,13 @@ export default function ProfilePage() {
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const [stats, setStats] = useState({ posts: 0, likes: 0, followers: 0 });
+  const [bio, setBio] = useState("");
+  const [savedBio, setSavedBio] = useState("");
+  const [editBio, setEditBio] = useState(false);
+  const [skills, setSkills] = useState<string[]>([]);
+  const [savedSkills, setSavedSkills] = useState<string[]>([]);
+  const [skillInput, setSkillInput] = useState("");
+  const [editSkills, setEditSkills] = useState(false);
   const { pushToast } = useUIState();
 
   useEffect(() => {
@@ -90,11 +97,15 @@ export default function ProfilePage() {
     const supabase = getSupabaseBrowserClient();
     const { data } = await supabase
       .from("profiles")
-      .select("username, full_name, avatar_url, cover_url")
+      .select("username, full_name, avatar_url, cover_url, bio, skills")
       .eq("user_id", userId)
       .maybeSingle();
     if (data?.avatar_url) setAvatarUrl(data.avatar_url);
     if (data?.cover_url) setCoverUrl(data.cover_url);
+    if (data?.bio) { setBio(data.bio); setSavedBio(data.bio); }
+    if (Array.isArray(data?.skills) && data.skills.length > 0) {
+      setSkills(data.skills); setSavedSkills(data.skills);
+    }
     if (data?.full_name) {
       setFullNameInput(data.full_name);
       setSavedFullName(data.full_name);
@@ -423,6 +434,42 @@ export default function ProfilePage() {
     pushToast({ message: "Profile photo removed.", tone: "success" });
   };
 
+  const handleSaveBio = async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    const supabase = getSupabaseBrowserClient();
+    const { error } = await supabase.from("profiles").update({ bio: bio.trim() || null }).eq("user_id", user.id);
+    setLoading(false);
+    if (error) { pushToast({ message: error.message, tone: "error" }); return; }
+    setSavedBio(bio.trim());
+    setEditBio(false);
+    pushToast({ message: "About updated.", tone: "success" });
+  };
+
+  const handleSaveSkills = async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    const supabase = getSupabaseBrowserClient();
+    const cleanSkills = skills.filter((s) => s.trim());
+    const { error } = await supabase.from("profiles").update({ skills: cleanSkills }).eq("user_id", user.id);
+    setLoading(false);
+    if (error) { pushToast({ message: error.message, tone: "error" }); return; }
+    setSavedSkills(cleanSkills);
+    setEditSkills(false);
+    pushToast({ message: "Skills updated.", tone: "success" });
+  };
+
+  const addSkill = () => {
+    const trimmed = skillInput.trim();
+    if (!trimmed || skills.includes(trimmed)) { setSkillInput(""); return; }
+    setSkills((prev) => [...prev, trimmed]);
+    setSkillInput("");
+  };
+
+  const removeSkill = (index: number) => {
+    setSkills((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleDelete = async () => {
     if (!user?.id) return;
     setLoading(true);
@@ -635,6 +682,95 @@ export default function ProfilePage() {
               <p className="page-label">Provider</p>
               <p className="page-value">{meta.provider ?? "email"}</p>
             </div>
+          </div>
+
+          {/* ── About / Bio ── */}
+          <div className="prof-section">
+            <div className="prof-section-head">
+              <div className="prof-section-title">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                About
+              </div>
+              {!editBio && (
+                <button className="profile-mini-btn" type="button" onClick={() => setEditBio(true)}>
+                  {savedBio ? "Edit" : "Add"}
+                </button>
+              )}
+            </div>
+            {editBio ? (
+              <div className="prof-bio-edit">
+                <textarea
+                  className="prof-bio-textarea"
+                  placeholder="Write a brief bio about yourself — your background, interests, or what drives you..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  maxLength={600}
+                  rows={4}
+                />
+                <div className="prof-bio-footer">
+                  <span className="prof-bio-count">{bio.length}/600</span>
+                  <div className="prof-section-actions">
+                    <button className="profile-mini-btn ghost" type="button" onClick={() => { setEditBio(false); setBio(savedBio); }}>Cancel</button>
+                    <button className="profile-mini-btn" type="button" onClick={handleSaveBio} disabled={loading}>Save</button>
+                  </div>
+                </div>
+              </div>
+            ) : savedBio ? (
+              <p className="prof-bio-text">{savedBio}</p>
+            ) : (
+              <p className="prof-bio-empty">Add a bio to let people know who you are.</p>
+            )}
+          </div>
+
+          {/* ── Skills ── */}
+          <div className="prof-section">
+            <div className="prof-section-head">
+              <div className="prof-section-title">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Skills
+              </div>
+              {!editSkills && (
+                <button className="profile-mini-btn" type="button" onClick={() => { setEditSkills(true); setSkills(savedSkills); }}>
+                  {savedSkills.length > 0 ? "Edit" : "Add"}
+                </button>
+              )}
+            </div>
+            {editSkills ? (
+              <div className="prof-skills-edit">
+                <div className="prof-skills-tags">
+                  {skills.map((sk, i) => (
+                    <span className="prof-skill-tag editing" key={sk + i}>
+                      {sk}
+                      <button type="button" className="prof-skill-remove" onClick={() => removeSkill(i)} aria-label={`Remove ${sk}`}>×</button>
+                    </span>
+                  ))}
+                </div>
+                <div className="prof-skill-input-row">
+                  <input
+                    className="prof-skill-input"
+                    type="text"
+                    placeholder="Add a skill and press Enter…"
+                    value={skillInput}
+                    onChange={(e) => setSkillInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addSkill(); } }}
+                  />
+                  <button className="profile-mini-btn" type="button" onClick={addSkill} disabled={!skillInput.trim()}>Add</button>
+                </div>
+                <p className="prof-skill-hint">Press Enter or comma to add each skill</p>
+                <div className="prof-section-actions" style={{ marginTop: 10 }}>
+                  <button className="profile-mini-btn ghost" type="button" onClick={() => { setEditSkills(false); setSkills(savedSkills); setSkillInput(""); }}>Cancel</button>
+                  <button className="profile-mini-btn" type="button" onClick={handleSaveSkills} disabled={loading}>Save</button>
+                </div>
+              </div>
+            ) : savedSkills.length > 0 ? (
+              <div className="prof-skills-tags">
+                {savedSkills.map((sk, i) => (
+                  <span className="prof-skill-tag" key={sk + i}>{sk}</span>
+                ))}
+              </div>
+            ) : (
+              <p className="prof-bio-empty">Add skills to showcase your expertise.</p>
+            )}
           </div>
             </>
           )}

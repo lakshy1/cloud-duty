@@ -17,6 +17,8 @@ type ProfileData = {
   full_name: string | null;
   avatar_url: string | null;
   cover_url: string | null;
+  bio: string | null;
+  skills: string[] | null;
 };
 
 function formatCount(n: number): string {
@@ -85,7 +87,7 @@ export default function UserProfilePage() {
     const load = async () => {
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("user_id, username, full_name, avatar_url, cover_url")
+        .select("user_id, username, full_name, avatar_url, cover_url, bio, skills")
         .eq("user_id", targetUserId)
         .maybeSingle();
 
@@ -431,6 +433,32 @@ export default function UserProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* ── About section ── */}
+        {profile.bio && (
+          <div className="up-section up-about">
+            <div className="up-section-head">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+              <span>About</span>
+            </div>
+            <p className="up-bio-text">{profile.bio}</p>
+          </div>
+        )}
+
+        {/* ── Skills section ── */}
+        {profile.skills && profile.skills.length > 0 && (
+          <div className="up-section up-skills-section">
+            <div className="up-section-head">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <span>Skills</span>
+            </div>
+            <div className="up-skills-list">
+              {profile.skills.map((sk, i) => (
+                <span className="up-skill-pill" key={sk + i}>{sk}</span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── Posts section ── */}
         <div className="up-posts-section">
