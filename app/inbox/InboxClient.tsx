@@ -1118,22 +1118,22 @@ export default function InboxClient() {
                                 type="button"
                                 onClick={() =>
                                   handleAttachmentOpen(
-                                    msg.attachment.preview ?? "",
-                                    msg.attachment.name,
-                                    msg.attachment.type
+                                    msg.attachment!.preview ?? "",
+                                    msg.attachment!.name,
+                                    msg.attachment!.type
                                   )
                                 }
                                 onTouchEnd={() =>
                                   handleAttachmentOpen(
-                                    msg.attachment.preview ?? "",
-                                    msg.attachment.name,
-                                    msg.attachment.type
+                                    msg.attachment!.preview ?? "",
+                                    msg.attachment!.name,
+                                    msg.attachment!.type
                                   )
                                 }
                               >
-                                <div className="inbox-attachment-name">{msg.attachment.name}</div>
+                                <div className="inbox-attachment-name">{msg.attachment!.name}</div>
                                 <div className="inbox-attachment-meta">
-                                  {msg.attachment.type} - {formatSize(msg.attachment.size)}
+                                  {msg.attachment!.type} - {formatSize(msg.attachment!.size)}
                                 </div>
                               </button>
                             ) : null}
