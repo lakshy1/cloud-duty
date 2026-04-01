@@ -680,11 +680,11 @@ export default function Home() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "post_reactions", filter: `user_id=eq.${userId}` },
         (payload) => {
-          const row = payload.new as { post_id?: string; reaction?: "like" | "dislike" };
+          const row = payload.new as { post_id?: string; reaction?: string | null };
           if (!row?.post_id || (row.reaction !== "like" && row.reaction !== "dislike")) return;
           setReactions((prev) => {
             const next = new Map(prev);
-            next.set(row.post_id as string, row.reaction);
+            next.set(row.post_id as string, row.reaction as "like" | "dislike");
             return next;
           });
         }
