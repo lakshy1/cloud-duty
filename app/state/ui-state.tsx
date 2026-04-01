@@ -13,7 +13,9 @@ import { getSupabaseBrowserClient } from "../lib/supabase/client";
 
 export type Toast = {
   id: string;
+  title?: string;
   message: string;
+  detail?: string;
   tone?: "info" | "success" | "warning" | "error";
 };
 
@@ -66,26 +68,35 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
     type?: string | null;
     message?: string | null;
     actorName?: string | null;
+    preview?: string | null;
   }) => {
     const actor = row.actorName?.trim() || "Someone";
     const type = row.type ?? "notification";
     switch (type) {
       case "like":
-        return { message: `${actor} liked your post.`, tone: "success" as const };
+        return { title: actor, message: "liked your post", tone: "success" as const };
       case "unlike":
-        return { message: `${actor} removed a like from your post.`, tone: "info" as const };
+        return { title: actor, message: "removed a like from your post", tone: "info" as const };
       case "dislike":
-        return { message: `${actor} disliked your post.`, tone: "warning" as const };
+        return { title: actor, message: "disliked your post", tone: "warning" as const };
       case "save":
-        return { message: `${actor} saved your post.`, tone: "success" as const };
+        return { title: actor, message: "saved your post", tone: "success" as const };
       case "unsave":
-        return { message: `${actor} removed your post from saved.`, tone: "info" as const };
+        return { title: actor, message: "removed your post from saved", tone: "info" as const };
       case "follow":
-        return { message: `${actor} started following you.`, tone: "success" as const };
+        return { title: actor, message: "started following you", tone: "success" as const };
       case "unfollow":
-        return { message: `${actor} unfollowed you.`, tone: "warning" as const };
+        return { title: actor, message: "unfollowed you", tone: "warning" as const };
+      case "message":
+        return {
+          title: actor,
+          message: "sent you a message",
+          detail: row.preview?.trim() || row.message?.trim() || "",
+          tone: "info" as const,
+        };
       default:
         return {
+          title: actor,
           message: row.message?.trim() || "You have a new notification.",
           tone: "info" as const,
         };
@@ -102,15 +113,15 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "sine";
-      osc.frequency.value = 880;
+      osc.frequency.value = 1040;
       gain.gain.value = 0.0001;
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
       const now = ctx.currentTime;
-      gain.gain.exponentialRampToValueAtTime(0.15, now + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
-      osc.stop(now + 0.28);
+      gain.gain.exponentialRampToValueAtTime(0.35, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+      osc.stop(now + 0.35);
       osc.onended = () => {
         ctx.close();
       };
@@ -225,6 +236,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
               type: row.type,
               message: row.message,
               actorName,
+              preview: (payload.new as { metadata?: { preview?: string | null } | null })?.metadata?.preview,
             });
             playNotificationPing(row.type);
             pushToast(toast);

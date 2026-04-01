@@ -1098,8 +1098,8 @@ body[data-route="inbox"] .inbox-chat-body::-webkit-scrollbar{
   position:absolute;top:8px;right:8px;
   width:28px;height:28px;border-radius:10px;
   border:1px solid var(--lp-panel-border);
-  background:color-mix(in srgb,var(--lp-panel-bg) 88%, var(--text) 12%);
-  color:var(--text);
+  background:color-mix(in srgb,var(--lp-panel-bg) 82%, #000 18%);
+  color:color-mix(in srgb,var(--text) 88%, #fff 12%);
   display:grid;place-items:center;cursor:pointer;
   transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease;
 }
@@ -1108,6 +1108,10 @@ body[data-route="inbox"] .inbox-chat-body::-webkit-scrollbar{
   border-color:var(--accent);
   transform:translateY(-1px);
   box-shadow:0 6px 14px rgba(0,0,0,.12);
+}
+[data-theme="minimal"] .inbox-msg-menu-btn{
+  background:color-mix(in srgb,var(--lp-panel-bg) 88%, #fff 12%);
+  color:color-mix(in srgb,var(--text) 88%, #000 12%);
 }
 .inbox-msg-menu{
   position:absolute;top:40px;right:6px;min-width:150px;
@@ -1877,6 +1881,19 @@ button.profile-stat:hover{
   display:flex;align-items:center;justify-content:space-between;gap:10px;
   position:relative;overflow:hidden;
   animation:toastIn .28s ease both;
+}
+.toast-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.toast-title{
+  font-weight:800;font-size:.8rem;letter-spacing:.01em;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.toast-message{
+  font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.toast-detail{
+  font-size:.72rem;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .toast::before{
   content:"";position:absolute;left:0;top:0;bottom:0;width:4px;

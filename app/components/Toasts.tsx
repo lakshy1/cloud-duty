@@ -74,7 +74,11 @@ export function Toasts() {
           }}
           className={`toast toast-${toast.tone ?? "info"}${closing.has(toast.id) ? " closing" : ""}`}
         >
-          <span>{toast.message}</span>
+          <div className="toast-text">
+            {toast.title ? <div className="toast-title">{toast.title}</div> : null}
+            <div className="toast-message">{toast.message}</div>
+            {toast.detail ? <div className="toast-detail">{toast.detail}</div> : null}
+          </div>
           <button
             className="toast-close"
             type="button"
