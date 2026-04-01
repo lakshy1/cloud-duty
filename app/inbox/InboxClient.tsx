@@ -49,6 +49,7 @@ type Thread = {
   avatarUrl?: string | null;
   last: string;
   time: string;
+  timeSort?: string | null;
   chatId?: string;
   userId?: string;
 };
@@ -344,13 +345,17 @@ export default function InboxClient() {
             avatarUrl: profile?.avatar_url ?? null,
             last: lastText,
             time: lastTime,
+            timeSort: last?.created_at || chat.created_at,
             chatId: chat.id,
             userId: otherId,
           };
         })
       );
 
-      setThreads([aiThread, ...chatThreads]);
+      const sortedChats = chatThreads.sort((a, b) =>
+        (b.timeSort ?? "").localeCompare(a.timeSort ?? "")
+      );
+      setThreads([aiThread, ...sortedChats]);
       setThreadsLoading(false);
     };
 
@@ -1087,16 +1092,9 @@ export default function InboxClient() {
                     <div className="inbox-chat-name-row">
                       <div className="inbox-chat-name">{activeThread?.name ?? ""}</div>
                     </div>
-                    {activeThread?.handle ? (
-                      <div className="inbox-chat-status">{activeThread.handle}</div>
-                    ) : null}
-                    {activeThread?.type === "chat" && activeStats ? (
-                      <div className="inbox-chat-meta">
-                        <span>{activeStats.followers} followers</span>
-                        <span className="dot">•</span>
-                        <span>{activeStats.following} following</span>
-                      </div>
-                    ) : null}
+                    <div className="inbox-chat-status">
+                      {activeThread?.type === "chat" ? "Direct message" : "CloudDuty AI"}
+                    </div>
                   </div>
                 </div>
               </div>

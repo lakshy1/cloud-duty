@@ -110,19 +110,26 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
-      const osc = ctx.createOscillator();
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = 1040;
+      osc1.type = "triangle";
+      osc2.type = "sine";
+      osc1.frequency.value = 960;
+      osc2.frequency.value = 1280;
       gain.gain.value = 0.0001;
-      osc.connect(gain);
+      osc1.connect(gain);
+      osc2.connect(gain);
       gain.connect(ctx.destination);
-      osc.start();
+      osc1.start();
+      osc2.start();
       const now = ctx.currentTime;
-      gain.gain.exponentialRampToValueAtTime(0.35, now + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
-      osc.stop(now + 0.35);
-      osc.onended = () => {
+      gain.gain.exponentialRampToValueAtTime(0.55, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+      osc1.stop(now + 0.3);
+      osc2.stop(now + 0.3);
+      osc2.onended = () => {
         ctx.close();
       };
     } catch {
