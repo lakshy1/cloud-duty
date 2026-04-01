@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
   useEffect,
+  useRef,
 } from "react";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 
@@ -59,6 +60,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [loginPromptOpen, setLoginPromptOpen] = useState(false);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+  const lastNotifToastRef = useRef<string | null>(null);
 
   const pushToast = useCallback((toast: Omit<Toast, "id"> & { id?: string }) => {
     const id = toast.id ?? crypto.randomUUID();
@@ -118,6 +120,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
     let active = true;
 
     const loadNotifications = async () => {
@@ -139,8 +142,17 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
-          () => {
+          (payload) => {
             setHasUnreadNotifications(true);
+            const row = payload.new as { message?: string | null; created_at?: string | null };
+            const createdAt = row?.created_at ?? null;
+            if (createdAt && lastNotifToastRef.current === createdAt) return;
+            if (createdAt) lastNotifToastRef.current = createdAt;
+            const message =
+              row?.message && row.message.trim()
+                ? row.message
+                : "You have a new notification.";
+            pushToast({ message, tone: "info" });
           }
         )
         .on(
@@ -153,6 +165,15 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
           }
         )
         .subscribe();
+
+      pollTimer = setInterval(async () => {
+        const { count: nextCount } = await supabase
+          .from("notifications")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .is("read_at", null);
+        if (active) setHasUnreadNotifications((nextCount ?? 0) > 0);
+      }, 20000);
     };
 
     loadNotifications();
@@ -161,8 +182,9 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       if (channel) {
         supabase.removeChannel(channel);
       }
+      if (pollTimer) clearInterval(pollTimer);
     };
-  }, []);
+  }, [pushToast]);
 
   return <UIStateContext.Provider value={value}>{children}</UIStateContext.Provider>;
 }
