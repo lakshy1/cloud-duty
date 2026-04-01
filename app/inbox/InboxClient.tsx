@@ -30,6 +30,10 @@ type ChatMessage = {
   id: string;
   sender_id: string;
   body: string | null;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_type?: string | null;
+  attachment_size?: number | null;
   created_at: string;
   deleted_at: string | null;
   deleted_by: string | null;
@@ -164,6 +168,15 @@ export default function InboxClient() {
     [activeThreadId, threads]
   );
 
+  const lastOutboundIndex = useMemo(() => {
+    if (!chatMessages.length || !userId) return -1;
+    let idx = -1;
+    chatMessages.forEach((msg, index) => {
+      if (msg.sender_id === userId) idx = index;
+    });
+    return idx;
+  }, [chatMessages, userId]);
+
   const refreshActiveStats = useCallback(async () => {
     if (!activeThread?.userId) {
       setActiveStats(null);
@@ -249,6 +262,7 @@ export default function InboxClient() {
       document.removeEventListener("mousedown", handleClick);
     };
   }, [messageMenuOpenId]);
+
 
   useEffect(() => {
     const targetChat = searchParams.get("chat");
@@ -347,11 +361,11 @@ export default function InboxClient() {
     const loadMessages = async () => {
       setChatMessages([]);
       setChatLoading(true);
-      const { data } = await supabase
-        .from("chat_messages")
-        .select("id,chat_id,sender_id,body,created_at,deleted_at,deleted_by")
-        .eq("chat_id", activeThread.chatId)
-        .order("created_at", { ascending: true });
+    const { data } = await supabase
+      .from("chat_messages")
+      .select("id,chat_id,sender_id,body,created_at,deleted_at,deleted_by,attachment_url,attachment_name,attachment_type,attachment_size")
+      .eq("chat_id", activeThread.chatId)
+      .order("created_at", { ascending: true });
       if (!active) return;
       setChatMessages((data ?? []) as ChatMessage[]);
       setChatLoading(false);
@@ -536,6 +550,19 @@ export default function InboxClient() {
       }
       chatId = created.id;
     }
+    const key = `inbox_hidden_chats_${userId}`;
+    setHiddenChatIds((prev) => {
+      if (!chatId) return prev;
+      if (!prev.has(chatId)) return prev;
+      const next = new Set(prev);
+      next.delete(chatId);
+      try {
+        window.localStorage.setItem(key, JSON.stringify(Array.from(next)));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
     setThreadsReloadKey((prev) => prev + 1);
     setActiveThreadId(`chat-${chatId}`);
     setShowChat(true);
@@ -570,15 +597,26 @@ export default function InboxClient() {
     setIsSending(true);
 
     const supabase = getSupabaseBrowserClient();
+    let otherUserId = activeThread.userId ?? null;
+    if (!otherUserId) {
+      const { data: chatRow } = await supabase
+        .from("chats")
+        .select("user_a,user_b")
+        .eq("id", activeThread.chatId)
+        .maybeSingle();
+      if (chatRow) {
+        otherUserId = chatRow.user_a === userId ? chatRow.user_b : chatRow.user_a;
+      }
+    }
     const { count: mutualA } = await supabase
       .from("follows")
       .select("follower_id", { count: "exact", head: true })
       .eq("follower_id", userId)
-      .eq("following_id", activeThread.userId ?? "");
+      .eq("following_id", otherUserId ?? "");
     const { count: mutualB } = await supabase
       .from("follows")
       .select("follower_id", { count: "exact", head: true })
-      .eq("follower_id", activeThread.userId ?? "")
+      .eq("follower_id", otherUserId ?? "")
       .eq("following_id", userId);
     const isMutual = (mutualA ?? 0) > 0 && (mutualB ?? 0) > 0;
     if (!isMutual) {
@@ -651,13 +689,27 @@ export default function InboxClient() {
   };
 
   const handleAttach = () => {
-    if (isSending || !isAiThread) return;
+    if (isSending) return;
     fileInputRef.current?.click();
   };
 
   const handleFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    const maxSize = 5 * 1024 * 1024;
+    const isAllowed =
+      file.type.startsWith("image/") || file.type === "application/pdf";
+    if (!isAllowed) {
+      pushToast({ message: "Only PDF and image files are allowed.", tone: "warning" });
+      event.target.value = "";
+      return;
+    }
+    if (file.size > maxSize) {
+      pushToast({ message: "File size must be 5MB or less.", tone: "warning" });
+      event.target.value = "";
+      return;
+    }
+
     const threadId = AI_THREAD_ID;
     setUploadLabel(file.name);
     setUploadProgress(0);
@@ -685,49 +737,112 @@ export default function InboxClient() {
         }
       });
 
-    let preview: string | undefined;
-    try {
-      const content = await readContent();
-      if (isText && content) {
-        preview = content.slice(0, 1200);
+    if (isAiThread) {
+      let preview: string | undefined;
+      try {
+        const content = await readContent();
+        if (isText && content) {
+          preview = content.slice(0, 1200);
+        }
+      } catch {
+        pushToast({ message: "Failed to read attachment.", tone: "error" });
       }
-    } catch {
-      pushToast({ message: "Failed to read attachment.", tone: "error" });
+
+      setUploadProgress(100);
+      window.setTimeout(() => {
+        setUploadProgress(null);
+        setUploadLabel(null);
+      }, 1200);
+
+      const attachment: ChatAttachment = {
+        name: file.name,
+        size: file.size,
+        type: file.type || "application/octet-stream",
+        preview,
+      };
+
+      const attachmentSummary = `Attached file: ${file.name} (${attachment.type || "unknown"}, ${formatSize(
+        file.size
+      )}).${preview ? "" : " (Binary file attached, no preview.)"}`;
+
+      const newMessage: AiMessage = {
+        id: `m-${Date.now()}`,
+        from: "me",
+        text: attachmentSummary,
+        createdAt: new Date().toISOString(),
+        attachment,
+      };
+
+      const threadMessages = [...(aiMessagesByThread[threadId] ?? []), newMessage];
+      setAiMessagesByThread((prev) => ({
+        ...prev,
+        [threadId]: threadMessages,
+      }));
+
+      setIsSending(true);
+      await requestAiReply(threadId, threadMessages);
+      event.target.value = "";
+      return;
     }
+
+    if (!activeThread?.chatId || !userId) {
+      event.target.value = "";
+      return;
+    }
+
+    setIsSending(true);
+    const supabase = getSupabaseBrowserClient();
+    const bucketName = process.env.NEXT_PUBLIC_CHAT_ATTACHMENTS_BUCKET || "chat-attachments";
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "");
+    const filePath = `${activeThread.chatId}/${userId}/${Date.now()}-${safeName}`;
+
+    let progress = 10;
+    const timer = window.setInterval(() => {
+      progress = Math.min(90, progress + 12);
+      setUploadProgress(progress);
+    }, 180);
+
+    const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file, {
+      upsert: true,
+      cacheControl: "3600",
+      contentType: file.type || "application/octet-stream",
+    });
+    window.clearInterval(timer);
+
+    if (uploadError) {
+      setUploadProgress(null);
+      setUploadLabel(null);
+      setIsSending(false);
+      pushToast({ message: uploadError.message, tone: "error" });
+      event.target.value = "";
+      return;
+    }
+
+    const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+    const publicUrl = data.publicUrl;
+
+    const { error } = await supabase.from("chat_messages").insert({
+      chat_id: activeThread.chatId,
+      sender_id: userId,
+      body: null,
+      attachment_url: publicUrl,
+      attachment_name: file.name,
+      attachment_type: file.type || "application/octet-stream",
+      attachment_size: file.size,
+    });
 
     setUploadProgress(100);
     window.setTimeout(() => {
       setUploadProgress(null);
       setUploadLabel(null);
-    }, 1200);
+    }, 800);
 
-    const attachment: ChatAttachment = {
-      name: file.name,
-      size: file.size,
-      type: file.type || "application/octet-stream",
-      preview,
-    };
-
-    const attachmentSummary = `Attached file: ${file.name} (${attachment.type || "unknown"}, ${formatSize(
-      file.size
-    )}).${preview ? "" : " (Binary file attached, no preview.)"}`;
-
-    const newMessage: AiMessage = {
-      id: `m-${Date.now()}`,
-      from: "me",
-      text: attachmentSummary,
-      createdAt: new Date().toISOString(),
-      attachment,
-    };
-
-    const threadMessages = [...(aiMessagesByThread[threadId] ?? []), newMessage];
-    setAiMessagesByThread((prev) => ({
-      ...prev,
-      [threadId]: threadMessages,
-    }));
-
-    setIsSending(true);
-    await requestAiReply(threadId, threadMessages);
+    if (error) {
+      pushToast({ message: error.message, tone: "error" });
+    } else {
+      pushToast({ message: "Attachment sent.", tone: "success" });
+    }
+    setIsSending(false);
     event.target.value = "";
   };
 
@@ -870,7 +985,16 @@ export default function InboxClient() {
                     onClick={() => setShowChat(false)}
                     aria-label="Back to conversations"
                   >
-                    <span aria-hidden="true">&lt;-</span>
+                    <svg aria-hidden="true" viewBox="0 0 24 24">
+                      <path
+                        d="M15 19l-7-7 7-7"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </button>
                   <div className="inbox-chat-avatar">
                     {activeThread?.type === "chat" && activeThread.avatarUrl ? (
@@ -942,6 +1066,10 @@ export default function InboxClient() {
                       const displayText = msg.deleted_at
                         ? "This message was deleted."
                         : msg.body || "";
+                      const isLastOutbound = isMine && index === lastOutboundIndex;
+                      const seenAfter =
+                        isLastOutbound &&
+                        chatMessages.slice(index + 1).some((m) => m.sender_id !== userId);
                       return (
                         <div key={msg.id} className="inbox-message-block">
                           {showDate ? <div className="inbox-date">{formatDateLabel(msg.created_at)}</div> : null}
@@ -955,7 +1083,11 @@ export default function InboxClient() {
                                 }
                                 aria-label="Message options"
                               >
-                                <Icon name="chevron-down" />
+                                <svg aria-hidden="true" viewBox="0 0 24 24">
+                                  <circle cx="6" cy="12" r="1.6" />
+                                  <circle cx="12" cy="12" r="1.6" />
+                                  <circle cx="18" cy="12" r="1.6" />
+                                </svg>
                               </button>
                             ) : null}
                             {isMine && !msg.deleted_at && messageMenuOpenId === msg.id ? (
@@ -972,8 +1104,30 @@ export default function InboxClient() {
                               </div>
                             ) : null}
                             <div className="inbox-bubble-text">{displayText}</div>
+                            {msg.attachment_url ? (
+                              <div className="inbox-attachment">
+                                {msg.attachment_type?.startsWith("image/") ? (
+                                  <img src={msg.attachment_url} alt={msg.attachment_name ?? "Attachment"} />
+                                ) : (
+                                  <div className="inbox-attachment-file">
+                                    <Icon name="file" />
+                                    <div>
+                                      <div className="inbox-attachment-name">
+                                        {msg.attachment_name ?? "Attachment"}
+                                      </div>
+                                      <div className="inbox-attachment-meta">
+                                        PDF • {formatSize(msg.attachment_size ?? 0)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : null}
                             <div className="inbox-bubble-time">{formatTime(msg.created_at)}</div>
                           </div>
+                          {isLastOutbound && !msg.deleted_at ? (
+                            <div className="inbox-read-receipt">{seenAfter ? "Seen" : "Sent"}</div>
+                          ) : null}
                         </div>
                       );
                     })}
@@ -1003,6 +1157,7 @@ export default function InboxClient() {
                   type="file"
                   onChange={handleFileSelected}
                   className="inbox-file-input"
+                  accept="image/*,application/pdf"
                   aria-hidden="true"
                   tabIndex={-1}
                 />

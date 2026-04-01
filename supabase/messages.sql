@@ -11,6 +11,10 @@ create table if not exists public.chat_messages (
   chat_id uuid not null references public.chats(id) on delete cascade,
   sender_id uuid not null references auth.users(id) on delete cascade,
   body text,
+  attachment_url text,
+  attachment_name text,
+  attachment_type text,
+  attachment_size int,
   created_at timestamptz not null default now(),
   deleted_at timestamptz,
   deleted_by uuid references auth.users(id) on delete set null

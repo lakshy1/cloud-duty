@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 import { Icon } from "./Icon";
 import { useUIState } from "../state/ui-state";
@@ -19,7 +20,8 @@ export function Topbar({
   searchInputRef,
 }: TopbarProps) {
   const pathname = usePathname();
-  const { searchQuery, setSearchQuery, isLoggedIn } = useUIState();
+  const router = useRouter();
+  const { searchQuery, setSearchQuery, isLoggedIn, hasUnreadNotifications } = useUIState();
   const [profOpen, setProfOpen] = useState(false);
   const profDropRef = useRef<HTMLDivElement | null>(null);
   const [initials, setInitials] = useState("?");
@@ -147,14 +149,23 @@ export function Topbar({
               ×
             </button>
           ) : null}
-          <span className="search-kbd">/</span>
         </div>
       ) : null}
 
       <div className="topbar-space" />
 
       {isLoggedIn === true ? (
-        <div className={`prof-drop${profOpen ? " open" : ""}`} id="profDrop" ref={profDropRef}>
+        <div className="topbar-right">
+          <button
+            className="topbar-bell"
+            type="button"
+            aria-label="Notifications"
+            onClick={() => router.push("/notifications")}
+          >
+            <Icon name="notifications" />
+            {hasUnreadNotifications ? <span className="topbar-bell-dot" aria-hidden="true" /> : null}
+          </button>
+          <div className={`prof-drop${profOpen ? " open" : ""}`} id="profDrop" ref={profDropRef}>
           <div
             className="prof"
             role="button"
@@ -216,6 +227,7 @@ export function Topbar({
             </button>
           </div>
         </div>
+        </div>
       ) : (
         <Link className="topbar-login-btn" href="/auth?mode=login">
           Log In
@@ -224,3 +236,5 @@ export function Topbar({
     </header>
   );
 }
+
+
