@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 import { useUIState } from "../state/ui-state";
-import { Loader } from "../components/Loader";
+import { Skeleton } from "../components/Skeleton";
 
 type ProfilePost = {
   id: string;
@@ -18,7 +19,15 @@ type ProfilePost = {
   created_at: string | null;
 };
 
+type FollowUser = {
+  user_id: string;
+  username: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+};
+
 export default function ProfilePage() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [username, setUsername] = useState("");
   const [savedUsername, setSavedUsername] = useState("");
@@ -38,7 +47,7 @@ export default function ProfilePage() {
   const [coverUploading, setCoverUploading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
-  const [stats, setStats] = useState({ posts: 0, likes: 0, followers: 0 });
+  const [stats, setStats] = useState({ posts: 0, likes: 0, followers: 0, following: 0 });
   const [bio, setBio] = useState("");
   const [savedBio, setSavedBio] = useState("");
   const [editBio, setEditBio] = useState(false);
@@ -48,6 +57,13 @@ export default function ProfilePage() {
   const [editSkills, setEditSkills] = useState(false);
   const [myPosts, setMyPosts] = useState<ProfilePost[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
+  const [followModalOpen, setFollowModalOpen] = useState(false);
+  const [followTab, setFollowTab] = useState<"followers" | "following">("followers");
+  const [followSearch, setFollowSearch] = useState("");
+  const [followLoading, setFollowLoading] = useState(false);
+  const [followList, setFollowList] = useState<FollowUser[]>([]);
+  const [followingSet, setFollowingSet] = useState<Set<string>>(new Set());
+  const [followersSet, setFollowersSet] = useState<Set<string>>(new Set());
   const { pushToast } = useUIState();
 
   useEffect(() => {
@@ -87,6 +103,16 @@ export default function ProfilePage() {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
   }, [displayFullName, meta.preferred_username, meta.user_name, meta.username]);
+
+  const filteredFollowList = useMemo(() => {
+    const q = followSearch.trim().toLowerCase();
+    if (!q) return followList;
+    return followList.filter((item) => {
+      const name = (item.full_name ?? "").toLowerCase();
+      const username = (item.username ?? "").toLowerCase();
+      return name.includes(q) || username.includes(q);
+    });
+  }, [followList, followSearch]);
 
   const normalizeUsername = (value: string) =>
     value
@@ -179,13 +205,13 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!user?.id) {
-      setStats({ posts: 0, likes: 0, followers: 0 });
+      setStats({ posts: 0, likes: 0, followers: 0, following: 0 });
       return;
     }
     let active = true;
     const loadStats = async () => {
       const supabase = getSupabaseBrowserClient();
-      const [postsRes, likeRows, followersRes] = await Promise.all([
+      const [postsRes, likeRows, followersRes, followingRes] = await Promise.all([
         supabase
           .from("posts")
           .select("id", { count: "exact", head: true })
@@ -195,6 +221,10 @@ export default function ProfilePage() {
           .from("follows")
           .select("follower_id", { count: "exact", head: true })
           .eq("following_id", user.id),
+        supabase
+          .from("follows")
+          .select("following_id", { count: "exact", head: true })
+          .eq("follower_id", user.id),
       ]);
       if (!active) return;
       const likesTotal =
@@ -206,6 +236,7 @@ export default function ProfilePage() {
         posts: postsRes.count ?? 0,
         likes: likesTotal,
         followers: followersRes.count ?? 0,
+        following: followingRes.count ?? 0,
       });
     };
     loadStats();
@@ -511,6 +542,101 @@ export default function ProfilePage() {
     setSkills((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const loadFollowSets = async (userId: string) => {
+    const supabase = getSupabaseBrowserClient();
+    const [followingRes, followersRes] = await Promise.all([
+      supabase.from("follows").select("following_id").eq("follower_id", userId),
+      supabase.from("follows").select("follower_id").eq("following_id", userId),
+    ]);
+    const followingIds = new Set((followingRes.data ?? []).map((row) => row.following_id));
+    const followerIds = new Set((followersRes.data ?? []).map((row) => row.follower_id));
+    setFollowingSet(followingIds);
+    setFollowersSet(followerIds);
+    return { followingIds, followerIds };
+  };
+
+  const loadFollowList = async (tab: "followers" | "following") => {
+    if (!user?.id) return;
+    setFollowLoading(true);
+    const supabase = getSupabaseBrowserClient();
+    const { followingIds, followerIds } = await loadFollowSets(user.id);
+    const targetIds = tab === "followers" ? Array.from(followerIds) : Array.from(followingIds);
+    if (targetIds.length === 0) {
+      setFollowList([]);
+      setFollowLoading(false);
+      return;
+    }
+    const { data } = await supabase
+      .from("profiles")
+      .select("user_id, username, full_name, avatar_url")
+      .in("user_id", targetIds);
+    setFollowList((data ?? []) as FollowUser[]);
+    setFollowLoading(false);
+  };
+
+  const handleToggleFollow = async (targetId: string) => {
+    if (!user?.id) return;
+    const supabase = getSupabaseBrowserClient();
+    const isFollowing = followingSet.has(targetId);
+    if (isFollowing) {
+      await supabase
+        .from("follows")
+        .delete()
+        .eq("follower_id", user.id)
+        .eq("following_id", targetId);
+      setFollowingSet((prev) => {
+        const next = new Set(prev);
+        next.delete(targetId);
+        return next;
+      });
+      setStats((prev) => ({ ...prev, following: Math.max(0, prev.following - 1) }));
+    } else {
+      await supabase.from("follows").insert({ follower_id: user.id, following_id: targetId });
+      setFollowingSet((prev) => new Set(prev).add(targetId));
+      setStats((prev) => ({ ...prev, following: prev.following + 1 }));
+    }
+  };
+
+  const handleMessage = async (targetId: string) => {
+    if (!user?.id) return;
+    const isMutual = followingSet.has(targetId) && followersSet.has(targetId);
+    if (!isMutual) {
+      pushToast({
+        message: "You both need to follow each other to enable messaging.",
+        tone: "warning",
+      });
+      return;
+    }
+    const supabase = getSupabaseBrowserClient();
+    const { data: existing } = await supabase
+      .from("chats")
+      .select("id,user_a,user_b")
+      .or(
+        `and(user_a.eq.${user.id},user_b.eq.${targetId}),and(user_a.eq.${targetId},user_b.eq.${user.id})`
+      )
+      .maybeSingle();
+    let chatId = existing?.id;
+    if (!chatId) {
+      const [userA, userB] = [user.id, targetId].sort();
+      const { data: created, error } = await supabase
+        .from("chats")
+        .insert({ user_a: userA, user_b: userB })
+        .select("id")
+        .single();
+      if (error || !created) {
+        pushToast({ message: "Unable to start chat. Try again.", tone: "error" });
+        return;
+      }
+      chatId = created.id;
+    }
+    router.push(`/inbox?chat=${chatId}`);
+  };
+
+  useEffect(() => {
+    if (!user?.id || !followModalOpen) return;
+    loadFollowList(followTab);
+  }, [followModalOpen, followTab, user?.id]);
+
   const handleDelete = async () => {
     if (!user?.id) return;
     setLoading(true);
@@ -535,7 +661,29 @@ export default function ProfilePage() {
       <div className="page-shell">
         <section className="page-card profile-card">
           {profileLoading ? (
-            <Loader label="Loading profile" />
+            <div className="profile-skeleton" aria-hidden="true">
+              <div className="skeleton skeleton-thumb" />
+              <div className="skeleton-row">
+                <Skeleton className="skeleton-circle" style={{ width: 96, height: 96 }} />
+                <div className="skeleton-stack">
+                  <Skeleton className="skeleton-line skeleton-w-60" />
+                  <Skeleton className="skeleton-line sm skeleton-w-40" />
+                </div>
+              </div>
+              <div className="profile-stats">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div className="skeleton-card" key={`sk-stat-${index}`}>
+                    <Skeleton className="skeleton-line lg skeleton-w-40" />
+                    <Skeleton className="skeleton-line sm skeleton-w-60" />
+                  </div>
+                ))}
+              </div>
+              <div className="skeleton-card">
+                <Skeleton className="skeleton-line skeleton-w-40" />
+                <Skeleton className="skeleton-line skeleton-w-80" />
+                <Skeleton className="skeleton-line skeleton-w-60" />
+              </div>
+            </div>
           ) : (
             <>
           <div
@@ -700,10 +848,28 @@ export default function ProfilePage() {
               <div className="profile-stat-val">{stats.likes}</div>
               <div className="profile-stat-label">Likes</div>
             </div>
-            <div className="profile-stat">
+            <button
+              className="profile-stat"
+              type="button"
+              onClick={() => {
+                setFollowTab("followers");
+                setFollowModalOpen(true);
+              }}
+            >
               <div className="profile-stat-val">{stats.followers}</div>
               <div className="profile-stat-label">Followers</div>
-            </div>
+            </button>
+            <button
+              className="profile-stat"
+              type="button"
+              onClick={() => {
+                setFollowTab("following");
+                setFollowModalOpen(true);
+              }}
+            >
+              <div className="profile-stat-val">{stats.following}</div>
+              <div className="profile-stat-label">Following</div>
+            </button>
           </div>
 
           {/* ── About / Bio ── */}
@@ -809,7 +975,15 @@ export default function ProfilePage() {
               )}
             </div>
             {postsLoading ? (
-              <div style={{ padding: "24px 0" }}><Loader /></div>
+              <div className="prof-post-grid" aria-hidden="true">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div className="skeleton-card" key={`sk-post-${index}`}>
+                    <Skeleton className="skeleton-thumb" />
+                    <Skeleton className="skeleton-line skeleton-w-80" />
+                    <Skeleton className="skeleton-line sm skeleton-w-40" />
+                  </div>
+                ))}
+              </div>
             ) : myPosts.length === 0 ? (
               <p className="prof-bio-empty">You haven&apos;t published any posts yet.</p>
             ) : (
@@ -847,6 +1021,134 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
+
+          {followModalOpen ? (
+            <div className="follow-overlay" role="dialog" aria-modal="true">
+              <div className="follow-panel">
+                <div className="follow-head">
+                  <div>
+                    <div className="follow-title">
+                      {followTab === "followers" ? "Followers" : "Following"}
+                    </div>
+                    <div className="follow-subtitle">
+                      Manage your connections and start a chat with mutuals.
+                    </div>
+                  </div>
+                  <button
+                    className="follow-close"
+                    type="button"
+                    onClick={() => setFollowModalOpen(false)}
+                    aria-label="Close"
+                  >
+                    <span className="follow-close-icon" aria-hidden="true">
+                      ×
+                    </span>
+                  </button>
+                </div>
+                <div className="follow-tabs">
+                  <button
+                    className={`follow-tab${followTab === "followers" ? " active" : ""}`}
+                    type="button"
+                    onClick={() => setFollowTab("followers")}
+                  >
+                    Followers
+                  </button>
+                  <button
+                    className={`follow-tab${followTab === "following" ? " active" : ""}`}
+                    type="button"
+                    onClick={() => setFollowTab("following")}
+                  >
+                    Following
+                  </button>
+                </div>
+                <div className="follow-search">
+                  <input
+                    type="text"
+                    placeholder="Search followers..."
+                    value={followSearch}
+                    onChange={(event) => setFollowSearch(event.target.value)}
+                  />
+                </div>
+                <div className="follow-table">
+                  <div className="follow-row follow-row-head">
+                    <span>User</span>
+                    <span>Action</span>
+                  </div>
+                  {followLoading ? (
+                    <div className="follow-table" aria-hidden="true">
+                      {Array.from({ length: 4 }).map((_, index) => (
+                        <div className="follow-row" key={`sk-follow-${index}`}>
+                          <div className="follow-user">
+                            <div className="follow-avatar">
+                              <Skeleton className="skeleton-circle" />
+                            </div>
+                            <div className="follow-user-meta">
+                              <Skeleton className="skeleton-line skeleton-w-60" />
+                              <Skeleton className="skeleton-line sm skeleton-w-40" />
+                            </div>
+                          </div>
+                          <div className="follow-actions">
+                            <Skeleton className="skeleton-chip skeleton-w-60" />
+                            <Skeleton className="skeleton-chip skeleton-w-40" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : filteredFollowList.length === 0 ? (
+                    <div className="follow-empty">No results found.</div>
+                  ) : (
+                    filteredFollowList.map((item) => {
+                      const isFollowing = followingSet.has(item.user_id);
+                      const isMutual =
+                        followingSet.has(item.user_id) && followersSet.has(item.user_id);
+                      const name = item.full_name || item.username || "User";
+                      return (
+                        <div className="follow-row" key={item.user_id}>
+                          <div className="follow-user">
+                            <div className="follow-avatar">
+                              {item.avatar_url ? (
+                                <img src={item.avatar_url} alt={name} />
+                              ) : (
+                                <span>{name[0]?.toUpperCase()}</span>
+                              )}
+                            </div>
+                            <div className="follow-user-meta">
+                              <div className="follow-user-name">{name}</div>
+                              <div className="follow-user-handle">
+                                @{item.username || "user"}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="follow-actions">
+                            <button
+                              className={`follow-btn${isFollowing ? " following" : ""}`}
+                              type="button"
+                              onClick={() => handleToggleFollow(item.user_id)}
+                            >
+                              {isFollowing ? "Following" : "Follow"}
+                            </button>
+                            <button
+                              className="follow-msg-btn"
+                              type="button"
+                              onClick={() => handleMessage(item.user_id)}
+                              disabled={!isMutual}
+                              title={
+                                isMutual
+                                  ? "Send message"
+                                  : "You both need to follow each other to message"
+                              }
+                            >
+                              Message
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
             </>
           )}
         </section>

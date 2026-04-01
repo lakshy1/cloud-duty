@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { CardGrid } from "../components/CardGrid";
-import { Loader } from "../components/Loader";
+import { Skeleton } from "../components/Skeleton";
 import { FollowButton } from "../components/FollowButton";
 import { PopupModal, PopupInteractions } from "../components/PopupModal";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
@@ -393,7 +393,23 @@ export default function SearchPage() {
           {filter === "profiles" ? (
             <div className="search-results">
               {loadingProfiles ? (
-                <Loader label="Loading profiles" />
+                <div className="profile-list" aria-hidden="true">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <div className="profile-row" key={`sk-prof-${index}`}>
+                      <div className="profile-row-avatar">
+                        <Skeleton className="skeleton-circle skeleton-w-100" />
+                      </div>
+                      <div className="profile-row-info">
+                        <Skeleton className="skeleton-line skeleton-w-60" />
+                        <Skeleton className="skeleton-line sm skeleton-w-40" />
+                      </div>
+                      <div className="profile-row-actions">
+                        <Skeleton className="skeleton-chip skeleton-w-80" />
+                        <Skeleton className="skeleton-chip skeleton-w-40" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : !normalizedQuery ? (
                 <div className="search-empty">Start typing to search profiles.</div>
               ) : filteredProfiles.length === 0 ? (
@@ -441,7 +457,16 @@ export default function SearchPage() {
           ) : (
             <div className="search-results">
               {loadingPosts ? (
-                <Loader label="Loading posts" />
+                <div className="masonry" aria-hidden="true">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div className="skeleton-card" key={`sk-post-${index}`}>
+                      <Skeleton className="skeleton-thumb" />
+                      <Skeleton className="skeleton-line skeleton-w-80" />
+                      <Skeleton className="skeleton-line skeleton-w-60" />
+                      <Skeleton className="skeleton-line sm skeleton-w-40" />
+                    </div>
+                  ))}
+                </div>
               ) : !normalizedQuery ? (
                 <div className="search-empty">Start typing to search posts.</div>
               ) : filteredPosts.length === 0 ? (

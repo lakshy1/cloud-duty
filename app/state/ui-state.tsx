@@ -6,7 +6,9 @@ import {
   useContext,
   useMemo,
   useState,
+  useEffect,
 } from "react";
+import { getSupabaseBrowserClient } from "../lib/supabase/client";
 
 export type Toast = {
   id: string;
@@ -26,6 +28,7 @@ type UIState = {
   toasts: Toast[];
   isLoggedIn: boolean | null;
   loginPromptOpen: boolean;
+  hasUnreadNotifications: boolean;
   setDrawerOpen: (open: boolean) => void;
   setPopupOpen: (open: boolean) => void;
   setPopupIndex: (index: number | null) => void;
@@ -38,6 +41,7 @@ type UIState = {
   removeToast: (id: string) => void;
   setIsLoggedIn: (v: boolean | null) => void;
   setLoginPromptOpen: (open: boolean) => void;
+  setHasUnreadNotifications: (value: boolean) => void;
 };
 
 const UIStateContext = createContext<UIState | null>(null);
@@ -54,6 +58,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [loginPromptOpen, setLoginPromptOpen] = useState(false);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
 
   const pushToast = useCallback((toast: Omit<Toast, "id"> & { id?: string }) => {
     const id = toast.id ?? crypto.randomUUID();
@@ -77,6 +82,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       toasts,
       isLoggedIn,
       loginPromptOpen,
+      hasUnreadNotifications,
       setDrawerOpen,
       setPopupOpen,
       setPopupIndex,
@@ -89,6 +95,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       removeToast,
       setIsLoggedIn,
       setLoginPromptOpen,
+      setHasUnreadNotifications,
     }),
     [
       drawerOpen,
@@ -102,10 +109,60 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       toasts,
       isLoggedIn,
       loginPromptOpen,
+      hasUnreadNotifications,
       pushToast,
       removeToast,
     ]
   );
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let active = true;
+
+    const loadNotifications = async () => {
+      const { data } = await supabase.auth.getSession();
+      const userId = data.session?.user.id;
+      if (!userId) {
+        if (active) setHasUnreadNotifications(false);
+        return;
+      }
+      const { count } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .is("read_at", null);
+      if (active) setHasUnreadNotifications((count ?? 0) > 0);
+
+      channel = supabase
+        .channel("notifications-realtime")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+          () => {
+            setHasUnreadNotifications(true);
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            if (payload.new && (payload.new as { read_at?: string | null }).read_at === null) {
+              setHasUnreadNotifications(true);
+            }
+          }
+        )
+        .subscribe();
+    };
+
+    loadNotifications();
+    return () => {
+      active = false;
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, []);
 
   return <UIStateContext.Provider value={value}>{children}</UIStateContext.Provider>;
 }

@@ -26,17 +26,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const themeScript = `
-    (function() {
-      try {
-        var t = localStorage.getItem('theme');
-        if (t !== 'minimal' && t !== 'obsidian') t = 'minimal';
-        var root = document.documentElement;
-        root.setAttribute('data-theme', t);
-        root.classList.toggle('dark', t === 'obsidian');
-      } catch (e) {}
-    })();
-  `;
   return (
     <html
       lang="en"
@@ -44,9 +33,6 @@ export default function RootLayout({
       className={`${dmSans.variable} ${syne.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
       <body className="min-h-full">
         <ThemeProvider>
           <UIStateProvider>{children}</UIStateProvider>

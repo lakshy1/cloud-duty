@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "./Icon";
 import { useUIState } from "../state/ui-state";
 
@@ -11,9 +12,10 @@ type SidebarProps = {
 
 export function Sidebar({ onCreate, onSearch }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
-  const { createOpen, isLoggedIn, setLoginPromptOpen } = useUIState();
+  const { createOpen, isLoggedIn, setLoginPromptOpen, hasUnreadNotifications } = useUIState();
 
   const requireAuth = (action: () => void) => {
     if (isLoggedIn) {
@@ -25,18 +27,18 @@ export function Sidebar({ onCreate, onSearch }: SidebarProps) {
 
   return (
     <aside className="sidebar">
-      <a className="sb-logo" href="/">
+      <Link className="sb-logo" href="/">
         <Icon name="cloud" stroke="#fff" />
-      </a>
+      </Link>
       <div className="sb-sep" />
-      <a className={`sb-btn${isActive("/") ? " active" : ""}`} href="/" aria-label="Home">
+      <Link className={`sb-btn${isActive("/") ? " active" : ""}`} href="/" aria-label="Home">
         <Icon name="home" />
-      </a>
+      </Link>
       <button
         className={`sb-btn${isActive("/search") ? " active" : ""}`}
         type="button"
         aria-label="Search"
-        onClick={() => requireAuth(() => { window.location.href = "/search"; })}
+        onClick={() => requireAuth(() => router.push("/search"))}
       >
         <Icon name="search" />
       </button>
@@ -44,7 +46,7 @@ export function Sidebar({ onCreate, onSearch }: SidebarProps) {
         className={`sb-btn${isActive("/my-posts") ? " active" : ""}`}
         type="button"
         aria-label="My Posts"
-        onClick={() => requireAuth(() => { window.location.href = "/my-posts"; })}
+        onClick={() => requireAuth(() => router.push("/my-posts"))}
       >
         <Icon name="file" />
       </button>
@@ -52,7 +54,7 @@ export function Sidebar({ onCreate, onSearch }: SidebarProps) {
         className={`sb-btn${isActive("/inbox") ? " active" : ""}`}
         type="button"
         aria-label="Inbox"
-        onClick={() => requireAuth(() => { window.location.href = "/inbox"; })}
+        onClick={() => requireAuth(() => router.push("/inbox"))}
       >
         <Icon name="messages" />
       </button>
@@ -69,13 +71,14 @@ export function Sidebar({ onCreate, onSearch }: SidebarProps) {
         className={`sb-btn${isActive("/notifications") ? " active" : ""}`}
         type="button"
         aria-label="Notifications"
-        onClick={() => requireAuth(() => { window.location.href = "/notifications"; })}
+        onClick={() => requireAuth(() => router.push("/notifications"))}
       >
         <Icon name="notifications" />
+        {hasUnreadNotifications ? <span className="sb-dot" aria-hidden="true" /> : null}
       </button>
-      <a className={`sb-btn${isActive("/settings") ? " active" : ""}`} href="/settings" aria-label="Settings">
+      <Link className={`sb-btn${isActive("/settings") ? " active" : ""}`} href="/settings" aria-label="Settings">
         <Icon name="settings" />
-      </a>
+      </Link>
       <div className="sb-space" />
     </aside>
   );

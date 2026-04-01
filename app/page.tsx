@@ -7,6 +7,7 @@ import { PaletteRow } from "./components/PaletteRow";
 import { PopupModal, PopupInteractions } from "./components/PopupModal";
 import { ReportModal } from "./components/ReportModal";
 import { Loader } from "./components/Loader";
+import { Skeleton } from "./components/Skeleton";
 import type { CardData } from "./data/card-data";
 import { cardData } from "./data/card-data";
 import { getSupabaseBrowserClient } from "./lib/supabase/client";
@@ -352,6 +353,7 @@ export default function Home() {
 
   const toggleSave = useCallback(
     async (postId: string) => {
+      const targetCard = cardsRef.current.find((card) => card.id === postId);
       let activeUserId = userId;
       if (!activeUserId) {
         const supabase = getSupabaseBrowserClient();
@@ -374,6 +376,15 @@ export default function Home() {
         : await supabase.from("saved_posts").insert({ post_id: postId, user_id: activeUserId });
       if (error) {
         setSavedIds(savedIds);
+      } else if (targetCard?.userId && targetCard.userId !== activeUserId) {
+        await supabase.from("notifications").insert({
+          user_id: targetCard.userId,
+          actor_id: activeUserId,
+          type: wasSaved ? "unsave" : "save",
+          entity_type: "post",
+          entity_id: postId,
+          message: wasSaved ? "removed your post from saved" : "saved your post",
+        });
       }
     },
     [savedIds, userId]
@@ -381,6 +392,7 @@ export default function Home() {
 
   const toggleReaction = useCallback(
     async (postId: string, reaction: "like" | "dislike") => {
+      const targetCard = cardsRef.current.find((card) => card.id === postId);
       let activeUserId = userId;
       if (!activeUserId) {
         const supabase = getSupabaseBrowserClient();
@@ -405,6 +417,19 @@ export default function Home() {
       if (error) {
         setReactions(reactions);
         return;
+      }
+      if (targetCard?.userId && targetCard.userId !== activeUserId) {
+        await supabase.from("notifications").insert({
+          user_id: targetCard.userId,
+          actor_id: activeUserId,
+          type: current === reaction ? "unlike" : reaction,
+          entity_type: "post",
+          entity_id: postId,
+          message:
+            current === reaction
+              ? `removed ${reaction} from your post`
+              : `${reaction}d your post`,
+        });
       }
       if (Array.isArray(data) && data[0]) {
         const { likes, dislikes } = data[0];
@@ -756,7 +781,16 @@ export default function Home() {
       <AppShell>
         <PaletteRow />
         {loadingPosts ? (
-          <Loader label="Loading posts" />
+          <div className="masonry" aria-hidden="true">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div className="skeleton-card" key={`sk-${index}`}>
+                <Skeleton className="skeleton-thumb" />
+                <Skeleton className="skeleton-line skeleton-w-80" />
+                <Skeleton className="skeleton-line skeleton-w-60" />
+                <Skeleton className="skeleton-line sm skeleton-w-40" />
+              </div>
+            ))}
+          </div>
         ) : (
           <CardGrid
             cards={filteredCards}

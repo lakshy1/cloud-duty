@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { RefObject } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "./Icon";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { useUIState } from "../state/ui-state";
@@ -16,6 +17,7 @@ type MobileDrawerProps = {
 
 export function MobileDrawer({ open, panelRef, onClose, onCreate, onSearch }: MobileDrawerProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
   const { isLoggedIn, setLoginPromptOpen } = useUIState();
@@ -44,12 +46,12 @@ export function MobileDrawer({ open, panelRef, onClose, onCreate, onSearch }: Mo
         tabIndex={-1}
       >
         <div className="m-drawer-head">
-          <a className="m-drawer-logo" href="/" onClick={onClose}>
+          <Link className="m-drawer-logo" href="/" onClick={onClose}>
             <div className="m-drawer-logo-icon">
               <Icon name="cloud" stroke="#fff" />
             </div>
             <span className="m-drawer-title">CloudDuty</span>
-          </a>
+          </Link>
           <button className="m-drawer-close" onClick={onClose} aria-label="Close menu">
             <svg viewBox="0 0 24 24">
               <path d="M18 6 6 18M6 6l12 12" />
@@ -57,14 +59,14 @@ export function MobileDrawer({ open, panelRef, onClose, onCreate, onSearch }: Mo
           </button>
         </div>
         <div className="m-drawer-sep" />
-        <a className={`m-nav-item${isActive("/") ? " active" : ""}`} href="/" onClick={onClose}>
+        <Link className={`m-nav-item${isActive("/") ? " active" : ""}`} href="/" onClick={onClose}>
           <Icon name="home" />
           Home
-        </a>
+        </Link>
         <button
           className={`m-nav-item${isActive("/search") ? " active" : ""}`}
           type="button"
-          onClick={() => requireAuth(() => { window.location.href = "/search"; })}
+          onClick={() => requireAuth(() => router.push("/search"))}
         >
           <Icon name="search" />
           Search
@@ -72,7 +74,7 @@ export function MobileDrawer({ open, panelRef, onClose, onCreate, onSearch }: Mo
         <button
           className={`m-nav-item${isActive("/my-posts") ? " active" : ""}`}
           type="button"
-          onClick={() => requireAuth(() => { window.location.href = "/my-posts"; })}
+          onClick={() => requireAuth(() => router.push("/my-posts"))}
         >
           <Icon name="file" />
           My Posts
@@ -80,7 +82,7 @@ export function MobileDrawer({ open, panelRef, onClose, onCreate, onSearch }: Mo
         <button
           className={`m-nav-item${isActive("/inbox") ? " active" : ""}`}
           type="button"
-          onClick={() => requireAuth(() => { window.location.href = "/inbox"; })}
+          onClick={() => requireAuth(() => router.push("/inbox"))}
         >
           <Icon name="messages" />
           Inbox
@@ -97,15 +99,15 @@ export function MobileDrawer({ open, panelRef, onClose, onCreate, onSearch }: Mo
         <button
           className={`m-nav-item${isActive("/notifications") ? " active" : ""}`}
           type="button"
-          onClick={() => requireAuth(() => { window.location.href = "/notifications"; })}
+          onClick={() => requireAuth(() => router.push("/notifications"))}
         >
           <Icon name="notifications" />
           Notifications
         </button>
-        <a className={`m-nav-item${isActive("/settings") ? " active" : ""}`} href="/settings" onClick={onClose}>
+        <Link className={`m-nav-item${isActive("/settings") ? " active" : ""}`} href="/settings" onClick={onClose}>
           <Icon name="settings" />
           Settings
-        </a>
+        </Link>
       </nav>
     </div>
   );

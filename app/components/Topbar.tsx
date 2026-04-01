@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 import { Icon } from "./Icon";
 import { useUIState } from "../state/ui-state";
@@ -16,12 +18,14 @@ export function Topbar({
   onToggleDrawer,
   searchInputRef,
 }: TopbarProps) {
+  const pathname = usePathname();
   const { searchQuery, setSearchQuery, isLoggedIn } = useUIState();
   const [profOpen, setProfOpen] = useState(false);
   const profDropRef = useRef<HTMLDivElement | null>(null);
   const [initials, setInitials] = useState("?");
   const [userName, setUserName] = useState("Account");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const cacheKey = "cd_profile_cache";
 
   useEffect(() => {
     const onDocClick = (event: MouseEvent) => {
@@ -36,6 +40,21 @@ export function Topbar({
 
   useEffect(() => {
     if (!isLoggedIn) return;
+    try {
+      const cached = window.localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached) as {
+          name?: string;
+          initials?: string;
+          avatar?: string | null;
+        };
+        if (parsed?.name) setUserName(parsed.name);
+        if (parsed?.initials) setInitials(parsed.initials);
+        if (parsed?.avatar !== undefined) setAvatarUrl(parsed.avatar ?? null);
+      }
+    } catch {
+      // ignore cache errors
+    }
     const supabase = getSupabaseBrowserClient();
     const loadUser = async () => {
       const { data } = await supabase.auth.getSession();
@@ -62,6 +81,18 @@ export function Topbar({
       setUserName(resolvedName);
       setInitials(initialsFromName || "U");
       setAvatarUrl(profile?.avatar_url || meta.avatar_url || null);
+      try {
+        window.localStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            name: resolvedName,
+            initials: initialsFromName || "U",
+            avatar: profile?.avatar_url || meta.avatar_url || null,
+          })
+        );
+      } catch {
+        // ignore cache errors
+      }
     };
     loadUser();
   }, [isLoggedIn]);
@@ -69,6 +100,11 @@ export function Topbar({
   const handleLogout = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
     await supabase.auth.signOut();
+    try {
+      window.localStorage.removeItem(cacheKey);
+    } catch {
+      // ignore cache errors
+    }
     window.location.href = "/";
   }, []);
 
@@ -87,31 +123,33 @@ export function Topbar({
         <span />
       </button>
 
-      <div className="search-bar search-bar--wide">
-        <Icon name="search" className="search-ico" />
-        <input
-          ref={searchInputRef}
-          id="globalSearch"
-          type="text"
-          placeholder="Search posts, boards..."
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-        />
-        {searchQuery ? (
-          <button
-            className="search-clear"
-            type="button"
-            aria-label="Clear search"
-            onClick={() => {
-              setSearchQuery("");
-              searchInputRef?.current?.focus();
-            }}
-          >
-            ×
-          </button>
-        ) : null}
-        <span className="search-kbd">/</span>
-      </div>
+      {pathname === "/" ? (
+        <div className="search-bar search-bar--wide">
+          <Icon name="search" className="search-ico" />
+          <input
+            ref={searchInputRef}
+            id="globalSearch"
+            type="text"
+            placeholder="Search posts, boards..."
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+          {searchQuery ? (
+            <button
+              className="search-clear"
+              type="button"
+              aria-label="Clear search"
+              onClick={() => {
+                setSearchQuery("");
+                searchInputRef?.current?.focus();
+              }}
+            >
+              ×
+            </button>
+          ) : null}
+          <span className="search-kbd">/</span>
+        </div>
+      ) : null}
 
       <div className="topbar-space" />
 
@@ -141,14 +179,14 @@ export function Topbar({
             <Icon name="chevron-down" className="prof-chev" />
           </div>
           <div className="prof-menu" id="profMenu">
-            <a className="prof-opt" href="/profile">
+            <Link className="prof-opt" href="/profile">
               <svg viewBox="0 0 24 24">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
               Profile
-            </a>
-            <a className="prof-opt" href="/my-posts">
+            </Link>
+            <Link className="prof-opt" href="/my-posts">
               <svg viewBox="0 0 24 24">
                 <path d="M6 3h9l3 3v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
                 <path d="M9 13h6" />
@@ -156,17 +194,17 @@ export function Topbar({
                 <path d="M9 9h3" />
               </svg>
               My Posts
-            </a>
-            <a className="prof-opt" href="/saved">
+            </Link>
+            <Link className="prof-opt" href="/saved">
               <svg viewBox="0 0 24 24">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
               </svg>
               Saved Posts
-            </a>
-            <a className="prof-opt" href="/settings">
+            </Link>
+            <Link className="prof-opt" href="/settings">
               <Icon name="settings" />
               Settings
-            </a>
+            </Link>
             <div className="prof-menu-sep" />
             <button className="prof-opt danger" type="button" onClick={handleLogout}>
               <svg viewBox="0 0 24 24">
@@ -179,9 +217,9 @@ export function Topbar({
           </div>
         </div>
       ) : (
-        <a className="topbar-login-btn" href="/auth?mode=login">
+        <Link className="topbar-login-btn" href="/auth?mode=login">
           Log In
-        </a>
+        </Link>
       )}
     </header>
   );

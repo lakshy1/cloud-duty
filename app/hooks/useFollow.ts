@@ -58,12 +58,28 @@ export function useFollow(targetUserId: string | null) {
         .delete()
         .eq("follower_id", currentUserId)
         .eq("following_id", targetUserId);
+      await supabase.from("notifications").insert({
+        user_id: targetUserId,
+        actor_id: currentUserId,
+        type: "unfollow",
+        entity_type: "follow",
+        entity_id: targetUserId,
+        message: "unfollowed you",
+      });
       setIsFollowing(false);
       setFollowerCount((prev) => Math.max(0, prev - 1));
     } else {
       await supabase.from("follows").insert({
         follower_id: currentUserId,
         following_id: targetUserId,
+      });
+      await supabase.from("notifications").insert({
+        user_id: targetUserId,
+        actor_id: currentUserId,
+        type: "follow",
+        entity_type: "follow",
+        entity_id: targetUserId,
+        message: "started following you",
       });
       setIsFollowing(true);
       setFollowerCount((prev) => prev + 1);
