@@ -136,12 +136,6 @@ export function PopupModal({
               </div>
               <div className="pp-stat-label">Dislikes</div>
             </div>
-            <div className="pp-stat">
-              <div className="pp-stat-val" id="ppShares">
-                {data?.shares ?? ""}
-              </div>
-              <div className="pp-stat-label">Shares</div>
-            </div>
           </div>
 
           <div className="pp-interactions">
@@ -199,7 +193,11 @@ export function PopupModal({
             <FollowButton targetUserId={data?.userId} size="md" className="pp-act-primary" />
             {data?.userId ? (
               <button className="pp-act-secondary" onClick={handleViewProfile} type="button">
-                View Profile {"->"}
+                <span>View Profile</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 12h12" />
+                  <path d="M13 6l6 6-6 6" />
+                </svg>
               </button>
             ) : (
               <button className="pp-act-secondary" type="button">

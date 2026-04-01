@@ -24,3 +24,10 @@ create policy "insert chat attachments"
   on storage.objects
   for insert
   with check (bucket_id = 'chat-attachments' and auth.role() = 'authenticated');
+
+-- Allow upserts on existing objects when upload uses `upsert: true`
+create policy "update chat attachments"
+  on storage.objects
+  for update
+  using (bucket_id = 'chat-attachments' and auth.role() = 'authenticated')
+  with check (bucket_id = 'chat-attachments' and auth.role() = 'authenticated');

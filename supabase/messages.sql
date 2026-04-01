@@ -15,6 +15,8 @@ create table if not exists public.chat_messages (
   attachment_name text,
   attachment_type text,
   attachment_size int,
+  read_at timestamptz,
+  read_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   deleted_at timestamptz,
   deleted_by uuid references auth.users(id) on delete set null
@@ -88,3 +90,16 @@ create policy "update own chat messages"
   on public.chat_messages
   for update
   using (auth.uid() = sender_id);
+
+drop policy if exists "mark chat messages read" on public.chat_messages;
+create policy "mark chat messages read"
+  on public.chat_messages
+  for update
+  using (
+    auth.uid() <> sender_id
+    and exists (
+      select 1 from public.chats c
+      where c.id = chat_id and (c.user_a = auth.uid() or c.user_b = auth.uid())
+    )
+  )
+  with check (read_by = auth.uid());

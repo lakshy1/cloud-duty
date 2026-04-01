@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
@@ -34,6 +34,8 @@ type ChatMessage = {
   attachment_name?: string | null;
   attachment_type?: string | null;
   attachment_size?: number | null;
+  read_at?: string | null;
+  read_by?: string | null;
   created_at: string;
   deleted_at: string | null;
   deleted_by: string | null;
@@ -84,6 +86,11 @@ export default function InboxClient() {
   const [isSending, setIsSending] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadLabel, setUploadLabel] = useState<string | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState<{
+    url: string;
+    name: string;
+    type?: string | null;
+  } | null>(null);
   const [threadQuery, setThreadQuery] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [threadsReloadKey, setThreadsReloadKey] = useState(0);
@@ -253,8 +260,9 @@ export default function InboxClient() {
   useEffect(() => {
     if (!messageMenuOpenId) return;
     const handleClick = (event: MouseEvent) => {
-      const target = event.target as Node;
+      const target = event.target as HTMLElement;
       if (messageMenuRef.current?.contains(target)) return;
+      if (target.closest(".inbox-msg-menu-btn")) return;
       setMessageMenuOpenId(null);
     };
     document.addEventListener("mousedown", handleClick);
@@ -361,11 +369,13 @@ export default function InboxClient() {
     const loadMessages = async () => {
       setChatMessages([]);
       setChatLoading(true);
-    const { data } = await supabase
-      .from("chat_messages")
-      .select("id,chat_id,sender_id,body,created_at,deleted_at,deleted_by,attachment_url,attachment_name,attachment_type,attachment_size")
-      .eq("chat_id", activeThread.chatId)
-      .order("created_at", { ascending: true });
+      const { data } = await supabase
+        .from("chat_messages")
+        .select(
+          "id,chat_id,sender_id,body,created_at,deleted_at,deleted_by,attachment_url,attachment_name,attachment_type,attachment_size,read_at,read_by"
+        )
+        .eq("chat_id", activeThread.chatId)
+        .order("created_at", { ascending: true });
       if (!active) return;
       setChatMessages((data ?? []) as ChatMessage[]);
       setChatLoading(false);
@@ -379,7 +389,14 @@ export default function InboxClient() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chat_messages", filter: `chat_id=eq.${activeThread.chatId}` },
         (payload) => {
-          setChatMessages((prev) => [...prev, payload.new as ChatMessage]);
+          const nextMessage = payload.new as ChatMessage;
+          setChatMessages((prev) => [...prev, nextMessage]);
+          if (nextMessage.sender_id !== userId) {
+            supabase
+              .from("chat_messages")
+              .update({ read_at: new Date().toISOString(), read_by: userId })
+              .eq("id", nextMessage.id);
+          }
         }
       )
       .on(
@@ -391,6 +408,13 @@ export default function InboxClient() {
         }
       )
       .subscribe();
+
+    supabase
+      .from("chat_messages")
+      .update({ read_at: new Date().toISOString(), read_by: userId })
+      .eq("chat_id", activeThread.chatId)
+      .neq("sender_id", userId)
+      .is("read_at", null);
 
     return () => {
       active = false;
@@ -637,6 +661,17 @@ export default function InboxClient() {
       pushToast({ message: error.message, tone: "error" });
     } else {
       setDraft("");
+      if (otherUserId) {
+        await supabase.from("notifications").insert({
+          user_id: otherUserId,
+          actor_id: userId,
+          type: "message",
+          entity_type: "chat",
+          entity_id: activeThread.chatId,
+          message: "You have a new message",
+          metadata: { chat_id: activeThread.chatId, preview: text.slice(0, 140) },
+        });
+      }
     }
     setIsSending(false);
   };
@@ -691,6 +726,19 @@ export default function InboxClient() {
   const handleAttach = () => {
     if (isSending) return;
     fileInputRef.current?.click();
+  };
+
+  const openAttachment = (url: string, name: string, type?: string | null) => {
+    if (!url) return;
+    setAttachmentPreview({ url, name, type });
+  };
+
+  const handleAttachmentOpen = (url: string, name: string, type?: string | null) => {
+    openAttachment(url, name, type);
+  };
+
+  const closeAttachment = () => {
+    setAttachmentPreview(null);
   };
 
   const handleFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -792,6 +840,17 @@ export default function InboxClient() {
 
     setIsSending(true);
     const supabase = getSupabaseBrowserClient();
+    let otherUserId = activeThread.userId ?? null;
+    if (!otherUserId) {
+      const { data: chatRow } = await supabase
+        .from("chats")
+        .select("user_a,user_b")
+        .eq("id", activeThread.chatId)
+        .maybeSingle();
+      if (chatRow) {
+        otherUserId = chatRow.user_a === userId ? chatRow.user_b : chatRow.user_a;
+      }
+    }
     const bucketName = process.env.NEXT_PUBLIC_CHAT_ATTACHMENTS_BUCKET || "chat-attachments";
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "");
     const filePath = `${activeThread.chatId}/${userId}/${Date.now()}-${safeName}`;
@@ -841,12 +900,29 @@ export default function InboxClient() {
       pushToast({ message: error.message, tone: "error" });
     } else {
       pushToast({ message: "Attachment sent.", tone: "success" });
+      if (otherUserId) {
+        await supabase.from("notifications").insert({
+          user_id: otherUserId,
+          actor_id: userId,
+          type: "message",
+          entity_type: "chat",
+          entity_id: activeThread.chatId,
+          message: "You received an attachment",
+          metadata: { chat_id: activeThread.chatId, attachment: file.name },
+        });
+      }
     }
     setIsSending(false);
     event.target.value = "";
   };
 
   const activeAiMessages = aiMessagesByThread[AI_THREAD_ID] ?? [];
+  const previewIsImage = attachmentPreview?.type?.startsWith("image/") ?? false;
+  const previewIsPdf =
+    !!attachmentPreview &&
+    !previewIsImage &&
+    (attachmentPreview.type?.includes("pdf") ||
+      attachmentPreview.url.toLowerCase().endsWith(".pdf"));
 
   return (
     <AppShell>
@@ -1037,12 +1113,29 @@ export default function InboxClient() {
                           <div className={`inbox-bubble ${msg.from === "me" ? "me" : "them"}`}>
                             <div className="inbox-bubble-text">{msg.text}</div>
                             {msg.attachment ? (
-                              <div className="inbox-attachment">
+                              <button
+                                className="inbox-attachment inbox-attachment-btn"
+                                type="button"
+                                onClick={() =>
+                                  handleAttachmentOpen(
+                                    msg.attachment.preview ?? "",
+                                    msg.attachment.name,
+                                    msg.attachment.type
+                                  )
+                                }
+                                onTouchEnd={() =>
+                                  handleAttachmentOpen(
+                                    msg.attachment.preview ?? "",
+                                    msg.attachment.name,
+                                    msg.attachment.type
+                                  )
+                                }
+                              >
                                 <div className="inbox-attachment-name">{msg.attachment.name}</div>
                                 <div className="inbox-attachment-meta">
                                   {msg.attachment.type} - {formatSize(msg.attachment.size)}
                                 </div>
-                              </div>
+                              </button>
                             ) : null}
                             <div className="inbox-bubble-time">{formatTime(msg.createdAt)}</div>
                           </div>
@@ -1067,9 +1160,7 @@ export default function InboxClient() {
                         ? "This message was deleted."
                         : msg.body || "";
                       const isLastOutbound = isMine && index === lastOutboundIndex;
-                      const seenAfter =
-                        isLastOutbound &&
-                        chatMessages.slice(index + 1).some((m) => m.sender_id !== userId);
+                      const seenAfter = isLastOutbound && !!msg.read_at;
                       return (
                         <div key={msg.id} className="inbox-message-block">
                           {showDate ? <div className="inbox-date">{formatDateLabel(msg.created_at)}</div> : null}
@@ -1105,7 +1196,24 @@ export default function InboxClient() {
                             ) : null}
                             <div className="inbox-bubble-text">{displayText}</div>
                             {msg.attachment_url ? (
-                              <div className="inbox-attachment">
+                              <button
+                                className="inbox-attachment inbox-attachment-btn"
+                                type="button"
+                                onClick={() =>
+                                  handleAttachmentOpen(
+                                    msg.attachment_url!,
+                                    msg.attachment_name ?? "Attachment",
+                                    msg.attachment_type
+                                  )
+                                }
+                                onTouchEnd={() =>
+                                  handleAttachmentOpen(
+                                    msg.attachment_url!,
+                                    msg.attachment_name ?? "Attachment",
+                                    msg.attachment_type
+                                  )
+                                }
+                              >
                                 {msg.attachment_type?.startsWith("image/") ? (
                                   <img src={msg.attachment_url} alt={msg.attachment_name ?? "Attachment"} />
                                 ) : (
@@ -1121,7 +1229,7 @@ export default function InboxClient() {
                                     </div>
                                   </div>
                                 )}
-                              </div>
+                              </button>
                             ) : null}
                             <div className="inbox-bubble-time">{formatTime(msg.created_at)}</div>
                           </div>
@@ -1148,7 +1256,7 @@ export default function InboxClient() {
                   className="inbox-attach"
                   type="button"
                   onClick={handleAttach}
-                  disabled={isSending || !isAiThread}
+                  disabled={isSending}
                 >
                   +
                 </button>
@@ -1183,6 +1291,50 @@ export default function InboxClient() {
                   <span>Uploading {uploadLabel ?? "attachment"}...</span>
                   <div className="inbox-upload-bar">
                     <span style={{ width: `${uploadProgress}%` }} />
+                  </div>
+                </div>
+              ) : null}
+              {attachmentPreview ? (
+                <div
+                  className="attachment-overlay"
+                  role="dialog"
+                  aria-modal="true"
+                  onClick={closeAttachment}
+                >
+                  <div className="attachment-modal" onClick={(event) => event.stopPropagation()}>
+                    <button
+                      className="attachment-close"
+                      type="button"
+                      aria-label="Close attachment"
+                      onClick={closeAttachment}
+                    >
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <path d="M18 6 6 18" />
+                        <path d="M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <div className="attachment-head">
+                      <div className="attachment-name">{attachmentPreview.name}</div>
+                      <a
+                        className="attachment-open"
+                        href={attachmentPreview.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open in new tab
+                      </a>
+                    </div>
+                    <div className="attachment-body">
+                      {previewIsImage ? (
+                        <img src={attachmentPreview.url} alt={attachmentPreview.name} />
+                      ) : previewIsPdf ? (
+                        <iframe src={attachmentPreview.url} title={attachmentPreview.name} />
+                      ) : (
+                        <a href={attachmentPreview.url} target="_blank" rel="noreferrer">
+                          Download file
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : null}
