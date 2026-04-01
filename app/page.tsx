@@ -612,6 +612,39 @@ export default function Home() {
   }, [userId]);
 
   useEffect(() => {
+    if (!userId) return;
+    const supabase = getSupabaseBrowserClient();
+    const channel = supabase
+      .channel("saved-posts-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "saved_posts", filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const row = payload.new as { post_id?: string };
+          if (!row?.post_id) return;
+          setSavedIds((prev) => new Set(prev).add(row.post_id as string));
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "saved_posts", filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const row = payload.old as { post_id?: string };
+          if (!row?.post_id) return;
+          setSavedIds((prev) => {
+            const next = new Set(prev);
+            next.delete(row.post_id as string);
+            return next;
+          });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
+  useEffect(() => {
     if (!userId) {
       setReactions(new Map());
       return;
@@ -635,6 +668,43 @@ export default function Home() {
     loadReactions();
     return () => {
       active = false;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const supabase = getSupabaseBrowserClient();
+    const channel = supabase
+      .channel("reactions-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "post_reactions", filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const row = payload.new as { post_id?: string; reaction?: "like" | "dislike" };
+          if (!row?.post_id || (row.reaction !== "like" && row.reaction !== "dislike")) return;
+          setReactions((prev) => {
+            const next = new Map(prev);
+            next.set(row.post_id as string, row.reaction);
+            return next;
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "post_reactions", filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const row = payload.old as { post_id?: string };
+          if (!row?.post_id) return;
+          setReactions((prev) => {
+            const next = new Map(prev);
+            next.delete(row.post_id as string);
+            return next;
+          });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
     };
   }, [userId]);
 

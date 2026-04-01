@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "../components/AppShell";
@@ -89,9 +89,14 @@ export default function InboxClient() {
   const [mutualList, setMutualList] = useState<MutualUser[]>([]);
   const [threadMenuOpen, setThreadMenuOpen] = useState<string | null>(null);
   const [hiddenChatIds, setHiddenChatIds] = useState<Set<string>>(new Set());
+  const [activeStats, setActiveStats] = useState<{ followers: number; following: number } | null>(
+    null
+  );
+  const [messageMenuOpenId, setMessageMenuOpenId] = useState<string | null>(null);
   const chatBodyRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const threadMenuRef = useRef<HTMLDivElement | null>(null);
+  const messageMenuRef = useRef<HTMLDivElement | null>(null);
 
   const isAiThread = activeThreadId === AI_THREAD_ID;
 
@@ -159,6 +164,28 @@ export default function InboxClient() {
     [activeThreadId, threads]
   );
 
+  const refreshActiveStats = useCallback(async () => {
+    if (!activeThread?.userId) {
+      setActiveStats(null);
+      return;
+    }
+    const supabase = getSupabaseBrowserClient();
+    const [followersRes, followingRes] = await Promise.all([
+      supabase
+        .from("follows")
+        .select("follower_id", { count: "exact", head: true })
+        .eq("following_id", activeThread.userId),
+      supabase
+        .from("follows")
+        .select("following_id", { count: "exact", head: true })
+        .eq("follower_id", activeThread.userId),
+    ]);
+    setActiveStats({
+      followers: followersRes.count ?? 0,
+      following: followingRes.count ?? 0,
+    });
+  }, [activeThread?.userId]);
+
   useEffect(() => {
     const container = chatBodyRef.current;
     if (!container) return;
@@ -209,6 +236,19 @@ export default function InboxClient() {
   useEffect(() => {
     setThreadMenuOpen(null);
   }, [activeThreadId]);
+
+  useEffect(() => {
+    if (!messageMenuOpenId) return;
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (messageMenuRef.current?.contains(target)) return;
+      setMessageMenuOpenId(null);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+    };
+  }, [messageMenuOpenId]);
 
   useEffect(() => {
     const targetChat = searchParams.get("chat");
@@ -343,6 +383,41 @@ export default function InboxClient() {
       if (channel) supabase.removeChannel(channel);
     };
   }, [activeThread, userId]);
+
+  useEffect(() => {
+    if (!activeThread?.userId) {
+      setActiveStats(null);
+      return;
+    }
+    refreshActiveStats();
+    const supabase = getSupabaseBrowserClient();
+    const channel = supabase
+      .channel(`inbox-stats-${activeThread.userId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "follows", filter: `following_id=eq.${activeThread.userId}` },
+        refreshActiveStats
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "follows", filter: `following_id=eq.${activeThread.userId}` },
+        refreshActiveStats
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "follows", filter: `follower_id=eq.${activeThread.userId}` },
+        refreshActiveStats
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "follows", filter: `follower_id=eq.${activeThread.userId}` },
+        refreshActiveStats
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeThread?.userId, refreshActiveStats]);
 
   useEffect(() => {
     if (!newModalOpen || !userId) return;
@@ -815,6 +890,13 @@ export default function InboxClient() {
                     {activeThread?.handle ? (
                       <div className="inbox-chat-status">{activeThread.handle}</div>
                     ) : null}
+                    {activeThread?.type === "chat" && activeStats ? (
+                      <div className="inbox-chat-meta">
+                        <span>{activeStats.followers} followers</span>
+                        <span className="dot">•</span>
+                        <span>{activeStats.following} following</span>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -864,17 +946,33 @@ export default function InboxClient() {
                         <div key={msg.id} className="inbox-message-block">
                           {showDate ? <div className="inbox-date">{formatDateLabel(msg.created_at)}</div> : null}
                           <div className={`inbox-bubble ${isMine ? "me" : "them"}`}>
-                            <div className="inbox-bubble-text">{displayText}</div>
-                            <div className="inbox-bubble-time">{formatTime(msg.created_at)}</div>
                             {isMine && !msg.deleted_at ? (
                               <button
-                                className="inbox-delete-btn"
+                                className="inbox-msg-menu-btn"
                                 type="button"
-                                onClick={() => handleDeleteMessage(msg.id)}
+                                onClick={() =>
+                                  setMessageMenuOpenId((prev) => (prev === msg.id ? null : msg.id))
+                                }
+                                aria-label="Message options"
                               >
-                                Delete
+                                <Icon name="chevron-down" />
                               </button>
                             ) : null}
+                            {isMine && !msg.deleted_at && messageMenuOpenId === msg.id ? (
+                              <div className="inbox-msg-menu" ref={messageMenuRef}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleDeleteMessage(msg.id);
+                                    setMessageMenuOpenId(null);
+                                  }}
+                                >
+                                  Delete message
+                                </button>
+                              </div>
+                            ) : null}
+                            <div className="inbox-bubble-text">{displayText}</div>
+                            <div className="inbox-bubble-time">{formatTime(msg.created_at)}</div>
                           </div>
                         </div>
                       );

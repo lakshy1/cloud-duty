@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -203,13 +203,9 @@ export default function ProfilePage() {
     };
   }, [baseUsername, metaFullName, user?.id]);
 
-  useEffect(() => {
-    if (!user?.id) {
-      setStats({ posts: 0, likes: 0, followers: 0, following: 0 });
-      return;
-    }
-    let active = true;
-    const loadStats = async () => {
+  const refreshStats = useCallback(
+    async (active = true) => {
+      if (!user?.id) return;
       const supabase = getSupabaseBrowserClient();
       const [postsRes, likeRows, followersRes, followingRes] = await Promise.all([
         supabase
@@ -238,12 +234,21 @@ export default function ProfilePage() {
         followers: followersRes.count ?? 0,
         following: followingRes.count ?? 0,
       });
-    };
-    loadStats();
+    },
+    [user?.id]
+  );
+
+  useEffect(() => {
+    if (!user?.id) {
+      setStats({ posts: 0, likes: 0, followers: 0, following: 0 });
+      return;
+    }
+    let active = true;
+    refreshStats(active);
     return () => {
       active = false;
     };
-  }, [user?.id]);
+  }, [refreshStats, user?.id]);
 
   useEffect(() => {
     if (!user?.id) { setPostsLoading(false); return; }
@@ -261,6 +266,7 @@ export default function ProfilePage() {
       });
     return () => { active = false; };
   }, [user?.id]);
+
 
   const handleSaveUsername = async () => {
     if (!user?.id) return;
@@ -573,6 +579,71 @@ export default function ProfilePage() {
     setFollowList((data ?? []) as FollowUser[]);
     setFollowLoading(false);
   };
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const supabase = getSupabaseBrowserClient();
+    const channel = supabase
+      .channel("profile-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "follows", filter: `following_id=eq.${user.id}` },
+        async () => {
+          await refreshStats(true);
+          await loadFollowSets(user.id);
+          if (followModalOpen) loadFollowList(followTab);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "follows", filter: `following_id=eq.${user.id}` },
+        async () => {
+          await refreshStats(true);
+          await loadFollowSets(user.id);
+          if (followModalOpen) loadFollowList(followTab);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "follows", filter: `follower_id=eq.${user.id}` },
+        async () => {
+          await refreshStats(true);
+          await loadFollowSets(user.id);
+          if (followModalOpen) loadFollowList(followTab);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "follows", filter: `follower_id=eq.${user.id}` },
+        async () => {
+          await refreshStats(true);
+          await loadFollowSets(user.id);
+          if (followModalOpen) loadFollowList(followTab);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "posts", filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const updated = payload.new as { id: string; likes_count?: number; dislikes_count?: number };
+          setMyPosts((prev) =>
+            prev.map((post) =>
+              post.id === updated.id
+                ? {
+                    ...post,
+                    likes_count:
+                      typeof updated.likes_count === "number" ? updated.likes_count : post.likes_count,
+                  }
+                : post
+            )
+          );
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [followModalOpen, followTab, loadFollowList, loadFollowSets, refreshStats, user?.id]);
 
   const handleToggleFollow = async (targetId: string) => {
     if (!user?.id) return;

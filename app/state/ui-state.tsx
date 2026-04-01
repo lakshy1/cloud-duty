@@ -62,6 +62,36 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const lastNotifToastRef = useRef<string | null>(null);
 
+  const buildNotificationToast = useCallback((row: {
+    type?: string | null;
+    message?: string | null;
+    actorName?: string | null;
+  }) => {
+    const actor = row.actorName?.trim() || "Someone";
+    const type = row.type ?? "notification";
+    switch (type) {
+      case "like":
+        return { message: `${actor} liked your post.`, tone: "success" as const };
+      case "unlike":
+        return { message: `${actor} removed a like from your post.`, tone: "info" as const };
+      case "dislike":
+        return { message: `${actor} disliked your post.`, tone: "warning" as const };
+      case "save":
+        return { message: `${actor} saved your post.`, tone: "success" as const };
+      case "unsave":
+        return { message: `${actor} removed your post from saved.`, tone: "info" as const };
+      case "follow":
+        return { message: `${actor} started following you.`, tone: "success" as const };
+      case "unfollow":
+        return { message: `${actor} unfollowed you.`, tone: "warning" as const };
+      default:
+        return {
+          message: row.message?.trim() || "You have a new notification.",
+          tone: "info" as const,
+        };
+    }
+  }, []);
+
   const pushToast = useCallback((toast: Omit<Toast, "id"> & { id?: string }) => {
     const id = toast.id ?? crypto.randomUUID();
     setToasts((prev) => [...prev, { ...toast, id }]);
@@ -142,17 +172,34 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
-          (payload) => {
+          async (payload) => {
             setHasUnreadNotifications(true);
-            const row = payload.new as { message?: string | null; created_at?: string | null };
+            const row = payload.new as {
+              message?: string | null;
+              created_at?: string | null;
+              actor_id?: string | null;
+              type?: string | null;
+            };
             const createdAt = row?.created_at ?? null;
             if (createdAt && lastNotifToastRef.current === createdAt) return;
             if (createdAt) lastNotifToastRef.current = createdAt;
-            const message =
-              row?.message && row.message.trim()
-                ? row.message
-                : "You have a new notification.";
-            pushToast({ message, tone: "info" });
+            let actorName: string | null = null;
+            if (row.actor_id) {
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("full_name, username")
+                .eq("user_id", row.actor_id)
+                .maybeSingle();
+              actorName =
+                profile?.full_name ||
+                (profile?.username ? `@${profile.username}` : null);
+            }
+            const toast = buildNotificationToast({
+              type: row.type,
+              message: row.message,
+              actorName,
+            });
+            pushToast(toast);
           }
         )
         .on(
@@ -184,7 +231,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       }
       if (pollTimer) clearInterval(pollTimer);
     };
-  }, [pushToast]);
+  }, [buildNotificationToast, pushToast]);
 
   return <UIStateContext.Provider value={value}>{children}</UIStateContext.Provider>;
 }

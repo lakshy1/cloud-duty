@@ -183,6 +183,41 @@ export default function UserProfilePage() {
     };
   }, [targetUserId]);
 
+  const refreshStats = useCallback(
+    async (active = true) => {
+      if (!targetUserId) return;
+      const supabase = getSupabaseBrowserClient();
+      const [postsRes, followersRes, followingRes, likesRes] = await Promise.all([
+        supabase
+          .from("posts")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", targetUserId),
+        supabase
+          .from("follows")
+          .select("follower_id", { count: "exact", head: true })
+          .eq("following_id", targetUserId),
+        supabase
+          .from("follows")
+          .select("following_id", { count: "exact", head: true })
+          .eq("follower_id", targetUserId),
+        supabase.from("posts").select("likes_count").eq("user_id", targetUserId),
+      ]);
+      if (!active) return;
+      const totalLikes = (likesRes.data ?? []).reduce(
+        (sum, row) =>
+          sum + (typeof row.likes_count === "number" ? row.likes_count : 0),
+        0
+      );
+      setStats({
+        posts: postsRes.count ?? 0,
+        followers: followersRes.count ?? 0,
+        following: followingRes.count ?? 0,
+        likes: totalLikes,
+      });
+    },
+    [targetUserId]
+  );
+
   useEffect(() => {
     if (!currentUserId) return;
     const supabase = getSupabaseBrowserClient();
@@ -193,6 +228,78 @@ export default function UserProfilePage() {
         if (data) setSavedIds(new Set(data.map((r) => r.post_id)));
       });
   }, [currentUserId]);
+
+  useEffect(() => {
+    if (!targetUserId) return;
+    const supabase = getSupabaseBrowserClient();
+    const channel = supabase
+      .channel("user-profile-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "follows", filter: `following_id=eq.${targetUserId}` },
+        async () => {
+          await refreshStats(true);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "follows", filter: `following_id=eq.${targetUserId}` },
+        async () => {
+          await refreshStats(true);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "follows", filter: `follower_id=eq.${targetUserId}` },
+        async () => {
+          await refreshStats(true);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "follows", filter: `follower_id=eq.${targetUserId}` },
+        async () => {
+          await refreshStats(true);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "posts", filter: `user_id=eq.${targetUserId}` },
+        (payload) => {
+          const updated = payload.new as {
+            id: string;
+            likes_count?: number;
+            dislikes_count?: number;
+            impressions_count?: number;
+          };
+          setPosts((prev) =>
+            prev.map((post) =>
+              post.id === updated.id
+                ? {
+                    ...post,
+                    likes:
+                      typeof updated.likes_count === "number"
+                        ? formatCount(updated.likes_count)
+                        : post.likes,
+                    dislikes:
+                      typeof updated.dislikes_count === "number"
+                        ? formatCount(updated.dislikes_count)
+                        : post.dislikes,
+                    views:
+                      typeof updated.impressions_count === "number"
+                        ? formatCount(updated.impressions_count)
+                        : post.views,
+                  }
+                : post
+            )
+          );
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refreshStats, targetUserId]);
 
   const applyPanelGeometry = useCallback(() => {
     const panel = popupPanelRef.current;
