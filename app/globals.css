@@ -945,7 +945,7 @@ body[data-route="inbox"] .feed{overflow:hidden}
   background:var(--surface);
   color:var(--text);
   width:36px;height:36px;border-radius:12px;
-  display:grid;place-items:center;
+  align-items:center;justify-content:center;
   font-size:.85rem;cursor:pointer;
   box-shadow:0 6px 16px rgba(0,0,0,.1);
 }
@@ -1063,21 +1063,29 @@ body[data-route="inbox"] .inbox-chat-body::-webkit-scrollbar{
 .inbox-bubble-time{font-size:.68rem;color:var(--muted)}
 .inbox-msg-menu-btn{
   position:absolute;top:10px;right:10px;
-  width:28px;height:28px;border-radius:10px;
-  border:1px solid color-mix(in srgb,var(--accent) 25%,var(--divider));
-  background:var(--surface);color:var(--text);
+  width:30px;height:30px;border-radius:10px;
+  border:1px solid color-mix(in srgb,var(--accent) 22%,var(--divider));
+  background:color-mix(in srgb,var(--surface) 92%,transparent);
+  color:var(--text);
   display:grid;place-items:center;cursor:pointer;
+  transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease;
 }
 .inbox-msg-menu-btn svg{width:14px;height:14px}
+.inbox-msg-menu-btn:hover{
+  border-color:var(--accent);
+  transform:translateY(-1px);
+  box-shadow:0 6px 14px rgba(0,0,0,.12);
+}
 .inbox-msg-menu{
-  position:absolute;top:42px;right:8px;min-width:150px;
+  position:absolute;top:44px;right:8px;min-width:160px;
   background:var(--surface);border:1px solid var(--divider);
-  border-radius:12px;padding:6px;z-index:20;
-  box-shadow:0 12px 24px rgba(0,0,0,.18);
+  border-radius:12px;padding:6px;z-index:30;
+  box-shadow:0 14px 28px rgba(0,0,0,.2);
 }
 .inbox-msg-menu button{
   width:100%;text-align:left;border:none;background:transparent;
   color:var(--text);padding:8px 10px;border-radius:8px;cursor:pointer;
+  font-size:.78rem;font-weight:600;
 }
 .inbox-msg-menu button:hover{
   background:color-mix(in srgb,var(--accent) 12%,transparent);
