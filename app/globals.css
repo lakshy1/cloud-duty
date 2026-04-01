@@ -1097,8 +1097,8 @@ body[data-route="inbox"] .inbox-chat-body::-webkit-scrollbar{
 .inbox-msg-menu-btn{
   position:absolute;top:8px;right:8px;
   width:28px;height:28px;border-radius:10px;
-  border:1px solid color-mix(in srgb,var(--accent) 22%,var(--divider));
-  background:var(--lp-panel-bg);
+  border:1px solid var(--lp-panel-border);
+  background:color-mix(in srgb,var(--lp-panel-bg) 88%, var(--text) 12%);
   color:var(--text);
   display:grid;place-items:center;cursor:pointer;
   transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease;
@@ -1866,29 +1866,29 @@ button.profile-stat:hover{
   position:fixed;right:18px;top:calc(var(--hdr-h) + 12px);
   bottom:auto;
   display:flex;flex-direction:column;gap:8px;z-index:900;
-  --toast-exit-x: calc(-100vw + 108px);
-  --toast-exit-y: calc(-1 * (var(--hdr-h) + 10px));
 }
 .toast{
   min-width:220px;max-width:320px;
-  background:var(--surface);border:1px solid var(--divider);
+  background:var(--lp-panel-bg);
+  border:1px solid var(--lp-panel-border);
   color:var(--text);padding:12px 14px;border-radius:12px;
   box-shadow:0 12px 28px rgba(0,0,0,.2);
   font-size:.8rem;font-weight:600;line-height:1.4;
   display:flex;align-items:center;justify-content:space-between;gap:10px;
+  position:relative;overflow:hidden;
   animation:toastIn .28s ease both;
+}
+.toast::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:4px;
+  background:var(--toast-accent, var(--accent));
 }
 .toast.closing{
   animation:toastToBell .42s cubic-bezier(.32,.9,.24,1) forwards;
 }
-.toast-info{border-left:3px solid color-mix(in srgb,var(--accent) 60%,transparent)}
-.toast-success{border-left:3px solid rgba(0,180,120,.55)}
-.toast-warning{border-left:3px solid rgba(255,170,70,.65)}
-.toast-error{border-left:3px solid rgba(224,92,75,.7)}
-.toast-info{border-color:var(--divider)}
-.toast-success{border-color:rgba(0,180,120,.35)}
-.toast-warning{border-color:rgba(255,170,70,.4)}
-.toast-error{border-color:rgba(224,92,75,.5)}
+.toast-info{--toast-accent:color-mix(in srgb,var(--accent) 70%,transparent)}
+.toast-success{--toast-accent:rgba(0,180,120,.75)}
+.toast-warning{--toast-accent:rgba(255,170,70,.85)}
+.toast-error{--toast-accent:rgba(224,92,75,.85)}
 .toast-close{
   border:none;background:transparent;color:var(--muted);
   font-size:1rem;line-height:1;cursor:pointer;
@@ -1898,8 +1898,6 @@ button.profile-stat:hover{
 @media(max-width:580px){
   .toast-stack{
     right:12px;left:12px;top:calc(var(--hdr-h) + 10px);bottom:auto;
-    --toast-exit-x: calc(50vw - 24px);
-    --toast-exit-y: calc(-1 * (var(--hdr-h) + 6px));
   }
   .toast{
     max-width:none;width:100%;
@@ -1913,7 +1911,7 @@ button.profile-stat:hover{
 @keyframes toastToBell{
   0%{opacity:1;transform:translate(0,0) scale(1)}
   65%{opacity:.9}
-  100%{opacity:0;transform:translate(var(--toast-exit-x),var(--toast-exit-y)) scale(.2)}
+  100%{opacity:0;transform:translate(var(--toast-exit-x, -120px),var(--toast-exit-y, -60px)) scale(.2)}
 }
 
 /* palette chips */

@@ -10,10 +10,29 @@ export function Toasts() {
   const { toasts, removeToast } = useUIState();
   const [closing, setClosing] = useState<Set<string>>(new Set());
   const exitTimers = useRef<Map<string, number>>(new Map());
+  const toastRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const resolveExitTarget = useCallback(() => {
+    const isMobile = window.matchMedia("(max-width: 580px)").matches;
+    if (isMobile) {
+      return document.querySelector(".topbar-bell") as HTMLElement | null;
+    }
+    return document.querySelector('.sb-btn[aria-label="Notifications"]') as HTMLElement | null;
+  }, []);
 
   const startClose = useCallback(
     (id: string) => {
       if (closing.has(id)) return;
+      const toastEl = toastRefs.current.get(id);
+      const targetEl = resolveExitTarget();
+      if (toastEl && targetEl) {
+        const toastRect = toastEl.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        const dx = targetRect.left + targetRect.width / 2 - (toastRect.left + toastRect.width / 2);
+        const dy = targetRect.top + targetRect.height / 2 - (toastRect.top + toastRect.height / 2);
+        toastEl.style.setProperty("--toast-exit-x", `${dx}px`);
+        toastEl.style.setProperty("--toast-exit-y", `${dy}px`);
+      }
       setClosing((prev) => new Set(prev).add(id));
       const timer = window.setTimeout(() => {
         removeToast(id);
@@ -49,6 +68,10 @@ export function Toasts() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
+          ref={(node) => {
+            if (node) toastRefs.current.set(toast.id, node);
+            else toastRefs.current.delete(toast.id);
+          }}
           className={`toast toast-${toast.tone ?? "info"}${closing.has(toast.id) ? " closing" : ""}`}
         >
           <span>{toast.message}</span>
@@ -58,7 +81,7 @@ export function Toasts() {
             aria-label="Dismiss"
             onClick={() => startClose(toast.id)}
           >
-            x
+            ×
           </button>
         </div>
       ))}

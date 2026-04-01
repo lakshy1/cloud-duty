@@ -92,6 +92,33 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const playNotificationPing = useCallback((type?: string | null) => {
+    if (!type) return;
+    if (!["message", "like", "unlike", "follow", "unfollow"].includes(type)) return;
+    try {
+      const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 880;
+      gain.gain.value = 0.0001;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      const now = ctx.currentTime;
+      gain.gain.exponentialRampToValueAtTime(0.15, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+      osc.stop(now + 0.28);
+      osc.onended = () => {
+        ctx.close();
+      };
+    } catch {
+      // ignore audio errors
+    }
+  }, []);
+
   const pushToast = useCallback((toast: Omit<Toast, "id"> & { id?: string }) => {
     const id = toast.id ?? crypto.randomUUID();
     setToasts((prev) => [...prev, { ...toast, id }]);
@@ -199,6 +226,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
               message: row.message,
               actorName,
             });
+            playNotificationPing(row.type);
             pushToast(toast);
           }
         )
