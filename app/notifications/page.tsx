@@ -25,7 +25,7 @@ type ActorProfile = {
   avatar_url: string | null;
 };
 
-type FilterKey = "all" | "message" | "likes" | "saved" | "follow";
+type FilterKey = "all" | "likes" | "saved" | "follow";
 
 function formatRelativeTime(iso: string) {
   const date = new Date(iso);
@@ -89,6 +89,7 @@ export default function NotificationsPage() {
           "id,user_id,actor_id,type,entity_type,entity_id,message,created_at,read_at,metadata"
         )
         .eq("user_id", userId)
+        .neq("type", "message")
         .order("created_at", { ascending: false });
 
       if (!active) return;
@@ -123,6 +124,7 @@ export default function NotificationsPage() {
           { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
           async (payload) => {
             const next = payload.new as NotificationRow;
+            if (next.type === "message") return;
             setItems((prev) => [next, ...prev]);
             if (next.actor_id && !profilesRef.current.has(next.actor_id)) {
               const { data: profile } = await supabase
@@ -173,7 +175,6 @@ export default function NotificationsPage() {
   );
 
   const getFilterGroup = (type: string) => {
-    if (type === "message") return "message";
     if (type === "like" || type === "unlike" || type === "dislike") return "likes";
     if (type === "save" || type === "unsave") return "saved";
     if (type === "follow" || type === "unfollow") return "follow";
@@ -194,8 +195,6 @@ export default function NotificationsPage() {
       case "unlike":
       case "unsave":
         return "tone-muted";
-      case "message":
-        return "tone-message";
       default:
         return "tone-default";
     }
@@ -226,13 +225,6 @@ export default function NotificationsPage() {
               onClick={() => setFilter("all")}
             >
               All
-            </button>
-            <button
-              type="button"
-              className={`notif-filter${filter === "message" ? " active" : ""}`}
-              onClick={() => setFilter("message")}
-            >
-              Message
             </button>
             <button
               type="button"

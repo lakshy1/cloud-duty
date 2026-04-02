@@ -57,7 +57,14 @@ export function Sidebar({ onCreate, onSearch }: SidebarProps) {
         onClick={() => requireAuth(() => router.push("/inbox"))}
       >
         <Icon name="messages" />
-        {inboxUnreadCount > 0 ? <span className="sb-dot" aria-hidden="true" /> : null}
+        <span
+          className="sb-inbox-count"
+          data-empty={inboxUnreadCount === 0 ? "true" : "false"}
+          aria-label={inboxUnreadCount ? `${inboxUnreadCount} unread threads` : undefined}
+          aria-hidden={inboxUnreadCount === 0}
+        >
+          {inboxUnreadCount > 99 ? "99+" : inboxUnreadCount || ""}
+        </span>
       </button>
       <button
         className={`sb-btn${createOpen ? " active" : ""}`}

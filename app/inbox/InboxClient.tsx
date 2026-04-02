@@ -52,6 +52,7 @@ type Thread = {
   timeSort?: string | null;
   chatId?: string;
   userId?: string;
+  unreadCount?: number;
 };
 
 type MutualUser = {
@@ -95,6 +96,7 @@ export default function InboxClient() {
   const [threadQuery, setThreadQuery] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [threadsReloadKey, setThreadsReloadKey] = useState(0);
+  const [threadChatIds, setThreadChatIds] = useState<string[]>([]);
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [mutualLoading, setMutualLoading] = useState(false);
   const [mutualSearch, setMutualSearch] = useState("");
@@ -105,6 +107,12 @@ export default function InboxClient() {
     null
   );
   const [messageMenuOpenId, setMessageMenuOpenId] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const currentChatIdRef = useRef<string | null>(null);
+  const threadsLoadedRef = useRef(false);
+  const chatLoadedRef = useRef<Set<string>>(new Set());
+  const chatLoadIdRef = useRef<string | null>(null);
+  const chatCacheRef = useRef<Map<string, ChatMessage[]>>(new Map());
   const threadLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const threadLongPressFiredRef = useRef(false);
   const messageLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -127,6 +135,10 @@ export default function InboxClient() {
     };
   }, []);
 
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
   const formatTime = (iso: string) =>
     new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
@@ -144,6 +156,9 @@ export default function InboxClient() {
       year: "numeric",
     });
   };
+
+  const formatTimeSafe = (iso: string) => (hydrated ? formatTime(iso) : "");
+  const formatDateLabelSafe = (iso: string) => (hydrated ? formatDateLabel(iso) : "");
 
   const formatSize = (bytes: number) => {
     if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -207,9 +222,75 @@ export default function InboxClient() {
   }, [mutualList, mutualSearch]);
 
   const activeThread = useMemo(
-    () => threads.find((thread) => thread.id === activeThreadId) ?? threads[0],
+    () => threads.find((thread) => thread.id === activeThreadId) ?? null,
     [activeThreadId, threads]
   );
+  const activeChatId = activeThread?.chatId ?? null;
+
+  useEffect(() => {
+    if (!threads.length) return;
+    const exists = threads.some((thread) => thread.id === activeThreadId);
+    if (!exists) {
+      setActiveThreadId(threads[0].id);
+    }
+  }, [threads, activeThreadId]);
+
+  const markThreadRead = useCallback(
+    async (chatId?: string) => {
+      if (!chatId || !userId) return;
+      const supabase = getSupabaseBrowserClient();
+      await supabase
+        .from("chat_messages")
+        .update({ read_at: new Date().toISOString(), read_by: userId })
+        .eq("chat_id", chatId)
+        .neq("sender_id", userId)
+        .is("read_at", null);
+      setThreads((prev) =>
+        prev.map((thread) => (thread.chatId === chatId ? { ...thread, unreadCount: 0 } : thread))
+      );
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("inbox-unread-refresh"));
+      }
+    },
+    [userId]
+  );
+
+  const loadChatMessages = useCallback(
+    async (chatId: string, silent = false) => {
+      if (!userId) return;
+      const supabase = getSupabaseBrowserClient();
+      chatLoadIdRef.current = chatId;
+      if (!silent && !chatLoadedRef.current.has(chatId)) {
+        setChatLoading(true);
+      }
+      const { data } = await supabase
+        .from("chat_messages")
+        .select(
+          "id,chat_id,sender_id,body,created_at,deleted_at,deleted_by,attachment_url,attachment_name,attachment_type,attachment_size,read_at,read_by"
+        )
+        .eq("chat_id", chatId)
+        .order("created_at", { ascending: true });
+      if (chatLoadIdRef.current !== chatId) return;
+      const nextMessages = (data ?? []) as ChatMessage[];
+      chatCacheRef.current.set(chatId, nextMessages);
+      setChatMessages(nextMessages);
+      setChatLoading(false);
+      chatLoadedRef.current.add(chatId);
+      if ((data ?? []).length > 0) {
+        markThreadRead(chatId);
+      }
+    },
+    [markThreadRead, userId]
+  );
+
+  useEffect(() => {
+    if (!activeThread?.id) return;
+    setThreads((prev) =>
+      prev.map((thread) =>
+        thread.id === activeThread.id ? { ...thread, unreadCount: 0 } : thread
+      )
+    );
+  }, [activeThread?.id]);
 
   const lastOutboundIndex = useMemo(() => {
     if (!chatMessages.length || !userId) return -1;
@@ -310,15 +391,18 @@ export default function InboxClient() {
 
   useEffect(() => {
     const targetChat = searchParams.get("chat");
-    if (targetChat) {
-      setActiveThreadId(`chat-${targetChat}`);
-      setShowChat(true);
-    }
-  }, [searchParams]);
+    if (!targetChat) return;
+    const nextId = `chat-${targetChat}`;
+    if (activeThreadId === nextId) return;
+    setActiveThreadId(nextId);
+    setShowChat(true);
+  }, [searchParams, activeThreadId]);
 
   useEffect(() => {
     const loadThreads = async () => {
-      setThreadsLoading(true);
+      if (!threadsLoadedRef.current) {
+        setThreadsLoading(true);
+      }
       const aiMessages = aiMessagesByThread[AI_THREAD_ID] ?? [];
       const aiLast = aiMessages[aiMessages.length - 1];
       const aiThread: Thread = {
@@ -327,7 +411,7 @@ export default function InboxClient() {
         name: "CloudDuty AI Bot",
         handle: "@cloudduty-ai",
         last: aiLast?.text ?? "Start a conversation",
-        time: aiLast ? formatTime(aiLast.createdAt) : "",
+        time: aiLast ? formatTimeSafe(aiLast.createdAt) : "",
       };
 
       if (!userId) {
@@ -345,6 +429,21 @@ export default function InboxClient() {
 
       const chatRows = chats ?? [];
       const visibleChats = chatRows.filter((chat) => !hiddenChatIds.has(chat.id));
+      const visibleChatIds = visibleChats.map((chat) => chat.id);
+      setThreadChatIds(visibleChatIds);
+      let unreadMap = new Map<string, number>();
+      if (visibleChatIds.length > 0) {
+        const { data: unreadRows } = await supabase
+            .from("chat_messages")
+            .select("chat_id,sender_id,read_at")
+            .in("chat_id", visibleChatIds)
+            .is("read_at", null)
+            .neq("sender_id", userId);
+        unreadRows?.forEach((row) => {
+          if (!row.chat_id) return;
+          unreadMap.set(row.chat_id, (unreadMap.get(row.chat_id) ?? 0) + 1);
+        });
+      }
       const otherIds = visibleChats.map((chat) => (chat.user_a === userId ? chat.user_b : chat.user_a));
       const { data: profiles } = otherIds.length
         ? await supabase
@@ -371,7 +470,7 @@ export default function InboxClient() {
           const lastText = last?.deleted_at
             ? "This message was deleted."
             : last?.body || "Start chatting";
-          const lastTime = last?.created_at ? formatTime(last.created_at) : "";
+          const lastTime = last?.created_at ? formatTimeSafe(last.created_at) : "";
           return {
             id: `chat-${chat.id}`,
             type: "chat",
@@ -383,6 +482,7 @@ export default function InboxClient() {
             timeSort: last?.created_at || chat.created_at,
             chatId: chat.id,
             userId: otherId,
+            unreadCount: unreadMap.get(chat.id) ?? 0,
           };
         })
       );
@@ -392,13 +492,54 @@ export default function InboxClient() {
       );
       setThreads([aiThread, ...sortedChats]);
       setThreadsLoading(false);
+      threadsLoadedRef.current = true;
     };
 
     loadThreads();
   }, [aiMessagesByThread, userId, threadsReloadKey, hiddenChatIds]);
 
+  const unreadThreadCount = useMemo(
+    () => threads.reduce((acc, thread) => (thread.unreadCount && thread.unreadCount > 0 ? acc + 1 : acc), 0),
+    [threads]
+  );
+
   useEffect(() => {
-    if (!activeThread || activeThread.type !== "chat" || !activeThread.chatId || !userId) {
+    if (!userId || threadChatIds.length === 0) return;
+    const supabase = getSupabaseBrowserClient();
+    const handleThreadRefresh = () => {
+      if (showChat) return;
+      setThreadsReloadKey((prev) => prev + 1);
+    };
+    const channel = supabase
+      .channel("inbox-thread-refresh")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "chat_messages",
+          filter: `chat_id=in.(${threadChatIds.join(",")})`,
+        },
+        handleThreadRefresh
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "chat_messages",
+          filter: `chat_id=in.(${threadChatIds.join(",")})`,
+        },
+        handleThreadRefresh
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [threadChatIds, userId, showChat]);
+
+  useEffect(() => {
+    if (!activeChatId || !userId) {
       return;
     }
 
@@ -407,60 +548,73 @@ export default function InboxClient() {
     let active = true;
 
     const loadMessages = async () => {
-      setChatMessages([]);
-      setChatLoading(true);
-      const { data } = await supabase
-        .from("chat_messages")
-        .select(
-          "id,chat_id,sender_id,body,created_at,deleted_at,deleted_by,attachment_url,attachment_name,attachment_type,attachment_size,read_at,read_by"
-        )
-        .eq("chat_id", activeThread.chatId)
-        .order("created_at", { ascending: true });
-      if (!active) return;
-      setChatMessages((data ?? []) as ChatMessage[]);
-      setChatLoading(false);
+      if (currentChatIdRef.current === activeChatId && chatLoadedRef.current.has(activeChatId)) {
+        return;
+      }
+      currentChatIdRef.current = activeChatId;
+      const cached = chatCacheRef.current.get(activeThread.chatId);
+      if (cached && cached.length) {
+        setChatMessages(cached);
+        setChatLoading(false);
+        loadChatMessages(activeChatId, true);
+        return;
+      }
+      await loadChatMessages(activeChatId, false);
     };
 
     loadMessages();
 
     channel = supabase
-      .channel(`chat-${activeThread.chatId}`)
+      .channel(`chat-${activeChatId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "chat_messages", filter: `chat_id=eq.${activeThread.chatId}` },
+        { event: "INSERT", schema: "public", table: "chat_messages", filter: `chat_id=eq.${activeChatId}` },
         (payload) => {
           const nextMessage = payload.new as ChatMessage;
-          setChatMessages((prev) => [...prev, nextMessage]);
+          setChatMessages((prev) => {
+            const next = [...prev, nextMessage];
+            chatCacheRef.current.set(activeThread.chatId, next);
+            return next;
+          });
           if (nextMessage.sender_id !== userId) {
             supabase
               .from("chat_messages")
               .update({ read_at: new Date().toISOString(), read_by: userId })
               .eq("id", nextMessage.id);
+            markThreadRead(activeChatId);
           }
         }
       )
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "chat_messages", filter: `chat_id=eq.${activeThread.chatId}` },
+        { event: "UPDATE", schema: "public", table: "chat_messages", filter: `chat_id=eq.${activeChatId}` },
         (payload) => {
           const updated = payload.new as ChatMessage;
-          setChatMessages((prev) => prev.map((msg) => (msg.id === updated.id ? updated : msg)));
+          setChatMessages((prev) => {
+            const next = prev.map((msg) => (msg.id === updated.id ? updated : msg));
+            chatCacheRef.current.set(activeThread.chatId, next);
+            return next;
+          });
         }
       )
       .subscribe();
 
-    supabase
-      .from("chat_messages")
-      .update({ read_at: new Date().toISOString(), read_by: userId })
-      .eq("chat_id", activeThread.chatId)
-      .neq("sender_id", userId)
-      .is("read_at", null);
+    markThreadRead(activeChatId);
 
     return () => {
       active = false;
       if (channel) supabase.removeChannel(channel);
     };
-  }, [activeThread, userId]);
+  }, [activeChatId, userId, showChat, loadChatMessages, markThreadRead]);
+
+  useEffect(() => {
+    if (!activeChatId || !userId) return;
+    const hasUnreadIncoming = chatMessages.some(
+      (msg) => msg.sender_id !== userId && !msg.read_at
+    );
+    if (!hasUnreadIncoming) return;
+    markThreadRead(activeChatId);
+  }, [chatMessages, activeChatId, userId, markThreadRead]);
 
   useEffect(() => {
     if (!activeThread?.userId) {
@@ -701,17 +855,7 @@ export default function InboxClient() {
       pushToast({ message: error.message, tone: "error" });
     } else {
       setDraft("");
-      if (otherUserId) {
-        await supabase.from("notifications").insert({
-          user_id: otherUserId,
-          actor_id: userId,
-          type: "message",
-          entity_type: "chat",
-          entity_id: activeThread.chatId,
-          message: "You have a new message",
-          metadata: { chat_id: activeThread.chatId, preview: text.slice(0, 140) },
-        });
-      }
+      // message notifications are handled via inbox unread state (no bell notifications)
     }
     setIsSending(false);
   };
@@ -969,7 +1113,7 @@ export default function InboxClient() {
       <div className="page-shell">
         <section className="page-card inbox-card">
           <div className={`inbox-grid${showChat ? " show-chat" : ""}`}>
-            <aside className="inbox-list">
+            <aside className="inbox-list" data-unread={unreadThreadCount > 0 ? "true" : "false"}>
               <div className="inbox-list-head">
                 <div className="inbox-list-title">Inbox</div>
                 <div className="inbox-list-actions">
@@ -1024,8 +1168,12 @@ export default function InboxClient() {
                         const target = event.target as HTMLElement;
                         if (target.closest(".inbox-thread-menu-btn")) return;
                         if (target.closest(".inbox-thread-menu-pop")) return;
+                        setThreadMenuOpen(null);
                         setActiveThreadId(thread.id);
                         setShowChat(true);
+                        if (thread.chatId) {
+                          markThreadRead(thread.chatId);
+                        }
                       }}
                       onTouchStart={
                         thread.type === "chat"
@@ -1061,6 +1209,11 @@ export default function InboxClient() {
                         </div>
                         <div className="inbox-thread-last">{thread.last}</div>
                       </div>
+                      {thread.unreadCount && thread.unreadCount > 0 ? (
+                        <span className="inbox-thread-unread" aria-label={`${thread.unreadCount} unread messages`}>
+                          {thread.unreadCount > 99 ? "99+" : thread.unreadCount}
+                        </span>
+                      ) : null}
                       {thread.type === "chat" && thread.userId ? (
                         <div className="inbox-thread-menu">
                           <button
@@ -1072,7 +1225,9 @@ export default function InboxClient() {
                             }}
                             aria-label="Thread options"
                           >
-                            <span aria-hidden="true" className="inbox-thread-menu-dots" />
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <polyline points="6 9 12 15 18 9" />
+                            </svg>
                           </button>
                           {threadMenuOpen === thread.id ? (
                             <div className="inbox-thread-menu-pop" ref={threadMenuRef}>
@@ -1153,10 +1308,12 @@ export default function InboxClient() {
                   ? activeAiMessages.map((msg, index) => {
                       const previous = activeAiMessages[index - 1];
                       const showDate =
-                        !previous || formatDateLabel(previous.createdAt) !== formatDateLabel(msg.createdAt);
+                        hydrated &&
+                        (!previous ||
+                          formatDateLabel(previous.createdAt) !== formatDateLabel(msg.createdAt));
                       return (
                         <div key={msg.id} className="inbox-message-block">
-                          {showDate ? <div className="inbox-date">{formatDateLabel(msg.createdAt)}</div> : null}
+                          {showDate ? <div className="inbox-date">{formatDateLabelSafe(msg.createdAt)}</div> : null}
                           <div className={`inbox-bubble ${msg.from === "me" ? "me" : "them"}`}>
                             <div className="inbox-bubble-text">{msg.text}</div>
                             {msg.attachment ? (
@@ -1184,12 +1341,12 @@ export default function InboxClient() {
                                 </div>
                               </button>
                             ) : null}
-                            <div className="inbox-bubble-time">{formatTime(msg.createdAt)}</div>
+                            <div className="inbox-bubble-time">{formatTimeSafe(msg.createdAt)}</div>
                           </div>
                         </div>
                       );
                     })
-                  : chatLoading
+                  : chatLoading && chatMessages.length === 0
                     ? Array.from({ length: 4 }).map((_, index) => (
                         <div className="inbox-message-block" key={`sk-msg-${index}`}>
                           <div className="inbox-bubble them">
@@ -1201,7 +1358,9 @@ export default function InboxClient() {
                     : chatMessages.map((msg, index) => {
                       const previous = chatMessages[index - 1];
                       const showDate =
-                        !previous || formatDateLabel(previous.created_at) !== formatDateLabel(msg.created_at);
+                        hydrated &&
+                        (!previous ||
+                          formatDateLabel(previous.created_at) !== formatDateLabel(msg.created_at));
                       const isMine = msg.sender_id === userId;
                       const displayText = msg.deleted_at
                         ? "This message was deleted."
@@ -1210,7 +1369,7 @@ export default function InboxClient() {
                       const seenAfter = isLastOutbound && !!msg.read_at;
                       return (
                         <div key={msg.id} className="inbox-message-block">
-                          {showDate ? <div className="inbox-date">{formatDateLabel(msg.created_at)}</div> : null}
+                          {showDate ? <div className="inbox-date">{formatDateLabelSafe(msg.created_at)}</div> : null}
                           <div
                             className={`inbox-bubble ${isMine ? "me" : "them"}`}
                             onTouchStart={
@@ -1232,9 +1391,7 @@ export default function InboxClient() {
                                 aria-label="Message options"
                               >
                                 <svg aria-hidden="true" viewBox="0 0 24 24">
-                                  <circle cx="6" cy="12" r="1.6" />
-                                  <circle cx="12" cy="12" r="1.6" />
-                                  <circle cx="18" cy="12" r="1.6" />
+                                  <polyline points="6 9 12 15 18 9" />
                                 </svg>
                               </button>
                             ) : null}
@@ -1288,10 +1445,18 @@ export default function InboxClient() {
                                 )}
                               </button>
                             ) : null}
-                            <div className="inbox-bubble-time">{formatTime(msg.created_at)}</div>
+                            <div className="inbox-bubble-time">{formatTimeSafe(msg.created_at)}</div>
                           </div>
                           {isLastOutbound && !msg.deleted_at ? (
-                            <div className="inbox-read-receipt">{seenAfter ? "Seen" : "Sent"}</div>
+                            <div className={`inbox-read-receipt${seenAfter ? " seen" : ""}`}>
+                              <span className="receipt-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24">
+                                  <polyline points="2 12 7 17 18 6" />
+                                  {seenAfter ? <polyline points="8 12 13 17 22 6" /> : null}
+                                </svg>
+                              </span>
+                              <span>{seenAfter ? "Seen" : "Sent"}</span>
+                            </div>
                           ) : null}
                         </div>
                       );

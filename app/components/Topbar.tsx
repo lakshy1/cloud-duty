@@ -163,7 +163,14 @@ export function Topbar({
             onClick={() => router.push("/inbox")}
           >
             <Icon name="messages" />
-            {inboxUnreadCount > 0 ? <span className="topbar-inbox-dot" aria-hidden="true" /> : null}
+            <span
+              className="topbar-inbox-count"
+              data-empty={inboxUnreadCount === 0 ? "true" : "false"}
+              aria-label={inboxUnreadCount ? `${inboxUnreadCount} unread threads` : undefined}
+              aria-hidden={inboxUnreadCount === 0}
+            >
+              {inboxUnreadCount > 99 ? "99+" : inboxUnreadCount || ""}
+            </span>
           </button>
           <button
             className="topbar-bell"

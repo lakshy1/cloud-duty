@@ -65,6 +65,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
   const [loginPromptOpen, setLoginPromptOpen] = useState(false);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const [inboxUnreadCount, setInboxUnreadCount] = useState(0);
+  const inboxRefreshRef = useRef<() => void>(() => {});
   const lastNotifToastRef = useRef<string | null>(null);
 
   const buildNotificationToast = useCallback((row: {
@@ -215,6 +216,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
         .from("notifications")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId)
+        .neq("type", "message")
         .is("read_at", null);
       if (active) setHasUnreadNotifications((count ?? 0) > 0);
 
@@ -224,13 +226,14 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
           async (payload) => {
-            setHasUnreadNotifications(true);
             const row = payload.new as {
               message?: string | null;
               created_at?: string | null;
               actor_id?: string | null;
               type?: string | null;
             };
+            if (row.type === "message") return;
+            setHasUnreadNotifications(true);
             const createdAt = row?.created_at ?? null;
             if (createdAt && lastNotifToastRef.current === createdAt) return;
             if (createdAt) lastNotifToastRef.current = createdAt;
@@ -259,7 +262,11 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
           "postgres_changes",
           { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
           (payload) => {
-            if (payload.new && (payload.new as { read_at?: string | null }).read_at === null) {
+            if (
+              payload.new &&
+              (payload.new as { read_at?: string | null; type?: string | null }).read_at === null &&
+              (payload.new as { type?: string | null }).type !== "message"
+            ) {
               setHasUnreadNotifications(true);
             }
           }
@@ -271,6 +278,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
           .from("notifications")
           .select("id", { count: "exact", head: true })
           .eq("user_id", userId)
+          .neq("type", "message")
           .is("read_at", null);
         if (active) setHasUnreadNotifications((nextCount ?? 0) > 0);
       }, 20000);
@@ -308,14 +316,18 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
         if (active) setInboxUnreadCount(0);
         return chatIds;
       }
-      const { count } = await supabase
+      const { data: unreadRows } = await supabase
         .from("chat_messages")
-        .select("id", { count: "exact", head: true })
+        .select("chat_id,sender_id,read_at")
         .in("chat_id", chatIds)
         .is("read_at", null)
         .neq("sender_id", userId);
-      if (active) setInboxUnreadCount(count ?? 0);
+      const unreadChatIds = new Set((unreadRows ?? []).map((row) => row.chat_id).filter(Boolean));
+      if (active) setInboxUnreadCount(unreadChatIds.size);
       return chatIds;
+    };
+    inboxRefreshRef.current = () => {
+      loadInboxUnread();
     };
 
     const setupInboxRealtime = async () => {
@@ -356,6 +368,12 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       if (channel) supabase.removeChannel(channel);
       if (pollTimer) clearInterval(pollTimer);
     };
+  }, []);
+
+  useEffect(() => {
+    const handler = () => inboxRefreshRef.current?.();
+    window.addEventListener("inbox-unread-refresh", handler);
+    return () => window.removeEventListener("inbox-unread-refresh", handler);
   }, []);
 
   return <UIStateContext.Provider value={value}>{children}</UIStateContext.Provider>;
