@@ -12,8 +12,14 @@ export function Toasts() {
   const exitTimers = useRef<Map<string, number>>(new Map());
   const toastRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  const resolveExitTarget = useCallback(() => {
+  const resolveExitTarget = useCallback((target?: string) => {
     const isMobile = window.matchMedia("(max-width: 580px)").matches;
+    if (target === "inbox") {
+      if (isMobile) {
+        return document.querySelector(".topbar-inbox") as HTMLElement | null;
+      }
+      return document.querySelector('.sb-btn[aria-label="Inbox"]') as HTMLElement | null;
+    }
     if (isMobile) {
       return document.querySelector(".topbar-bell") as HTMLElement | null;
     }
@@ -21,10 +27,10 @@ export function Toasts() {
   }, []);
 
   const startClose = useCallback(
-    (id: string) => {
+    (id: string, target?: string) => {
       if (closing.has(id)) return;
       const toastEl = toastRefs.current.get(id);
-      const targetEl = resolveExitTarget();
+      const targetEl = resolveExitTarget(target);
       if (toastEl && targetEl) {
         const toastRect = toastEl.getBoundingClientRect();
         const targetRect = targetEl.getBoundingClientRect();
@@ -45,12 +51,14 @@ export function Toasts() {
       }, EXIT_MS);
       exitTimers.current.set(id, timer);
     },
-    [closing, removeToast]
+    [closing, removeToast, resolveExitTarget]
   );
 
   useEffect(() => {
     if (toasts.length === 0) return;
-    const timers = toasts.map((toast) => window.setTimeout(() => startClose(toast.id), AUTO_CLOSE_MS));
+    const timers = toasts.map((toast) =>
+      window.setTimeout(() => startClose(toast.id, toast.target), AUTO_CLOSE_MS)
+    );
     return () => {
       timers.forEach((t) => window.clearTimeout(t));
     };
@@ -72,7 +80,10 @@ export function Toasts() {
             if (node) toastRefs.current.set(toast.id, node);
             else toastRefs.current.delete(toast.id);
           }}
-          className={`toast toast-${toast.tone ?? "info"}${closing.has(toast.id) ? " closing" : ""}`}
+          className={`toast toast-${toast.tone ?? "info"}${toast.target ? ` toast-${toast.target}` : ""}${
+            closing.has(toast.id) ? " closing" : ""
+          }`}
+          data-target={toast.target ?? "notifications"}
         >
           <div className="toast-text">
             {toast.title ? <div className="toast-title">{toast.title}</div> : null}
@@ -83,7 +94,7 @@ export function Toasts() {
             className="toast-close"
             type="button"
             aria-label="Dismiss"
-            onClick={() => startClose(toast.id)}
+            onClick={() => startClose(toast.id, toast.target)}
           >
             ×
           </button>

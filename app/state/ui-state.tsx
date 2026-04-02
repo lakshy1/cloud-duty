@@ -17,6 +17,7 @@ export type Toast = {
   message: string;
   detail?: string;
   tone?: "info" | "success" | "warning" | "error";
+  target?: "notifications" | "inbox";
 };
 
 type UIState = {
@@ -67,6 +68,8 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
   const [inboxUnreadCount, setInboxUnreadCount] = useState(0);
   const inboxRefreshRef = useRef<() => void>(() => {});
   const lastNotifToastRef = useRef<string | null>(null);
+  const lastMessageToastRef = useRef<string | null>(null);
+  const inboxUserIdRef = useRef<string | null>(null);
 
   const buildNotificationToast = useCallback((row: {
     type?: string | null;
@@ -78,34 +81,53 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
     const type = row.type ?? "notification";
     switch (type) {
       case "like":
-        return { title: actor, message: "liked your post", tone: "success" as const };
+        return { title: actor, message: "liked your post", tone: "success" as const, target: "notifications" as const };
       case "unlike":
-        return { title: actor, message: "removed a like from your post", tone: "info" as const };
+        return { title: actor, message: "removed a like from your post", tone: "info" as const, target: "notifications" as const };
       case "dislike":
-        return { title: actor, message: "disliked your post", tone: "warning" as const };
+        return { title: actor, message: "disliked your post", tone: "warning" as const, target: "notifications" as const };
       case "save":
-        return { title: actor, message: "saved your post", tone: "success" as const };
+        return { title: actor, message: "saved your post", tone: "success" as const, target: "notifications" as const };
       case "unsave":
-        return { title: actor, message: "removed your post from saved", tone: "info" as const };
+        return { title: actor, message: "removed your post from saved", tone: "info" as const, target: "notifications" as const };
       case "follow":
-        return { title: actor, message: "started following you", tone: "success" as const };
+        return { title: actor, message: "started following you", tone: "success" as const, target: "notifications" as const };
       case "unfollow":
-        return { title: actor, message: "unfollowed you", tone: "warning" as const };
+        return { title: actor, message: "unfollowed you", tone: "warning" as const, target: "notifications" as const };
       case "message":
         return {
           title: actor,
           message: "sent you a message",
           detail: row.preview?.trim() || row.message?.trim() || "",
           tone: "info" as const,
+          target: "inbox" as const,
         };
       default:
         return {
           title: actor,
           message: row.message?.trim() || "You have a new notification.",
           tone: "info" as const,
+          target: "notifications" as const,
         };
     }
   }, []);
+
+  const buildMessageToast = useCallback(
+    (row: { body?: string | null; attachment_name?: string | null; senderName?: string | null }) => {
+      const actor = row.senderName?.trim() || "Someone";
+      const body = row.body?.trim() || "";
+      const attachment = row.attachment_name?.trim() || "";
+      const detail = body || (attachment ? `Attachment: ${attachment}` : "");
+      return {
+        title: actor,
+        message: body ? "sent you a message" : "sent you an attachment",
+        detail,
+        tone: "info" as const,
+        target: "inbox" as const,
+      };
+    },
+    []
+  );
 
   const playNotificationPing = useCallback((type?: string | null) => {
     if (!type) return;
@@ -292,12 +314,13 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       }
       if (pollTimer) clearInterval(pollTimer);
     };
-  }, [buildNotificationToast, pushToast]);
+  }, [buildNotificationToast, playNotificationPing, pushToast]);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     let active = true;
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let messageChannel: ReturnType<typeof supabase.channel> | null = null;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
 
     const loadInboxUnread = async () => {
@@ -307,6 +330,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
         if (active) setInboxUnreadCount(0);
         return [];
       }
+      inboxUserIdRef.current = userId;
       const { data: chats } = await supabase
         .from("chats")
         .select("id,user_a,user_b")
@@ -359,6 +383,48 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
         )
         .subscribe();
 
+      messageChannel = supabase
+        .channel("inbox-message-toast")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "chat_messages",
+            filter: `chat_id=in.(${chatIds.join(",")})`,
+          },
+          async (payload) => {
+            const row = payload.new as {
+              id?: string | null;
+              chat_id?: string | null;
+              sender_id?: string | null;
+              body?: string | null;
+              attachment_name?: string | null;
+            };
+            if (!row || !row.sender_id) return;
+            if (row.sender_id === inboxUserIdRef.current) return;
+            if (row.id && lastMessageToastRef.current === row.id) return;
+            if (row.id) lastMessageToastRef.current = row.id;
+            let senderName: string | null = null;
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("full_name, username")
+              .eq("user_id", row.sender_id)
+              .maybeSingle();
+            senderName =
+              profile?.full_name ||
+              (profile?.username ? `@${profile.username}` : null);
+            const toast = buildMessageToast({
+              body: row.body,
+              attachment_name: row.attachment_name ?? null,
+              senderName,
+            });
+            playNotificationPing("message");
+            pushToast(toast);
+          }
+        )
+        .subscribe();
+
       pollTimer = setInterval(loadInboxUnread, 20000);
     };
 
@@ -366,9 +432,10 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
       if (channel) supabase.removeChannel(channel);
+      if (messageChannel) supabase.removeChannel(messageChannel);
       if (pollTimer) clearInterval(pollTimer);
     };
-  }, []);
+  }, [buildMessageToast, playNotificationPing, pushToast]);
 
   useEffect(() => {
     const handler = () => inboxRefreshRef.current?.();
