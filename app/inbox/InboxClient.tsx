@@ -552,7 +552,7 @@ export default function InboxClient() {
         return;
       }
       currentChatIdRef.current = activeChatId;
-      const cached = chatCacheRef.current.get(activeThread.chatId);
+      const cached = chatCacheRef.current.get(activeChatId);
       if (cached && cached.length) {
         setChatMessages(cached);
         setChatLoading(false);
