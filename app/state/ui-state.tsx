@@ -32,6 +32,7 @@ type UIState = {
   isLoggedIn: boolean | null;
   loginPromptOpen: boolean;
   hasUnreadNotifications: boolean;
+  inboxUnreadCount: number;
   setDrawerOpen: (open: boolean) => void;
   setPopupOpen: (open: boolean) => void;
   setPopupIndex: (index: number | null) => void;
@@ -45,6 +46,7 @@ type UIState = {
   setIsLoggedIn: (v: boolean | null) => void;
   setLoginPromptOpen: (open: boolean) => void;
   setHasUnreadNotifications: (value: boolean) => void;
+  setInboxUnreadCount: (value: number) => void;
 };
 
 const UIStateContext = createContext<UIState | null>(null);
@@ -62,6 +64,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [loginPromptOpen, setLoginPromptOpen] = useState(false);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+  const [inboxUnreadCount, setInboxUnreadCount] = useState(0);
   const lastNotifToastRef = useRef<string | null>(null);
 
   const buildNotificationToast = useCallback((row: {
@@ -160,6 +163,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       isLoggedIn,
       loginPromptOpen,
       hasUnreadNotifications,
+      inboxUnreadCount,
       setDrawerOpen,
       setPopupOpen,
       setPopupIndex,
@@ -173,6 +177,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       setIsLoggedIn,
       setLoginPromptOpen,
       setHasUnreadNotifications,
+      setInboxUnreadCount,
     }),
     [
       drawerOpen,
@@ -187,6 +192,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       isLoggedIn,
       loginPromptOpen,
       hasUnreadNotifications,
+      inboxUnreadCount,
       pushToast,
       removeToast,
     ]
@@ -279,6 +285,78 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       if (pollTimer) clearInterval(pollTimer);
     };
   }, [buildNotificationToast, pushToast]);
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    let active = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    const loadInboxUnread = async () => {
+      const { data } = await supabase.auth.getSession();
+      const userId = data.session?.user.id;
+      if (!userId) {
+        if (active) setInboxUnreadCount(0);
+        return [];
+      }
+      const { data: chats } = await supabase
+        .from("chats")
+        .select("id,user_a,user_b")
+        .or(`user_a.eq.${userId},user_b.eq.${userId}`);
+      const chatIds = (chats ?? []).map((chat) => chat.id);
+      if (chatIds.length === 0) {
+        if (active) setInboxUnreadCount(0);
+        return chatIds;
+      }
+      const { count } = await supabase
+        .from("chat_messages")
+        .select("id", { count: "exact", head: true })
+        .in("chat_id", chatIds)
+        .is("read_at", null)
+        .neq("sender_id", userId);
+      if (active) setInboxUnreadCount(count ?? 0);
+      return chatIds;
+    };
+
+    const setupInboxRealtime = async () => {
+      const chatIds = await loadInboxUnread();
+      if (!active || chatIds.length === 0) {
+        return;
+      }
+      channel = supabase
+        .channel("inbox-unread-realtime")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "chat_messages",
+            filter: `chat_id=in.(${chatIds.join(",")})`,
+          },
+          loadInboxUnread
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "chat_messages",
+            filter: `chat_id=in.(${chatIds.join(",")})`,
+          },
+          loadInboxUnread
+        )
+        .subscribe();
+
+      pollTimer = setInterval(loadInboxUnread, 20000);
+    };
+
+    setupInboxRealtime();
+    return () => {
+      active = false;
+      if (channel) supabase.removeChannel(channel);
+      if (pollTimer) clearInterval(pollTimer);
+    };
+  }, []);
 
   return <UIStateContext.Provider value={value}>{children}</UIStateContext.Provider>;
 }

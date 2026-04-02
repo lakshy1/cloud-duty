@@ -15,7 +15,7 @@ export function Sidebar({ onCreate, onSearch }: SidebarProps) {
   const router = useRouter();
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
-  const { createOpen, isLoggedIn, setLoginPromptOpen, hasUnreadNotifications } = useUIState();
+  const { createOpen, isLoggedIn, setLoginPromptOpen, hasUnreadNotifications, inboxUnreadCount } = useUIState();
 
   const requireAuth = (action: () => void) => {
     if (isLoggedIn) {
@@ -57,6 +57,7 @@ export function Sidebar({ onCreate, onSearch }: SidebarProps) {
         onClick={() => requireAuth(() => router.push("/inbox"))}
       >
         <Icon name="messages" />
+        {inboxUnreadCount > 0 ? <span className="sb-dot" aria-hidden="true" /> : null}
       </button>
       <button
         className={`sb-btn${createOpen ? " active" : ""}`}

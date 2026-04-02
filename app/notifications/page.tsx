@@ -25,6 +25,8 @@ type ActorProfile = {
   avatar_url: string | null;
 };
 
+type FilterKey = "all" | "message" | "likes" | "saved" | "follow";
+
 function formatRelativeTime(iso: string) {
   const date = new Date(iso);
   const now = new Date();
@@ -62,6 +64,7 @@ export default function NotificationsPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<NotificationRow[]>([]);
+  const [filter, setFilter] = useState<FilterKey>("all");
   const profilesRef = useRef(new Map<string, ActorProfile>());
   const [profileTick, setProfileTick] = useState(0);
 
@@ -169,6 +172,43 @@ export default function NotificationsPage() {
     [items, profileTick]
   );
 
+  const getFilterGroup = (type: string) => {
+    if (type === "message") return "message";
+    if (type === "like" || type === "unlike" || type === "dislike") return "likes";
+    if (type === "save" || type === "unsave") return "saved";
+    if (type === "follow" || type === "unfollow") return "follow";
+    return "all";
+  };
+
+  const getToneClass = (type: string) => {
+    switch (type) {
+      case "like":
+        return "tone-like";
+      case "dislike":
+        return "tone-dislike";
+      case "save":
+        return "tone-save";
+      case "follow":
+        return "tone-follow";
+      case "unfollow":
+      case "unlike":
+      case "unsave":
+        return "tone-muted";
+      case "message":
+        return "tone-message";
+      default:
+        return "tone-default";
+    }
+  };
+
+  const filteredItems = useMemo(
+    () =>
+      filter === "all"
+        ? displayItems
+        : displayItems.filter((item) => getFilterGroup(item.type) === filter),
+    [displayItems, filter]
+  );
+
   return (
     <AppShell>
       <div className="page-shell">
@@ -179,6 +219,43 @@ export default function NotificationsPage() {
         </section>
 
         <section className="page-card notif-card">
+          <div className="notif-filters">
+            <button
+              type="button"
+              className={`notif-filter${filter === "all" ? " active" : ""}`}
+              onClick={() => setFilter("all")}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              className={`notif-filter${filter === "message" ? " active" : ""}`}
+              onClick={() => setFilter("message")}
+            >
+              Message
+            </button>
+            <button
+              type="button"
+              className={`notif-filter${filter === "likes" ? " active" : ""}`}
+              onClick={() => setFilter("likes")}
+            >
+              Likes/Dislikes
+            </button>
+            <button
+              type="button"
+              className={`notif-filter${filter === "saved" ? " active" : ""}`}
+              onClick={() => setFilter("saved")}
+            >
+              Saved
+            </button>
+            <button
+              type="button"
+              className={`notif-filter${filter === "follow" ? " active" : ""}`}
+              onClick={() => setFilter("follow")}
+            >
+              Follow/Unfollow
+            </button>
+          </div>
           {loading ? (
             Array.from({ length: 5 }).map((_, index) => (
               <div className="notif-item" key={`sk-notif-${index}`}>
@@ -194,9 +271,12 @@ export default function NotificationsPage() {
                 <Skeleton className="skeleton-line sm skeleton-w-30" />
               </div>
             ))
-          ) : displayItems.length ? (
-            displayItems.map((item) => (
-              <div className={`notif-item${item.read_at ? "" : " unread"}`} key={item.id}>
+          ) : filteredItems.length ? (
+            filteredItems.map((item) => (
+              <div
+                className={`notif-item${item.read_at ? "" : " unread"} ${getToneClass(item.type)}`}
+                key={item.id}
+              >
                 <div className="notif-left">
                   <div className="notif-avatar">
                     {item.actor?.avatar_url ? (
@@ -217,7 +297,9 @@ export default function NotificationsPage() {
               </div>
             ))
           ) : (
-            <div className="notif-empty">No notifications yet.</div>
+            <div className="notif-empty">
+              {filter === "all" ? "No notifications yet." : "No notifications in this filter."}
+            </div>
           )}
         </section>
       </div>

@@ -21,7 +21,7 @@ export function Topbar({
 }: TopbarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { searchQuery, setSearchQuery, isLoggedIn, hasUnreadNotifications } = useUIState();
+  const { searchQuery, setSearchQuery, isLoggedIn, hasUnreadNotifications, inboxUnreadCount } = useUIState();
   const [profOpen, setProfOpen] = useState(false);
   const profDropRef = useRef<HTMLDivElement | null>(null);
   const [initials, setInitials] = useState("?");
@@ -156,6 +156,15 @@ export function Topbar({
 
       {isLoggedIn === true ? (
         <div className="topbar-right">
+          <button
+            className="topbar-inbox"
+            type="button"
+            aria-label="Inbox"
+            onClick={() => router.push("/inbox")}
+          >
+            <Icon name="messages" />
+            {inboxUnreadCount > 0 ? <span className="topbar-inbox-dot" aria-hidden="true" /> : null}
+          </button>
           <button
             className="topbar-bell"
             type="button"

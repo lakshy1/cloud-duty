@@ -175,26 +175,42 @@ export default function MyPostsPage() {
                 <article className="my-post" key={post.id}>
                   <div className="my-post-media">
                     <Image src={post.img} alt={post.title} fill sizes="(max-width: 760px) 100vw, 33vw" />
+                    <button
+                      className="my-post-edit-fab"
+                      type="button"
+                      onClick={() => openEdit(post)}
+                      aria-label={`Edit ${post.title}`}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25z" />
+                        <path d="M14.06 6.19l3.75 3.75" />
+                      </svg>
+                    </button>
                   </div>
                   <div className="my-post-body">
-                    <div className="my-post-title">{post.title}</div>
-                    {post.created_at ? (
-                      <div className="my-post-date">{formatDate(post.created_at)}</div>
-                    ) : null}
-                    <div className="my-post-summary">{post.summary}</div>
-                    <div className="my-post-actions">
-                      <button className="my-post-edit" type="button" onClick={() => openEdit(post)}>
-                        Edit
-                      </button>
-                      <button
-                        className="my-post-delete"
-                        type="button"
-                        onClick={() => setPendingDelete(post)}
-                        disabled={deletingId === post.id}
-                      >
-                        {deletingId === post.id ? "Deleting..." : "Delete"}
-                      </button>
+                    <div className="my-post-head">
+                      <div className="my-post-head-main">
+                        <div className="my-post-title">{post.title}</div>
+                        {post.created_at ? (
+                          <div className="my-post-date">{formatDate(post.created_at)}</div>
+                        ) : null}
+                      </div>
+                      <div className="my-post-actions">
+                        <button className="my-post-edit" type="button" onClick={() => openEdit(post)}>
+                          Edit
+                        </button>
+                        <button
+                          className="my-post-delete"
+                          type="button"
+                          onClick={() => setPendingDelete(post)}
+                          disabled={deletingId === post.id}
+                        >
+                          {deletingId === post.id ? "Deleting..." : "Delete"}
+                        </button>
+                      </div>
                     </div>
+                    <div className="my-post-summary">{post.summary}</div>
+                    {post.desc ? <div className="my-post-details">{post.desc}</div> : null}
                   </div>
                 </article>
               ))}

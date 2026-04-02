@@ -105,6 +105,9 @@ export default function InboxClient() {
     null
   );
   const [messageMenuOpenId, setMessageMenuOpenId] = useState<string | null>(null);
+  const threadLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const threadLongPressFiredRef = useRef(false);
+  const messageLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const chatBodyRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const threadMenuRef = useRef<HTMLDivElement | null>(null);
@@ -146,6 +149,38 @@ export default function InboxClient() {
     if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${bytes} B`;
+  };
+
+  const startThreadLongPress = (threadId: string) => {
+    threadLongPressFiredRef.current = false;
+    if (threadLongPressTimerRef.current) clearTimeout(threadLongPressTimerRef.current);
+    threadLongPressTimerRef.current = setTimeout(() => {
+      threadLongPressFiredRef.current = true;
+      setThreadMenuOpen(threadId);
+    }, 520);
+  };
+
+  const cancelThreadLongPress = () => {
+    if (threadLongPressTimerRef.current) {
+      clearTimeout(threadLongPressTimerRef.current);
+      threadLongPressTimerRef.current = null;
+    }
+  };
+
+  const startMessageLongPress = (messageId: string, target: EventTarget | null) => {
+    const element = target instanceof HTMLElement ? target : null;
+    if (element?.closest(".inbox-attachment")) return;
+    if (messageLongPressTimerRef.current) clearTimeout(messageLongPressTimerRef.current);
+    messageLongPressTimerRef.current = setTimeout(() => {
+      setMessageMenuOpenId((prev) => (prev === messageId ? null : messageId));
+    }, 520);
+  };
+
+  const cancelMessageLongPress = () => {
+    if (messageLongPressTimerRef.current) {
+      clearTimeout(messageLongPressTimerRef.current);
+      messageLongPressTimerRef.current = null;
+    }
   };
 
   const filteredThreads = useMemo(() => {
@@ -937,27 +972,29 @@ export default function InboxClient() {
             <aside className="inbox-list">
               <div className="inbox-list-head">
                 <div className="inbox-list-title">Inbox</div>
-                <button
-                  className="inbox-compose"
-                  type="button"
-                  onClick={() => {
-                    if (!userId) {
-                      pushToast({ message: "Please sign in to start a chat.", tone: "warning" });
-                      return;
-                    }
-                    setNewModalOpen(true);
-                  }}
-                >
-                  New
-                </button>
-              </div>
-              <div className="inbox-search">
-                <input
-                  type="text"
-                  placeholder="Search messages"
-                  value={threadQuery}
-                  onChange={(event) => setThreadQuery(event.target.value)}
-                />
+                <div className="inbox-list-actions">
+                  <div className="inbox-search">
+                    <input
+                      type="text"
+                      placeholder="Search"
+                      value={threadQuery}
+                      onChange={(event) => setThreadQuery(event.target.value)}
+                    />
+                  </div>
+                  <button
+                    className="inbox-compose"
+                    type="button"
+                    onClick={() => {
+                      if (!userId) {
+                        pushToast({ message: "Please sign in to start a chat.", tone: "warning" });
+                        return;
+                      }
+                      setNewModalOpen(true);
+                    }}
+                  >
+                    New
+                  </button>
+                </div>
               </div>
               <div className="inbox-thread-list">
                 {threadsLoading ? (
@@ -980,12 +1017,24 @@ export default function InboxClient() {
                       role="button"
                       tabIndex={0}
                       onClick={(event) => {
+                        if (threadLongPressFiredRef.current) {
+                          threadLongPressFiredRef.current = false;
+                          return;
+                        }
                         const target = event.target as HTMLElement;
                         if (target.closest(".inbox-thread-menu-btn")) return;
                         if (target.closest(".inbox-thread-menu-pop")) return;
                         setActiveThreadId(thread.id);
                         setShowChat(true);
                       }}
+                      onTouchStart={
+                        thread.type === "chat"
+                          ? () => startThreadLongPress(thread.id)
+                          : undefined
+                      }
+                      onTouchEnd={cancelThreadLongPress}
+                      onTouchCancel={cancelThreadLongPress}
+                      onTouchMove={cancelThreadLongPress}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
@@ -1162,7 +1211,17 @@ export default function InboxClient() {
                       return (
                         <div key={msg.id} className="inbox-message-block">
                           {showDate ? <div className="inbox-date">{formatDateLabel(msg.created_at)}</div> : null}
-                          <div className={`inbox-bubble ${isMine ? "me" : "them"}`}>
+                          <div
+                            className={`inbox-bubble ${isMine ? "me" : "them"}`}
+                            onTouchStart={
+                              isMine && !msg.deleted_at
+                                ? (event) => startMessageLongPress(msg.id, event.target)
+                                : undefined
+                            }
+                            onTouchEnd={isMine && !msg.deleted_at ? cancelMessageLongPress : undefined}
+                            onTouchCancel={isMine && !msg.deleted_at ? cancelMessageLongPress : undefined}
+                            onTouchMove={isMine && !msg.deleted_at ? cancelMessageLongPress : undefined}
+                          >
                             {isMine && !msg.deleted_at ? (
                               <button
                                 className="inbox-msg-menu-btn"
