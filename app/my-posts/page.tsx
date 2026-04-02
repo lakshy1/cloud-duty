@@ -15,6 +15,7 @@ type MyPost = {
   summary: string;
   desc?: string;
   created_at?: string;
+  tag?: string;
 };
 
 export default function MyPostsPage() {
@@ -26,8 +27,14 @@ export default function MyPostsPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editSummary, setEditSummary] = useState("");
   const [editDetails, setEditDetails] = useState("");
+  const [editTag, setEditTag] = useState("Project");
+  const [editBannerFile, setEditBannerFile] = useState<File | null>(null);
+  const [editBannerPreview, setEditBannerPreview] = useState<string | null>(null);
+  const [editBannerUploading, setEditBannerUploading] = useState(false);
+  const [editBannerIsObject, setEditBannerIsObject] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
-  const { pushToast, searchQuery } = useUIState();
+  const { pushToast, searchQuery, setCreateOpen } = useUIState();
+  const tagOptions = ["Project", "Design", "Engineering", "Marketing", "Research", "Product"];
 
   useEffect(() => {
     let active = true;
@@ -42,7 +49,7 @@ export default function MyPostsPage() {
       }
       const { data, error } = await supabase
         .from("posts")
-        .select("id, img, title, summary, desc, created_at")
+        .select("id, img, title, summary, desc, created_at, tag")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
       if (!active) return;
@@ -86,6 +93,53 @@ export default function MyPostsPage() {
     setEditTitle(post.title);
     setEditSummary(post.summary);
     setEditDetails(post.desc ?? "");
+    setEditTag(post.tag ?? "Project");
+    setEditBannerFile(null);
+    setEditBannerPreview(post.img ?? null);
+    setEditBannerIsObject(false);
+  };
+
+  const closeEdit = () => {
+    if (editBannerPreview && editBannerIsObject) {
+      URL.revokeObjectURL(editBannerPreview);
+    }
+    setEditBannerFile(null);
+    setEditBannerPreview(null);
+    setEditBannerIsObject(false);
+    setEditingPost(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (editBannerPreview && editBannerIsObject) {
+        URL.revokeObjectURL(editBannerPreview);
+      }
+    };
+  }, [editBannerPreview, editBannerIsObject]);
+
+  const uploadBanner = async () => {
+    if (!editBannerFile) return null;
+    const supabase = getSupabaseBrowserClient();
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      throw new Error("Please sign in again to upload images.");
+    }
+    const bucketName = process.env.NEXT_PUBLIC_POST_IMAGES_BUCKET || "post-images";
+    await supabase.auth.setSession(sessionData.session);
+    const safeName = `${Date.now()}-${editBannerFile.name.replace(/[^a-zA-Z0-9._-]/g, "")}`;
+    const filePath = `posts/${safeName}`;
+    const { error: uploadError } = await supabase.storage
+      .from(bucketName)
+      .upload(filePath, editBannerFile, {
+        upsert: false,
+        cacheControl: "3600",
+        contentType: editBannerFile.type || "image/jpeg",
+      });
+    if (uploadError) {
+      throw new Error(uploadError.message);
+    }
+    const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+    return data.publicUrl;
   };
 
   const handleSaveEdit = async () => {
@@ -93,6 +147,7 @@ export default function MyPostsPage() {
     const trimmedTitle = editTitle.trim();
     const trimmedSummary = editSummary.trim();
     const trimmedDetails = editDetails.trim();
+    const trimmedTag = editTag.trim() || "Project";
     if (!trimmedTitle || !trimmedSummary || !trimmedDetails) {
       pushToast({ message: "Title, summary, and details are required.", tone: "warning" });
       return;
@@ -106,25 +161,56 @@ export default function MyPostsPage() {
       setSavingEdit(false);
       return;
     }
+    let nextImage: string | null = null;
+    if (editBannerFile) {
+      try {
+        setEditBannerUploading(true);
+        nextImage = await uploadBanner();
+      } catch (error) {
+        pushToast({
+          message: error instanceof Error ? error.message : "Unable to upload image.",
+          tone: "error",
+        });
+        setSavingEdit(false);
+        setEditBannerUploading(false);
+        return;
+      }
+      setEditBannerUploading(false);
+    }
     const { error } = await supabase
       .from("posts")
-      .update({ title: trimmedTitle, summary: trimmedSummary, desc: trimmedDetails })
+      .update({
+        title: trimmedTitle,
+        summary: trimmedSummary,
+        desc: trimmedDetails,
+        tag: trimmedTag,
+        img: nextImage ?? editingPost.img,
+      })
       .eq("id", editingPost.id)
       .eq("user_id", userId);
     if (error) {
       pushToast({ message: error.message, tone: "error" });
       setSavingEdit(false);
+      setEditBannerUploading(false);
       return;
     }
     setPosts((prev) =>
       prev.map((post) =>
         post.id === editingPost.id
-          ? { ...post, title: trimmedTitle, summary: trimmedSummary, desc: trimmedDetails }
+          ? {
+              ...post,
+              title: trimmedTitle,
+              summary: trimmedSummary,
+              desc: trimmedDetails,
+              tag: trimmedTag,
+              img: nextImage ?? post.img,
+            }
           : post
       )
     );
     setSavingEdit(false);
-    setEditingPost(null);
+    setEditBannerUploading(false);
+    closeEdit();
     pushToast({ message: "Post updated.", tone: "success" });
   };
 
@@ -166,9 +252,16 @@ export default function MyPostsPage() {
           {loading ? (
             <Loader label="Loading your posts" />
           ) : filteredPosts.length === 0 ? (
-            <p className="page-subtitle">
-              {normalizedQuery ? "No posts match your search." : "No posts yet."}
-            </p>
+            <div className="my-posts-empty">
+              <p className="page-subtitle">
+                {normalizedQuery ? "No posts match your search." : "No posts yet."}
+              </p>
+              {!normalizedQuery ? (
+                <button className="my-posts-empty-cta" type="button" onClick={() => setCreateOpen(true)}>
+                  Create new post
+                </button>
+              ) : null}
+            </div>
           ) : (
             <div className="my-posts-grid">
               {filteredPosts.map((post) => (
@@ -276,7 +369,7 @@ export default function MyPostsPage() {
             <div
               className="edit-overlay"
               onClick={(event) => {
-                if (event.target === event.currentTarget) setEditingPost(null);
+                if (event.target === event.currentTarget) closeEdit();
               }}
             >
               <div className="edit-panel" role="dialog" aria-modal="true" aria-labelledby="editTitle">
@@ -287,13 +380,57 @@ export default function MyPostsPage() {
                     </div>
                     <div className="edit-subtitle">Update your post details.</div>
                   </div>
-                  <button className="edit-close" type="button" onClick={() => setEditingPost(null)}>
+                  <button className="edit-close" type="button" onClick={closeEdit}>
                     <svg viewBox="0 0 24 24">
                       <path d="M18 6 6 18M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
                 <div className="edit-body">
+                  <label className="edit-field">
+                    <span>Banner image</span>
+                    <div className="edit-upload">
+                      <input
+                        id="edit-banner-input"
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] ?? null;
+                          if (editBannerPreview && editBannerIsObject) {
+                            URL.revokeObjectURL(editBannerPreview);
+                          }
+                          setEditBannerFile(file);
+                          if (file) {
+                            setEditBannerPreview(URL.createObjectURL(file));
+                            setEditBannerIsObject(true);
+                          } else {
+                            setEditBannerPreview(editingPost.img);
+                            setEditBannerIsObject(false);
+                          }
+                        }}
+                      />
+                      <div className="edit-upload-preview">
+                        {editBannerPreview ? (
+                          <img src={editBannerPreview} alt="Banner preview" />
+                        ) : (
+                          <div className="edit-upload-placeholder">No image selected</div>
+                        )}
+                        <label className="edit-upload-cta" htmlFor="edit-banner-input">
+                          Edit image
+                        </label>
+                      </div>
+                    </div>
+                  </label>
+                  <label className="edit-field">
+                    <span>Tag</span>
+                    <select value={editTag} onChange={(e) => setEditTag(e.target.value)}>
+                      {tagOptions.map((tag) => (
+                        <option key={tag} value={tag}>
+                          {tag}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <label className="edit-field">
                     <span>Title</span>
                     <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
@@ -312,11 +449,16 @@ export default function MyPostsPage() {
                   </label>
                 </div>
                 <div className="edit-actions">
-                  <button className="edit-secondary" type="button" onClick={() => setEditingPost(null)}>
+                  <button className="edit-secondary" type="button" onClick={closeEdit}>
                     Cancel
                   </button>
-                  <button className="edit-primary" type="button" onClick={handleSaveEdit} disabled={savingEdit}>
-                    {savingEdit ? "Saving..." : "Save changes"}
+                  <button
+                    className="edit-primary"
+                    type="button"
+                    onClick={handleSaveEdit}
+                    disabled={savingEdit || editBannerUploading}
+                  >
+                    {savingEdit || editBannerUploading ? "Saving..." : "Save changes"}
                   </button>
                 </div>
               </div>

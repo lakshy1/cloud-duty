@@ -943,7 +943,7 @@ export default function ProfilePage() {
             </button>
           </div>
 
-          {/* ── About / Bio ── */}
+          {/* â”€â”€ About / Bio â”€â”€ */}
           <div className="prof-section">
             <div className="prof-section-head">
               <div className="prof-section-title">
@@ -960,7 +960,7 @@ export default function ProfilePage() {
               <div className="prof-bio-edit">
                 <textarea
                   className="prof-bio-textarea"
-                  placeholder="Write a brief bio about yourself — your background, interests, or what drives you..."
+                  placeholder="Write a brief bio about yourself - your background, interests, or what drives you..."
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   maxLength={600}
@@ -981,7 +981,7 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* ── Skills ── */}
+          {/* â”€â”€ Skills â”€â”€ */}
           <div className="prof-section">
             <div className="prof-section-head">
               <div className="prof-section-title">
@@ -1000,7 +1000,7 @@ export default function ProfilePage() {
                   {skills.map((sk, i) => (
                     <span className="prof-skill-tag editing" key={sk + i}>
                       {sk}
-                      <button type="button" className="prof-skill-remove" onClick={() => removeSkill(i)} aria-label={`Remove ${sk}`}>×</button>
+                      <button type="button" className="prof-skill-remove" onClick={() => removeSkill(i)} aria-label={`Remove ${sk}`}>x</button>
                     </span>
                   ))}
                 </div>
@@ -1008,7 +1008,7 @@ export default function ProfilePage() {
                   <input
                     className="prof-skill-input"
                     type="text"
-                    placeholder="Add a skill and press Enter…"
+                    placeholder="Add a skill and press Enter..."
                     value={skillInput}
                     onChange={(e) => setSkillInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addSkill(); } }}
@@ -1032,7 +1032,7 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* ── My Posts ── */}
+          {/* â”€â”€ My Posts â”€â”€ */}
           <div className="prof-section prof-posts-section">
             <div className="prof-section-head">
               <div className="prof-section-title">
@@ -1111,9 +1111,9 @@ export default function ProfilePage() {
                     onClick={() => setFollowModalOpen(false)}
                     aria-label="Close"
                   >
-                    <span className="follow-close-icon" aria-hidden="true">
-                      ×
-                    </span>
+                    <svg className="follow-close-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M6 6l12 12M18 6l-12 12" />
+                    </svg>
                   </button>
                 </div>
                 <div className="follow-tabs">
@@ -1227,3 +1227,7 @@ export default function ProfilePage() {
     </AppShell>
   );
 }
+
+
+
+

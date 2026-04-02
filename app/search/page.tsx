@@ -66,6 +66,7 @@ export default function SearchPage() {
   const isOpenRef = useRef(false);
 
   const filteredPostsRef = useRef<CardData[]>([]);
+  const suggestions = ["System design", "AI Tools", "Payments", "Portfolio"];
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -368,9 +369,19 @@ export default function SearchPage() {
                 Posts
               </button>
             </div>
+            <div className="search-filter-select">
+              <select
+                value={filter}
+                onChange={(event) => setFilter(event.target.value as FilterMode)}
+                aria-label="Filter results"
+              >
+                <option value="profiles">Profiles</option>
+                <option value="posts">Posts</option>
+              </select>
+            </div>
             {query ? (
               <button type="button" className="search-hero-clear" onClick={() => setQuery("")}>
-                ×
+                x
               </button>
             ) : null}
           </div>
@@ -385,10 +396,33 @@ export default function SearchPage() {
             </span>
             {normalizedQuery ? (
               <span className="search-meta-query">Results for &quot;{query.trim()}&quot;</span>
-            ) : (
-              <span className="search-meta-query">Type to start searching.</span>
-            )}
+            ) : null}
           </div>
+
+          {!normalizedQuery ? (
+            <div className="search-empty-panel">
+              <div className="search-empty-title">Search the CloudDuty workspace</div>
+              <div className="search-empty-sub">
+                Try a tag, project name, or teammate handle.
+              </div>
+              <div className="search-empty-hint">Suggestions</div>
+              <div className="search-suggestions">
+                {suggestions.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className="search-suggestion"
+                    onClick={() => {
+                      setFilter("posts");
+                      setQuery(value);
+                    }}
+                  >
+                    {value}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {filter === "profiles" ? (
             <div className="search-results">
@@ -410,9 +444,7 @@ export default function SearchPage() {
                     </div>
                   ))}
                 </div>
-              ) : !normalizedQuery ? (
-                <div className="search-empty">Start typing to search profiles.</div>
-              ) : filteredProfiles.length === 0 ? (
+              ) : !normalizedQuery ? null : filteredProfiles.length === 0 ? (
                 <div className="search-empty">No profiles match your search.</div>
               ) : (
                 <div className="profile-list">
@@ -467,9 +499,7 @@ export default function SearchPage() {
                     </div>
                   ))}
                 </div>
-              ) : !normalizedQuery ? (
-                <div className="search-empty">Start typing to search posts.</div>
-              ) : filteredPosts.length === 0 ? (
+              ) : !normalizedQuery ? null : filteredPosts.length === 0 ? (
                 <div className="search-empty">No posts match your search.</div>
               ) : (
                 <CardGrid

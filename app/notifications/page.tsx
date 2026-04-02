@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { Skeleton } from "../components/Skeleton";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
@@ -61,6 +62,7 @@ function buildTitle(type: string) {
 }
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<NotificationRow[]>([]);
@@ -224,28 +226,28 @@ export default function NotificationsPage() {
               className={`notif-filter${filter === "all" ? " active" : ""}`}
               onClick={() => setFilter("all")}
             >
-              All
+              All activity
             </button>
             <button
               type="button"
               className={`notif-filter${filter === "likes" ? " active" : ""}`}
               onClick={() => setFilter("likes")}
             >
-              Likes/Dislikes
+              Reactions
             </button>
             <button
               type="button"
               className={`notif-filter${filter === "saved" ? " active" : ""}`}
               onClick={() => setFilter("saved")}
             >
-              Saved
+              Saves
             </button>
             <button
               type="button"
               className={`notif-filter${filter === "follow" ? " active" : ""}`}
               onClick={() => setFilter("follow")}
             >
-              Follow/Unfollow
+              Follows
             </button>
           </div>
           {loading ? (
@@ -265,9 +267,20 @@ export default function NotificationsPage() {
             ))
           ) : filteredItems.length ? (
             filteredItems.map((item) => (
-              <div
+              <button
+                type="button"
                 className={`notif-item${item.read_at ? "" : " unread"} ${getToneClass(item.type)}`}
                 key={item.id}
+                onClick={() => {
+                  if (item.entity_type === "post" && item.entity_id) {
+                    router.push(`/?post=${item.entity_id}`);
+                    return;
+                  }
+                  const actorId = item.actor?.user_id ?? item.actor_id;
+                  if (actorId) {
+                    router.push(`/user/${actorId}`);
+                  }
+                }}
               >
                 <div className="notif-left">
                   <div className="notif-avatar">
@@ -286,7 +299,7 @@ export default function NotificationsPage() {
                   </div>
                 </div>
                 <div className="notif-time">{item.time}</div>
-              </div>
+              </button>
             ))
           ) : (
             <div className="notif-empty">

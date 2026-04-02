@@ -96,10 +96,11 @@ export function Toasts() {
             aria-label="Dismiss"
             onClick={() => startClose(toast.id, toast.target)}
           >
-            ×
+            x
           </button>
         </div>
       ))}
     </div>
   );
 }
+

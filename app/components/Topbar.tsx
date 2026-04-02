@@ -137,17 +137,17 @@ export function Topbar({
             onChange={(event) => setSearchQuery(event.target.value)}
           />
           {searchQuery ? (
-            <button
-              className="search-clear"
-              type="button"
-              aria-label="Clear search"
-              onClick={() => {
-                setSearchQuery("");
-                searchInputRef?.current?.focus();
-              }}
-            >
-              ×
-            </button>
+              <button
+                className="search-clear"
+                type="button"
+                aria-label="Clear search"
+                onClick={() => {
+                  setSearchQuery("");
+                  searchInputRef?.current?.focus();
+                }}
+              >
+              x
+              </button>
           ) : null}
         </div>
       ) : null}

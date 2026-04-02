@@ -77,7 +77,7 @@ export default function InboxClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { pushToast } = useUIState();
-  const [activeThreadId, setActiveThreadId] = useState(AI_THREAD_ID);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(AI_THREAD_ID);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [threadsLoading, setThreadsLoading] = useState(true);
   const [aiMessagesByThread, setAiMessagesByThread] = useState(initialAiMessages);
@@ -229,6 +229,7 @@ export default function InboxClient() {
 
   useEffect(() => {
     if (!threads.length) return;
+    if (activeThreadId === null) return;
     const exists = threads.some((thread) => thread.id === activeThreadId);
     if (!exists) {
       setActiveThreadId(threads[0].id);
@@ -1266,48 +1267,86 @@ export default function InboxClient() {
             </aside>
 
             <div className="inbox-chat">
-              <div className="inbox-chat-head">
-                <div className="inbox-chat-profile">
+              {!activeThread ? (
+                <div className="inbox-empty">
+                  <div className="inbox-empty-illu" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <div className="inbox-empty-title">Select a conversation</div>
+                  <div className="inbox-empty-sub">
+                    Pick a thread from the left to start chatting.
+                  </div>
                   <button
-                    className="inbox-back"
+                    className="inbox-empty-cta"
                     type="button"
-                    onClick={() => setShowChat(false)}
-                    aria-label="Back to conversations"
+                    onClick={() => {
+                      if (!userId) {
+                        pushToast({ message: "Please sign in to start a chat.", tone: "warning" });
+                        return;
+                      }
+                      setNewModalOpen(true);
+                    }}
                   >
-                    <svg aria-hidden="true" viewBox="0 0 24 24">
-                      <path
-                        d="M15 19l-7-7 7-7"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                    New message
                   </button>
-                  <div className="inbox-chat-avatar">
-                    {activeThread?.type === "chat" && activeThread.avatarUrl ? (
-                      <img src={activeThread.avatarUrl} alt={activeThread.name} />
-                    ) : activeThread?.type === "chat" ? (
-                      <span className="inbox-chat-initial">
-                        {(activeThread?.name || "U")[0]?.toUpperCase()}
-                      </span>
-                    ) : (
-                      <Icon name="cloud" stroke="#fff" />
-                    )}
-                  </div>
-                  <div className="inbox-chat-title">
-                    <div className="inbox-chat-name-row">
-                      <div className="inbox-chat-name">{activeThread?.name ?? ""}</div>
-                    </div>
-                    <div className="inbox-chat-status">
-                      {activeThread?.type === "chat" ? "Direct message" : "CloudDuty AI"}
-                    </div>
-                  </div>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="inbox-chat-head">
+                    <div className="inbox-chat-profile">
+                      <button
+                        className="inbox-back"
+                        type="button"
+                        onClick={() => setShowChat(false)}
+                        aria-label="Back to conversations"
+                      >
+                        <svg aria-hidden="true" viewBox="0 0 24 24">
+                          <path
+                            d="M15 19l-7-7 7-7"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                      <div className="inbox-chat-avatar">
+                        {activeThread?.type === "chat" && activeThread.avatarUrl ? (
+                          <img src={activeThread.avatarUrl} alt={activeThread.name} />
+                        ) : activeThread?.type === "chat" ? (
+                          <span className="inbox-chat-initial">
+                            {(activeThread?.name || "U")[0]?.toUpperCase()}
+                          </span>
+                        ) : (
+                          <Icon name="cloud" stroke="#fff" />
+                        )}
+                      </div>
+                      <div className="inbox-chat-title">
+                        <div className="inbox-chat-name-row">
+                          <div className="inbox-chat-name">{activeThread?.name ?? ""}</div>
+                        </div>
+                        <div className="inbox-chat-status">
+                          {activeThread?.type === "chat" ? "Direct message" : "CloudDuty AI"}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      className="inbox-close"
+                      type="button"
+                      onClick={() => {
+                        setActiveThreadId(null);
+                        setShowChat(false);
+                      }}
+                      aria-label="Close chat panel"
+                    >
+                      x
+                    </button>
+                  </div>
 
-              <div className="inbox-chat-body" ref={chatBodyRef}>
+                  <div className="inbox-chat-body" ref={chatBodyRef}>
                 {isAiThread
                   ? activeAiMessages.map((msg, index) => {
                       const previous = activeAiMessages[index - 1];
@@ -1442,7 +1481,7 @@ export default function InboxClient() {
                                         {msg.attachment_name ?? "Attachment"}
                                       </div>
                                       <div className="inbox-attachment-meta">
-                                        PDF • {formatSize(msg.attachment_size ?? 0)}
+                                        PDF - {formatSize(msg.attachment_size ?? 0)}
                                       </div>
                                     </div>
                                   </div>
@@ -1477,7 +1516,7 @@ export default function InboxClient() {
                 ) : null}
               </div>
 
-              <div className="inbox-chat-input">
+                  <div className="inbox-chat-input">
                 <button
                   className="inbox-attach"
                   type="button"
@@ -1511,59 +1550,61 @@ export default function InboxClient() {
                 <button type="button" onClick={handleSend} disabled={!draft.trim() || isSending}>
                   {isSending ? "Sending..." : "Send"}
                 </button>
-              </div>
-              {uploadProgress !== null ? (
-                <div className="inbox-upload-status" aria-live="polite">
-                  <span>Uploading {uploadLabel ?? "attachment"}...</span>
-                  <div className="inbox-upload-bar">
-                    <span style={{ width: `${uploadProgress}%` }} />
                   </div>
-                </div>
-              ) : null}
-              {attachmentPreview ? (
-                <div
-                  className="attachment-overlay"
-                  role="dialog"
-                  aria-modal="true"
-                  onClick={closeAttachment}
-                >
-                  <div className="attachment-modal" onClick={(event) => event.stopPropagation()}>
-                    <button
-                      className="attachment-close"
-                      type="button"
-                      aria-label="Close attachment"
+                  {uploadProgress !== null ? (
+                    <div className="inbox-upload-status" aria-live="polite">
+                      <span>Uploading {uploadLabel ?? "attachment"}...</span>
+                      <div className="inbox-upload-bar">
+                        <span style={{ width: `${uploadProgress}%` }} />
+                      </div>
+                    </div>
+                  ) : null}
+                  {attachmentPreview ? (
+                    <div
+                      className="attachment-overlay"
+                      role="dialog"
+                      aria-modal="true"
                       onClick={closeAttachment}
                     >
-                      <svg aria-hidden="true" viewBox="0 0 24 24">
-                        <path d="M18 6 6 18" />
-                        <path d="M6 6l12 12" />
-                      </svg>
-                    </button>
-                    <div className="attachment-head">
-                      <div className="attachment-name">{attachmentPreview.name}</div>
-                      <a
-                        className="attachment-open"
-                        href={attachmentPreview.url}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Open in new tab
-                      </a>
+                      <div className="attachment-modal" onClick={(event) => event.stopPropagation()}>
+                        <button
+                          className="attachment-close"
+                          type="button"
+                          aria-label="Close attachment"
+                          onClick={closeAttachment}
+                        >
+                          <svg aria-hidden="true" viewBox="0 0 24 24">
+                            <path d="M18 6 6 18" />
+                            <path d="M6 6l12 12" />
+                          </svg>
+                        </button>
+                        <div className="attachment-head">
+                          <div className="attachment-name">{attachmentPreview.name}</div>
+                          <a
+                            className="attachment-open"
+                            href={attachmentPreview.url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Open in new tab
+                          </a>
+                        </div>
+                        <div className="attachment-body">
+                          {previewIsImage ? (
+                            <img src={attachmentPreview.url} alt={attachmentPreview.name} />
+                          ) : previewIsPdf ? (
+                            <iframe src={attachmentPreview.url} title={attachmentPreview.name} />
+                          ) : (
+                            <a href={attachmentPreview.url} target="_blank" rel="noreferrer">
+                              Download file
+                            </a>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="attachment-body">
-                      {previewIsImage ? (
-                        <img src={attachmentPreview.url} alt={attachmentPreview.name} />
-                      ) : previewIsPdf ? (
-                        <iframe src={attachmentPreview.url} title={attachmentPreview.name} />
-                      ) : (
-                        <a href={attachmentPreview.url} target="_blank" rel="noreferrer">
-                          Download file
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ) : null}
+                  ) : null}
+                </>
+              )}
             </div>
           </div>
         </section>

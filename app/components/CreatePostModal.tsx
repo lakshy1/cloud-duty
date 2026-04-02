@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from "react";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 import { useUIState } from "../state/ui-state";
 import { useFocusTrap } from "../hooks/useFocusTrap";
@@ -13,6 +14,7 @@ type CreatePostModalProps = {
 
 const DEFAULT_AVATAR = "https://i.pravatar.cc/64?img=12";
 const DEFAULT_TAG = "Project";
+const TAG_OPTIONS = ["Project", "Design", "Engineering", "Marketing", "Research", "Product"];
 
 const trimOrEmpty = (value: string) => value.trim();
 const normalizeUsername = (value: string) =>
@@ -39,17 +41,37 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [bannerUploading, setBannerUploading] = useState(false);
+  const [bannerMeta, setBannerMeta] = useState<{ width: number; height: number } | null>(null);
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
+  const [dragActive, setDragActive] = useState(false);
+  const [cropFrameSize, setCropFrameSize] = useState<{ width: number; height: number } | null>(null);
+  const cropFrameRef = useRef<HTMLDivElement | null>(null);
+  const dragStateRef = useRef<{
+    startX: number;
+    startY: number;
+    offsetX: number;
+    offsetY: number;
+  } | null>(null);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [details, setDetails] = useState("");
+  const [tag, setTag] = useState(DEFAULT_TAG);
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const [aiDetailsLoading, setAiDetailsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [aiError, setAiError] = useState<{ field: "summary" | "details"; message: string } | null>(
+    null
+  );
+  const aiErrorTimerRef = useRef<number | null>(null);
 
   useFocusTrap(panelRef, open, { onEscape: onClose });
 
   useEffect(() => {
     if (!open) return;
     setError("");
+    setAiError(null);
   }, [open]);
 
   useEffect(() => {
@@ -118,8 +140,106 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
   useEffect(() => {
     return () => {
       if (bannerPreview) URL.revokeObjectURL(bannerPreview);
+      if (aiErrorTimerRef.current) window.clearTimeout(aiErrorTimerRef.current);
     };
   }, [bannerPreview]);
+
+  useEffect(() => {
+    if (!bannerPreview) {
+      setBannerMeta(null);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      setBannerMeta({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.src = bannerPreview;
+  }, [bannerPreview]);
+
+  useEffect(() => {
+    if (!cropFrameRef.current) return;
+    const element = cropFrameRef.current;
+    const updateSize = () => {
+      const rect = element.getBoundingClientRect();
+      setCropFrameSize({ width: rect.width, height: rect.height });
+    };
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [bannerPreview]);
+
+  const cropMetrics = useMemo(() => {
+    if (!bannerMeta || !cropFrameSize) return null;
+    if (!cropFrameSize.width || !cropFrameSize.height) return null;
+    const baseScale = Math.max(
+      cropFrameSize.width / bannerMeta.width,
+      cropFrameSize.height / bannerMeta.height
+    );
+    return { frameWidth: cropFrameSize.width, frameHeight: cropFrameSize.height, baseScale };
+  }, [bannerMeta, cropFrameSize]);
+
+  const clampOffsets = useCallback(
+    (next: { x: number; y: number }) => {
+      if (!cropMetrics || !bannerMeta) return next;
+      const scale = cropMetrics.baseScale * cropZoom;
+      const maxX = Math.max((bannerMeta.width * scale - cropMetrics.frameWidth) / 2, 0);
+      const maxY = Math.max((bannerMeta.height * scale - cropMetrics.frameHeight) / 2, 0);
+      return {
+        x: Math.min(Math.max(next.x, -maxX), maxX),
+        y: Math.min(Math.max(next.y, -maxY), maxY),
+      };
+    },
+    [bannerMeta, cropMetrics, cropZoom]
+  );
+
+  useEffect(() => {
+    setCropOffset((prev) => clampOffsets(prev));
+  }, [cropZoom, clampOffsets]);
+
+  const applyFile = useCallback(
+    (file: File | null) => {
+      if (bannerPreview) URL.revokeObjectURL(bannerPreview);
+      setBannerFile(file);
+      if (file) {
+        setBannerPreview(URL.createObjectURL(file));
+        setCropZoom(1);
+        setCropOffset({ x: 0, y: 0 });
+      } else {
+        setBannerPreview(null);
+      }
+    },
+    [bannerPreview]
+  );
+
+  const handleDragStart = (event: ReactMouseEvent | ReactTouchEvent) => {
+    if (!bannerPreview) return;
+    const point =
+      "touches" in event ? event.touches[0] : event;
+    dragStateRef.current = {
+      startX: point.clientX,
+      startY: point.clientY,
+      offsetX: cropOffset.x,
+      offsetY: cropOffset.y,
+    };
+  };
+
+  const handleDragMove = (event: ReactMouseEvent | ReactTouchEvent) => {
+    if (!dragStateRef.current) return;
+    const point =
+      "touches" in event ? event.touches[0] : event;
+    const dx = point.clientX - dragStateRef.current.startX;
+    const dy = point.clientY - dragStateRef.current.startY;
+    const next = clampOffsets({
+      x: dragStateRef.current.offsetX + dx,
+      y: dragStateRef.current.offsetY + dy,
+    });
+    setCropOffset(next);
+  };
+
+  const handleDragEnd = () => {
+    dragStateRef.current = null;
+  };
 
   const resetForm = () => {
     if (bannerPreview) URL.revokeObjectURL(bannerPreview);
@@ -128,6 +248,9 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
     setTitle("");
     setSummary("");
     setDetails("");
+    setTag(DEFAULT_TAG);
+    setCropZoom(1);
+    setCropOffset({ x: 0, y: 0 });
     setError("");
   };
 
@@ -135,6 +258,37 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
     if (submitting) return;
     onClose();
   };
+
+  const renderCroppedBlob = useCallback(async () => {
+    if (!bannerFile || !bannerPreview || !bannerMeta || !cropMetrics) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = 1200;
+    canvas.height = 800;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    const img = new Image();
+    const imageReady = new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("Unable to read image."));
+    });
+    img.src = bannerPreview;
+    await imageReady;
+
+    const scaleToCanvas = canvas.width / cropMetrics.frameWidth;
+    const scale = cropMetrics.baseScale * cropZoom;
+    const drawW = bannerMeta.width * scale * scaleToCanvas;
+    const drawH = bannerMeta.height * scale * (canvas.height / cropMetrics.frameHeight);
+    const drawX = (canvas.width - drawW) / 2 + cropOffset.x * scaleToCanvas;
+    const drawY = (canvas.height - drawH) / 2 + cropOffset.y * (canvas.height / cropMetrics.frameHeight);
+    ctx.drawImage(img, drawX, drawY, drawW, drawH);
+    return new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(
+        (blob) => resolve(blob),
+        "image/jpeg",
+        0.92
+      );
+    });
+  }, [bannerFile, bannerPreview, bannerMeta, cropMetrics, cropOffset, cropZoom]);
 
   const uploadBanner = async () => {
     if (!bannerFile) return null;
@@ -148,10 +302,12 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
     const safeName = `${Date.now()}-${bannerFile.name.replace(/[^a-zA-Z0-9._-]/g, "")}`;
     const filePath = `posts/${safeName}`;
 
-    const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, bannerFile, {
+    const cropped = await renderCroppedBlob();
+    const contentType = cropped?.type || bannerFile.type || "image/jpeg";
+    const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, cropped ?? bannerFile, {
       upsert: false,
       cacheControl: "3600",
-      contentType: bannerFile.type || "image/jpeg",
+      contentType,
     });
 
     if (uploadError) {
@@ -165,6 +321,53 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
     const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
     return data.publicUrl;
   };
+
+  const enhanceField = useCallback(
+    async (field: "summary" | "details") => {
+      if (!title.trim() && !summary.trim() && !details.trim()) {
+        setAiError({ field, message: "Add a title or some text before using AI enhancement." });
+        if (aiErrorTimerRef.current) window.clearTimeout(aiErrorTimerRef.current);
+        aiErrorTimerRef.current = window.setTimeout(() => setAiError(null), 2500);
+        return;
+      }
+      if (field === "summary") setAiSummaryLoading(true);
+      if (field === "details") setAiDetailsLoading(true);
+      setError("");
+      setAiError(null);
+      try {
+        const response = await fetch("/api/groq", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            field,
+            title,
+            summary,
+            details,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.error || "AI enhancement failed.");
+        }
+        if (field === "summary") {
+          setSummary(data.text || summary);
+        } else {
+          setDetails(data.text || details);
+        }
+      } catch (err) {
+        setAiError({
+          field,
+          message: err instanceof Error ? err.message : "AI enhancement failed.",
+        });
+        if (aiErrorTimerRef.current) window.clearTimeout(aiErrorTimerRef.current);
+        aiErrorTimerRef.current = window.setTimeout(() => setAiError(null), 2500);
+      } finally {
+        if (field === "summary") setAiSummaryLoading(false);
+        if (field === "details") setAiDetailsLoading(false);
+      }
+    },
+    [details, summary, title]
+  );
 
   const handleSubmit = async () => {
     const trimmedTitle = trimOrEmpty(title);
@@ -212,7 +415,7 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
           ava: authorAvatar || DEFAULT_AVATAR,
           author: authorName || "User",
           handle: authorHandle || "@user",
-          tag: DEFAULT_TAG,
+          tag,
           title: trimmedTitle,
           summary: trimmedSummary,
           desc: trimmedDetails,
@@ -239,7 +442,7 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
         ava: data.ava ?? authorAvatar ?? DEFAULT_AVATAR,
         author: data.author ?? authorName ?? "User",
         handle: data.handle ?? authorHandle ?? "@user",
-        tag: data.tag ?? DEFAULT_TAG,
+        tag: data.tag ?? tag ?? DEFAULT_TAG,
         title: data.title ?? trimmedTitle,
         summary: data.summary ?? trimmedSummary,
         details: data.desc ?? trimmedDetails,
@@ -293,7 +496,20 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
           <div className="create-form">
             <label className="create-field">
               <span className="create-label">Upload Image</span>
-              <div className="create-upload">
+              <div
+                className={`create-upload${dragActive ? " drag" : ""}`}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  setDragActive(true);
+                }}
+                onDragLeave={() => setDragActive(false)}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  setDragActive(false);
+                  const file = event.dataTransfer.files?.[0] ?? null;
+                  applyFile(file);
+                }}
+              >
                 <input
                   className="create-upload-input"
                   type="file"
@@ -301,9 +517,7 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
                   aria-label="Upload image"
                   onChange={(event) => {
                     const file = event.target.files?.[0] ?? null;
-                    if (bannerPreview) URL.revokeObjectURL(bannerPreview);
-                    setBannerFile(file);
-                    setBannerPreview(file ? URL.createObjectURL(file) : null);
+                    applyFile(file);
                   }}
                 />
                 <div className="create-upload-ui">
@@ -319,13 +533,47 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
                       {bannerFile ? bannerFile.name : "Click to upload"}
                     </div>
                     <div className="create-upload-sub">
-                      PNG, JPG or WebP • Suggested 1200x800
+                      PNG, JPG or WebP - Suggested 1200x800
                     </div>
                   </div>
                   <div className="create-upload-cta">
                     {bannerFile ? "Replace" : "Upload"}
                   </div>
                 </div>
+                {bannerPreview ? (
+                  <div
+                    className="create-cropper"
+                    ref={cropFrameRef}
+                    onMouseDown={handleDragStart}
+                    onMouseMove={handleDragMove}
+                    onMouseUp={handleDragEnd}
+                    onMouseLeave={handleDragEnd}
+                    onTouchStart={handleDragStart}
+                    onTouchMove={handleDragMove}
+                    onTouchEnd={handleDragEnd}
+                  >
+                    <img
+                      src={bannerPreview}
+                      alt="Crop preview"
+                      style={{
+                        transform: `translate(-50%, -50%) translate(${cropOffset.x}px, ${cropOffset.y}px) scale(${(cropMetrics?.baseScale ?? 1) * cropZoom})`,
+                      }}
+                    />
+                  </div>
+                ) : null}
+                {bannerPreview ? (
+                  <div className="create-crop-controls">
+                    <span>Zoom</span>
+                    <input
+                      type="range"
+                      min={1}
+                      max={2.5}
+                      step={0.05}
+                      value={cropZoom}
+                      onChange={(event) => setCropZoom(Number(event.target.value))}
+                    />
+                  </div>
+                ) : null}
               </div>
             </label>
 
@@ -342,25 +590,76 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
             </label>
 
             <label className="create-field">
+              <span className="create-label">Category</span>
+              <select
+                className="create-select"
+                value={tag}
+                onChange={(event) => setTag(event.target.value)}
+              >
+                {TAG_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="create-field">
               <span className="create-label">Summary</span>
-              <textarea
-                className="create-textarea"
-                placeholder="Short overview for the card preview"
-                value={summary}
-                onChange={(event) => setSummary(event.target.value)}
-                maxLength={220}
-              />
+              <div className="create-textarea-wrap">
+                <textarea
+                  className="create-textarea"
+                  placeholder="Short overview for the card preview"
+                  value={summary}
+                  onChange={(event) => setSummary(event.target.value)}
+                  maxLength={220}
+                />
+                <button
+                  className="create-ai-btn"
+                  type="button"
+                  onClick={() => enhanceField("summary")}
+                  disabled={aiSummaryLoading}
+                  aria-label="Enhance summary with AI"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 3l1.6 3.8L17 8.4l-3.4 1.3L12 13l-1.6-3.3L7 8.4l3.4-1.6L12 3z" />
+                    <path d="M18.5 13.5l.9 2.2 2.2.9-2.2.9-.9 2.2-.9-2.2-2.2-.9 2.2-.9.9-2.2z" />
+                  </svg>
+                  {aiSummaryLoading ? "AI..." : "AI"}
+                </button>
+                {aiError?.field === "summary" ? (
+                  <div className="create-ai-error">{aiError.message}</div>
+                ) : null}
+              </div>
             </label>
 
             <label className="create-field">
               <span className="create-label">Details</span>
-              <textarea
-                className="create-textarea details"
-                placeholder="Full story, outcomes, and context"
-                value={details}
-                onChange={(event) => setDetails(event.target.value)}
-                maxLength={1200}
-              />
+              <div className="create-textarea-wrap">
+                <textarea
+                  className="create-textarea details"
+                  placeholder="Full story, outcomes, and context"
+                  value={details}
+                  onChange={(event) => setDetails(event.target.value)}
+                  maxLength={1200}
+                />
+                <button
+                  className="create-ai-btn"
+                  type="button"
+                  onClick={() => enhanceField("details")}
+                  disabled={aiDetailsLoading}
+                  aria-label="Enhance details with AI"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 3l1.6 3.8L17 8.4l-3.4 1.3L12 13l-1.6-3.3L7 8.4l3.4-1.6L12 3z" />
+                    <path d="M18.5 13.5l.9 2.2 2.2.9-2.2.9-.9 2.2-.9-2.2-2.2-.9 2.2-.9.9-2.2z" />
+                  </svg>
+                  {aiDetailsLoading ? "AI..." : "AI"}
+                </button>
+                {aiError?.field === "details" ? (
+                  <div className="create-ai-error">{aiError.message}</div>
+                ) : null}
+              </div>
             </label>
 
             {error ? <div className="create-error">{error}</div> : null}
@@ -388,6 +687,7 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
             )}
             <div className="create-preview-meta">
               <h3>{title || "Post title"}</h3>
+              <div className="create-preview-tag">{tag || DEFAULT_TAG}</div>
               <p>{summary || "Summary text appears here."}</p>
               <p className="create-preview-details">
                 {details ? `${details.substring(0, 140)}...` : "Details preview appears here."}

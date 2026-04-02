@@ -1,19 +1,41 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getSupabaseBrowserClient } from "../lib/supabase/client";
 
 export default function EmailConfirmedPage() {
+  const [name, setName] = useState("there");
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const supabase = getSupabaseBrowserClient();
+      const { data } = await supabase.auth.getUser();
+      const meta = data.user?.user_metadata ?? {};
+      const derived =
+        meta.first_name ||
+        meta.full_name ||
+        meta.name ||
+        data.user?.email?.split("@")[0] ||
+        "there";
+      setName(derived);
+    };
+    loadUser();
+  }, []);
+
   return (
     <div className="email-confirmed-page">
-      <div className="email-confirmed-card">
-
-        {/* Brand dot + wordmark */}
+      <header className="email-confirmed-header">
         <div className="email-confirmed-brand">
           <span className="email-confirmed-dot" />
           <span className="email-confirmed-wordmark">CloudDuty</span>
         </div>
+        <Link href="/" className="email-confirmed-nav">
+          Go to Dashboard
+        </Link>
+      </header>
 
-        {/* Check icon */}
+      <div className="email-confirmed-card">
         <div className="email-confirmed-icon-wrap">
           <svg
             className="email-confirmed-check"
@@ -33,25 +55,22 @@ export default function EmailConfirmedPage() {
           </svg>
         </div>
 
-        {/* Text */}
-        <h1 className="email-confirmed-title">Email confirmed!</h1>
+        <div className="email-confirmed-kicker">Email confirmed</div>
+        <h1 className="email-confirmed-title">Hi {name}, you&apos;re in.</h1>
         <p className="email-confirmed-body">
-          Your CloudDuty account is now active. You&rsquo;re ready to go.
+          Your CloudDuty account is now active. Jump back into your workspace.
         </p>
 
-        {/* CTA */}
         <Link href="/" className="email-confirmed-cta">
-          Go to CloudDuty &rarr;
+          Go to Dashboard
         </Link>
-
-        {/* Footer note */}
-        <p className="email-confirmed-note">
-          Already have a session?{" "}
-          <Link href="/" className="email-confirmed-link">
-            Take me to my feed
-          </Link>
-        </p>
       </div>
+
+      <footer className="email-confirmed-footer">
+        <span>CloudDuty</span>
+        <span className="email-confirmed-footer-sep" />
+        <span>Security notice: this link works only after email confirmation.</span>
+      </footer>
     </div>
   );
 }

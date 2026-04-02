@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CardGrid } from "./components/CardGrid";
 import { AppShell } from "./components/AppShell";
 import { PaletteRow } from "./components/PaletteRow";
@@ -8,6 +9,7 @@ import { PopupModal, PopupInteractions } from "./components/PopupModal";
 import { ReportModal } from "./components/ReportModal";
 import { Loader } from "./components/Loader";
 import { Skeleton } from "./components/Skeleton";
+import { UiDemoModal } from "./components/UiDemoModal";
 import type { CardData } from "./data/card-data";
 import { cardData } from "./data/card-data";
 import { getSupabaseBrowserClient } from "./lib/supabase/client";
@@ -51,6 +53,8 @@ function sortByRecent(items: CardData[]) {
 }
 
 export default function Home() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [authChecked, setAuthChecked] = useState(false);
   const {
     popupIndex,
@@ -80,6 +84,8 @@ export default function Home() {
     message: "",
   });
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
+  const [demoMode, setDemoMode] = useState<"desktop" | "mobile">("desktop");
 
   const popupPanelRef = useRef<HTMLDivElement | null>(null);
   const popupOverlayRef = useRef<HTMLDivElement | null>(null);
@@ -91,6 +97,7 @@ export default function Home() {
     activeAnim: null,
     savedCardRect: null,
   });
+  const openedFromQueryRef = useRef(false);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -101,6 +108,20 @@ export default function Home() {
     };
     checkSession();
   }, []);
+
+  useEffect(() => {
+    if (!authChecked || !userId) return;
+    try {
+      const key = `cd-demo-${userId}`;
+      if (window.localStorage.getItem(key)) return;
+      const isMobile = window.innerWidth <= 640;
+      setDemoMode(isMobile ? "mobile" : "desktop");
+      setDemoOpen(true);
+      window.localStorage.setItem(key, new Date().toISOString());
+    } catch {
+      // ignore storage errors
+    }
+  }, [authChecked, userId]);
 
   const popupData = popupIndex !== null ? cards[popupIndex] : null;
   const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -309,6 +330,21 @@ export default function Home() {
     },
     [applyFinalGeometry, getTargetRect]
   );
+
+  useEffect(() => {
+    const postId = searchParams?.get("post");
+    if (!postId || openedFromQueryRef.current) return;
+    const index = cards.findIndex((card) => card.id === postId);
+    if (index < 0) return;
+    openedFromQueryRef.current = true;
+    requestAnimationFrame(() => {
+      const cardEl = document.querySelector(`.card[data-index="${index}"]`) as HTMLElement | null;
+      if (!cardEl) return;
+      const rect = cardEl.getBoundingClientRect();
+      openPopup(index, rect);
+      router.replace("/", { scroll: false });
+    });
+  }, [cards, openPopup, router, searchParams]);
 
   const delay = useCallback((ms: number) => {
     return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -903,6 +939,8 @@ export default function Home() {
         onTextChange={setReportText}
         onSubmit={submitReport}
       />
+
+      <UiDemoModal open={demoOpen} mode={demoMode} onClose={() => setDemoOpen(false)} />
     </>
   );
 }

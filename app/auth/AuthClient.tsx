@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { Provider, User } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
@@ -73,12 +73,34 @@ const passwordRules = [
   },
 ];
 
+function PasswordEyeIcon({ visible }: { visible: boolean }) {
+  if (visible) {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M1.5 12S5.3 5.5 12 5.5 22.5 12 22.5 12 18.7 18.5 12 18.5 1.5 12 1.5 12Z" />
+        <circle cx="12" cy="12" r="3.25" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 3l18 18" />
+      <path d="M10.7 6.2A9.8 9.8 0 0 1 12 6.1c6.6 0 10.5 5.9 10.5 5.9a18.4 18.4 0 0 1-4 4.5" />
+      <path d="M6.2 7.3A18.1 18.1 0 0 0 1.5 12s3.8 6.5 10.5 6.5c1.2 0 2.3-.2 3.3-.5" />
+      <path d="M9.9 10A3.2 3.2 0 0 0 14 14.1" />
+    </svg>
+  );
+}
+
 export default function AuthClient() {
   const searchParams = useSearchParams();
   const supabase = getSupabaseBrowserClient();
-  const redirectBase =
+  const fallbackBase = "https://cloudduty.vercel.app";
+  const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL ??
-    (typeof window !== "undefined" ? window.location.origin : "");
+    (typeof window !== "undefined" ? window.location.origin : fallbackBase);
+  const redirectBase = siteUrl.includes("netlify.app") ? fallbackBase : siteUrl || fallbackBase;
   const paramMode = searchParams?.get("mode") === "signup" ? "signup" : "login";
   const [authMode, setAuthMode] = useState<AuthMode>(paramMode);
 
@@ -102,6 +124,7 @@ export default function AuthClient() {
   const [loginMode, setLoginMode] = useState<LoginMode>("password");
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginPhone, setLoginPhone] = useState("");
   const [loginCountry, setLoginCountry] = useState("US");
   const [loginOtp, setLoginOtp] = useState("");
@@ -218,6 +241,12 @@ export default function AuthClient() {
   const [signupCountry, setSignupCountry] = useState("US");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showSignupConfirm, setShowSignupConfirm] = useState(false);
+  const [passwordFocus, setPasswordFocus] = useState(false);
+  const [dismissedRules, setDismissedRules] = useState<Set<string>>(new Set());
+  const ruleTimersRef = useRef<Map<string, number>>(new Map());
+  const [showStrength, setShowStrength] = useState(false);
   const [signupLoading, setSignupLoading] = useState(false);
   const [signupMessage, setSignupMessage] = useState<string | null>(null);
   const [signupError, setSignupError] = useState<string | null>(null);
@@ -253,6 +282,55 @@ export default function AuthClient() {
     [signupPassword]
   );
   const isPasswordStrong = passwordStatus.every((rule) => rule.met);
+  const shouldShowStrength = (passwordFocus || signupPassword.length > 0) && !isPasswordStrong;
+
+  useEffect(() => {
+    let hideTimer: number | undefined;
+
+    if (shouldShowStrength) {
+      setShowStrength(true);
+    } else {
+      hideTimer = window.setTimeout(() => {
+        setShowStrength(false);
+      }, 1000);
+    }
+
+    return () => {
+      if (hideTimer) {
+        window.clearTimeout(hideTimer);
+      }
+    };
+  }, [shouldShowStrength]);
+
+  useEffect(() => {
+    passwordStatus.forEach((rule) => {
+      if (rule.met) {
+        if (!dismissedRules.has(rule.id) && !ruleTimersRef.current.has(rule.id)) {
+          const timer = window.setTimeout(() => {
+            setDismissedRules((prev) => new Set([...prev, rule.id]));
+            ruleTimersRef.current.delete(rule.id);
+          }, 1200);
+          ruleTimersRef.current.set(rule.id, timer);
+        }
+      } else {
+        if (ruleTimersRef.current.has(rule.id)) {
+          window.clearTimeout(ruleTimersRef.current.get(rule.id));
+          ruleTimersRef.current.delete(rule.id);
+        }
+        if (dismissedRules.has(rule.id)) {
+          setDismissedRules((prev) => {
+            const next = new Set(prev);
+            next.delete(rule.id);
+            return next;
+          });
+        }
+      }
+    });
+    return () => {
+      ruleTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+      ruleTimersRef.current.clear();
+    };
+  }, [dismissedRules, passwordStatus]);
 
   const passwordsMatch =
     signupConfirmPassword === "" || signupPassword === signupConfirmPassword;
@@ -285,7 +363,7 @@ export default function AuthClient() {
     setSignupError(null);
     setSignupMessage(null);
     const fullPhone = formatE164(signupCountry, signupPhone);
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: signupEmail,
       password: signupPassword,
       options: {
@@ -299,13 +377,29 @@ export default function AuthClient() {
       },
     });
     setSignupLoading(false);
+    const signUpErrorMessage = signUpError?.message.toLowerCase() ?? "";
     if (signUpError) {
-      if (signUpError.message.toLowerCase().includes('rate limit') ||
-          signUpError.message.toLowerCase().includes('too many requests')) {
+      if (signUpErrorMessage.includes("rate limit") || signUpErrorMessage.includes("too many requests")) {
         setSignupError("Too many signup attempts. Please wait a few minutes before trying again.");
+      } else if (
+        signUpErrorMessage.includes("already") ||
+        signUpErrorMessage.includes("registered") ||
+        signUpErrorMessage.includes("exists")
+      ) {
+        setSignupError("You already have an account. Please log in.");
       } else {
         setSignupError(signUpError.message);
       }
+      return;
+    }
+
+    const existingUserWithoutIdentity =
+      !!signUpData?.user &&
+      Array.isArray(signUpData.user.identities) &&
+      signUpData.user.identities.length === 0;
+
+    if (existingUserWithoutIdentity) {
+      setSignupError("You already have an account. Please log in.");
       return;
     }
     setSignupMessage("Check your email to confirm your account, then sign in.");
@@ -339,7 +433,7 @@ export default function AuthClient() {
   return (
     <div className="auth-page auth-page--duo">
       <div className={`auth-dual ${authMode === "signup" ? "is-signup" : "is-login"}`}>
-        <section className="auth-dual__panel auth-dual__panel--signin">
+                <section className="auth-dual__panel auth-dual__panel--signin">
           <div className="auth-dual__panel-inner">
             <div className="auth-form-head">
               <div className="auth-head-row">
@@ -433,14 +527,24 @@ export default function AuthClient() {
                   </label>
                   <label className="auth-label">
                     Password
-                    <input
-                      className="auth-input"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={loginPassword}
-                      onChange={(event) => setLoginPassword(event.target.value)}
-                      required
-                    />
+                    <div className="auth-input-wrap">
+                      <input
+                        className="auth-input"
+                        type={showLoginPassword ? "text" : "password"}
+                        placeholder="Enter your password"
+                        value={loginPassword}
+                        onChange={(event) => setLoginPassword(event.target.value)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className={`auth-eye${showLoginPassword ? " active" : ""}`}
+                        aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                        onClick={() => setShowLoginPassword((prev) => !prev)}
+                      >
+                        <PasswordEyeIcon visible={showLoginPassword} />
+                      </button>
+                    </div>
                   </label>
                   <div className="auth-row">
                     <button
@@ -508,23 +612,6 @@ export default function AuthClient() {
                       />
                     </label>
                   ) : null}
-                  <div className="auth-row">
-                    <button
-                      className="auth-link"
-                      type="button"
-                      onClick={() => {
-                        setLoginOtpSent(false);
-                        setLoginOtp("");
-                      }}
-                    >
-                      Use email instead
-                    </button>
-                    {loginOtpSent ? (
-                      <button className="auth-link" type="button" onClick={handleSendOtp}>
-                        Resend code
-                      </button>
-                    ) : null}
-                  </div>
                 </>
               )}
 
@@ -533,18 +620,16 @@ export default function AuthClient() {
 
               <button className="auth-primary" type="submit" disabled={loginLoading}>
                 {loginLoading
-                  ? "Working..."
+                  ? loginMode === "password"
+                    ? "Signing in..."
+                    : "Sending..."
                   : loginMode === "password"
-                    ? "Sign in"
-                    : loginOtpSent
-                      ? "Verify & Sign in"
-                      : "Send code"}
+                  ? "Sign in"
+                  : loginOtpSent
+                  ? "Verify code"
+                  : "Send code"}
               </button>
             </form>
-
-            <p className="auth-hint">
-              By continuing you agree to CloudDuty&apos;s Terms of Service and Privacy Policy.
-            </p>
           </div>
         </section>
 
@@ -605,12 +690,13 @@ export default function AuthClient() {
                   handleCompleteProfile();
                 }}
               >
-                <div className="auth-grid">
+                <div className="auth-grid auth-name-grid">
                   <label className="auth-label">
                     First name
                     <input
                       className="auth-input"
                       type="text"
+                      placeholder="Jane"
                       value={profileFirstName}
                       onChange={(event) => setProfileFirstName(event.target.value)}
                       required
@@ -621,6 +707,7 @@ export default function AuthClient() {
                     <input
                       className="auth-input"
                       type="text"
+                      placeholder="Doe"
                       value={profileLastName}
                       onChange={(event) => setProfileLastName(event.target.value)}
                       required
@@ -665,7 +752,7 @@ export default function AuthClient() {
                   handleSignup();
                 }}
               >
-                <div className="auth-grid">
+                <div className="auth-grid auth-name-grid">
                   <label className="auth-label">
                     First name
                     <input
@@ -725,32 +812,83 @@ export default function AuthClient() {
                     />
                   </div>
                 </label>
-                <label className="auth-label">
-                  Password
-                  <input
-                    className="auth-input"
-                    type="password"
-                    placeholder="Create a strong password"
-                    value={signupPassword}
-                    onChange={(event) => setSignupPassword(event.target.value)}
-                    required
-                  />
-                </label>
-                <label className="auth-label">
+                <div className="auth-pass-stack">
+                  <label className="auth-label">
+                    Password
+                    <div className="auth-input-wrap">
+                      <input
+                        className="auth-input"
+                        type={showSignupPassword ? "text" : "password"}
+                        placeholder="Create a strong password"
+                        value={signupPassword}
+                        onChange={(event) => setSignupPassword(event.target.value)}
+                        onFocus={() => setPasswordFocus(true)}
+                        onBlur={() => setPasswordFocus(false)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className={`auth-eye${showSignupPassword ? " active" : ""}`}
+                        aria-label={showSignupPassword ? "Hide password" : "Show password"}
+                        onClick={() => setShowSignupPassword((prev) => !prev)}
+                      >
+                        <PasswordEyeIcon visible={showSignupPassword} />
+                      </button>
+                    </div>
+                  </label>
+                  <div
+                    className={`auth-strength auth-strength--float${showStrength ? " visible" : ""}`}
+                    aria-live="polite"
+                    aria-hidden={!showStrength}
+                  >
+                    <div className="auth-strength-label">Password strength</div>
+                    <ul className="auth-strength-list">
+                      {passwordStatus.map((rule) => (
+                        <li
+                          key={rule.id}
+                          className={`auth-strength-item${rule.met ? " met" : ""}${dismissedRules.has(rule.id) ? " dismissed" : ""}`}
+                        >
+                          <span className={`auth-strength-icon${rule.met ? " met" : ""}`} aria-hidden="true" />
+                          <span className="auth-strength-text">{rule.label}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                <label className="auth-label auth-label--hint-pop">
                   Re-enter password
-                  <input
-                    className={`auth-input${signupConfirmPassword && !passwordsMatch ? " auth-input--error" : confirmMet ? " auth-input--ok" : ""}`}
-                    type="password"
-                    placeholder="Confirm your password"
-                    value={signupConfirmPassword}
-                    onChange={(event) => setSignupConfirmPassword(event.target.value)}
-                    required
-                  />
-                  {signupConfirmPassword && !passwordsMatch ? (
-                    <span className="auth-field-hint auth-field-hint--error">Passwords do not match</span>
-                  ) : confirmMet ? (
-                    <span className="auth-field-hint auth-field-hint--ok">Passwords match</span>
-                  ) : null}
+                  <div className="auth-input-wrap">
+                    <input
+                      className={`auth-input${signupConfirmPassword && !passwordsMatch ? " auth-input--error" : confirmMet ? " auth-input--ok" : ""}`}
+                      type={showSignupConfirm ? "text" : "password"}
+                      placeholder="Confirm your password"
+                      value={signupConfirmPassword}
+                      onChange={(event) => setSignupConfirmPassword(event.target.value)}
+                      required
+                    />
+                    <button
+                      type="button"
+                      className={`auth-eye${showSignupConfirm ? " active" : ""}`}
+                      aria-label={showSignupConfirm ? "Hide password" : "Show password"}
+                      onClick={() => setShowSignupConfirm((prev) => !prev)}
+                    >
+                      <PasswordEyeIcon visible={showSignupConfirm} />
+                    </button>
+                  </div>
+                  <div className="auth-field-hint-slot" aria-live="polite">
+                    {signupConfirmPassword && !passwordsMatch ? (
+                      <span className="auth-field-hint auth-field-hint--error">Passwords do not match</span>
+                    ) : confirmMet ? (
+                      <span className="auth-field-hint auth-field-hint--ok">Passwords match</span>
+                    ) : (
+                      <span
+                        className="auth-field-hint auth-field-hint--placeholder"
+                        aria-hidden="true"
+                      >
+                        &nbsp;
+                      </span>
+                    )}
+                  </div>
                 </label>
                 <button
                   className="auth-primary"
@@ -766,7 +904,15 @@ export default function AuthClient() {
             {signupError ? <p className="auth-error">{signupError}</p> : null}
 
             <p className="auth-hint">
-              By continuing you agree to CloudDuty&apos;s Terms of Service and Privacy Policy.
+              By continuing you agree to CloudDuty&apos;s{" "}
+              <a className="auth-hint-link" href="/terms">
+                Terms of Service
+              </a>{" "}
+              and{" "}
+              <a className="auth-hint-link" href="/privacy">
+                Privacy Policy
+              </a>
+              .
             </p>
           </div>
         </section>
@@ -820,3 +966,6 @@ export default function AuthClient() {
     </div>
   );
 }
+
+
+
