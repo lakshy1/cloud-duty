@@ -594,7 +594,9 @@ export default function InboxClient() {
           const updated = payload.new as ChatMessage;
           setChatMessages((prev) => {
             const next = prev.map((msg) => (msg.id === updated.id ? updated : msg));
-            chatCacheRef.current.set(activeThread.chatId, next);
+            if (activeChatId) {
+              chatCacheRef.current.set(activeChatId, next);
+            }
             return next;
           });
         }
