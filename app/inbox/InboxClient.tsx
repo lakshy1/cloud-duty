@@ -573,7 +573,9 @@ export default function InboxClient() {
           const nextMessage = payload.new as ChatMessage;
           setChatMessages((prev) => {
             const next = [...prev, nextMessage];
-            chatCacheRef.current.set(activeThread.chatId, next);
+            if (activeChatId) {
+              chatCacheRef.current.set(activeChatId, next);
+            }
             return next;
           });
           if (nextMessage.sender_id !== userId) {
