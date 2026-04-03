@@ -744,7 +744,7 @@ export default function InboxClient() {
         ],
       }));
     } finally {
-      setIsSending(false);
+      // no-op: sending state removed
     }
   };
 
