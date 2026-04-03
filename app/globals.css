@@ -2208,16 +2208,21 @@ body{
 /* edit modal */
 .edit-overlay{
   position:fixed;inset:0;background:rgba(8,8,10,.6);backdrop-filter:blur(8px);
-  display:flex;align-items:center;justify-content:center;padding:24px;z-index:9999;
+  display:flex;align-items:center;justify-content:center;padding:0;z-index:9999;
 }
 .edit-panel{
-  width:min(560px,94vw);background:var(--sb-bg);border:1px solid var(--divider);
-  border-radius:18px;box-shadow:0 28px 70px rgba(0,0,0,.45);
+  width:95vw;background:var(--sb-bg);border:1px solid var(--divider);
+  border-radius:22px;box-shadow:0 28px 70px rgba(0,0,0,.45);
   padding:20px 20px 18px;
   display:flex;flex-direction:column;
-  max-height:82vh;
-  overflow:hidden;
-  aspect-ratio:2/3;
+  height:90dvh;
+  max-height:90dvh;
+  overflow:auto;
+}
+@media (min-width: 900px){
+  .edit-panel{
+    width:min(520px,52vw);
+  }
 }
 .edit-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .edit-title{font-size:1.1rem;font-weight:800}
