@@ -123,18 +123,6 @@ export default function InboxClient() {
   const isAiThread = activeThreadId === AI_THREAD_ID;
 
   useEffect(() => {
-    const prev = document.body.dataset.route;
-    document.body.dataset.route = "inbox";
-    return () => {
-      if (prev) {
-        document.body.dataset.route = prev;
-      } else {
-        delete document.body.dataset.route;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
     setHydrated(true);
   }, []);
 
@@ -1103,7 +1091,7 @@ export default function InboxClient() {
       attachmentPreview.url.toLowerCase().endsWith(".pdf"));
 
   return (
-    <AppShell>
+    <AppShell routeClassName="inbox-route">
       <div className="page-shell">
         <section className="page-card inbox-card">
           <div className={`inbox-grid${showChat ? " show-chat" : ""}`}>

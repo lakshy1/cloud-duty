@@ -11,7 +11,13 @@ import { CreatePostModal } from "./CreatePostModal";
 import { LoginPromptModal } from "./LoginPromptModal";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  routeClassName,
+}: {
+  children: React.ReactNode;
+  routeClassName?: string;
+}) {
   const {
     drawerOpen, setDrawerOpen,
     createOpen, setCreateOpen,
@@ -59,7 +65,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         searchInputRef={searchInputRef}
       />
 
-      <main className="feed">
+      <main className={`feed${routeClassName ? ` ${routeClassName}` : ""}`}>
         <div className="feed-body">
           {children}
         </div>
