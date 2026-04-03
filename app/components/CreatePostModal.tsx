@@ -76,6 +76,14 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
 
   useEffect(() => {
     if (!open) return;
+    document.body.classList.add("modal-open");
+    return () => {
+      document.body.classList.remove("modal-open");
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     let active = true;
     const loadIdentity = async () => {
       try {

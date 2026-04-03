@@ -7,6 +7,7 @@ import { AppShell } from "../components/AppShell";
 import { Icon } from "../components/Icon";
 import { useUIState } from "../state/ui-state";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
+import { getCache, setCache } from "../lib/client-cache";
 import { Skeleton } from "../components/Skeleton";
 
 const AI_THREAD_ID = "ai";
@@ -121,6 +122,11 @@ export default function InboxClient() {
   const messageMenuRef = useRef<HTMLDivElement | null>(null);
 
   const isAiThread = activeThreadId === AI_THREAD_ID;
+  const inboxThreadsCacheKey = userId ? `cd_cache_inbox_threads_${userId}` : null;
+  const getChatCacheKey = useCallback(
+    (chatId: string) => (userId ? `cd_cache_inbox_messages_${userId}_${chatId}` : null),
+    [userId]
+  );
 
   useEffect(() => {
     setHydrated(true);
@@ -264,11 +270,13 @@ export default function InboxClient() {
       setChatMessages(nextMessages);
       setChatLoading(false);
       chatLoadedRef.current.add(chatId);
+      const cacheKey = getChatCacheKey(chatId);
+      if (cacheKey) setCache(cacheKey, nextMessages);
       if ((data ?? []).length > 0) {
         markThreadRead(chatId);
       }
     },
-    [markThreadRead, userId]
+    [getChatCacheKey, markThreadRead, userId]
   );
 
   useEffect(() => {
@@ -408,6 +416,14 @@ export default function InboxClient() {
         return;
       }
 
+      if (!threadsLoadedRef.current && inboxThreadsCacheKey) {
+        const cachedThreads = getCache<Thread[]>(inboxThreadsCacheKey, 5 * 60 * 1000);
+        if (cachedThreads && cachedThreads.length) {
+          setThreads([aiThread, ...cachedThreads]);
+          setThreadsLoading(false);
+        }
+      }
+
       const supabase = getSupabaseBrowserClient();
       const { data: chats } = await supabase
         .from("chats")
@@ -481,15 +497,26 @@ export default function InboxClient() {
       setThreads([aiThread, ...sortedChats]);
       setThreadsLoading(false);
       threadsLoadedRef.current = true;
+      if (inboxThreadsCacheKey) setCache(inboxThreadsCacheKey, sortedChats);
     };
 
     loadThreads();
-  }, [aiMessagesByThread, userId, threadsReloadKey, hiddenChatIds]);
+  }, [aiMessagesByThread, inboxThreadsCacheKey, userId, threadsReloadKey, hiddenChatIds]);
 
   const unreadThreadCount = useMemo(
     () => threads.reduce((acc, thread) => (thread.unreadCount && thread.unreadCount > 0 ? acc + 1 : acc), 0),
     [threads]
   );
+
+  useEffect(() => {
+    if (!inboxThreadsCacheKey) return;
+    const chatThreads = threads.filter((thread) => thread.type === "chat");
+    if (!chatThreads.length) return;
+    const timer = window.setTimeout(() => {
+      setCache(inboxThreadsCacheKey, chatThreads);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [inboxThreadsCacheKey, threads]);
 
   useEffect(() => {
     if (!userId || threadChatIds.length === 0) return;
@@ -540,6 +567,15 @@ export default function InboxClient() {
         return;
       }
       currentChatIdRef.current = activeChatId;
+      const cacheKey = getChatCacheKey(activeChatId);
+      if (cacheKey) {
+        const cached = getCache<ChatMessage[]>(cacheKey, 3 * 60 * 1000);
+        if (cached && cached.length) {
+          chatCacheRef.current.set(activeChatId, cached);
+          setChatMessages(cached);
+          setChatLoading(false);
+        }
+      }
       const cached = chatCacheRef.current.get(activeChatId);
       if (cached && cached.length) {
         setChatMessages(cached);
@@ -564,6 +600,8 @@ export default function InboxClient() {
             if (activeChatId) {
               chatCacheRef.current.set(activeChatId, next);
             }
+            const cacheKey = getChatCacheKey(activeChatId);
+            if (cacheKey) setCache(cacheKey, next);
             return next;
           });
           if (nextMessage.sender_id !== userId) {
@@ -582,11 +620,13 @@ export default function InboxClient() {
           const updated = payload.new as ChatMessage;
           setChatMessages((prev) => {
             const next = prev.map((msg) => (msg.id === updated.id ? updated : msg));
-            if (activeChatId) {
-              chatCacheRef.current.set(activeChatId, next);
-            }
-            return next;
-          });
+              if (activeChatId) {
+                chatCacheRef.current.set(activeChatId, next);
+              }
+              const cacheKey = getChatCacheKey(activeChatId);
+              if (cacheKey) setCache(cacheKey, next);
+              return next;
+            });
         }
       )
       .subscribe();

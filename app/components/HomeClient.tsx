@@ -13,6 +13,7 @@ import { UiDemoModal } from "./UiDemoModal";
 import type { CardData } from "../data/card-data";
 import { cardData } from "../data/card-data";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
+import { getCache, setCache } from "../lib/client-cache";
 import { useUIState } from "../state/ui-state";
 
 type PopupState = {
@@ -98,6 +99,7 @@ export default function HomeClient() {
     savedCardRect: null,
   });
   const openedFromQueryRef = useRef(false);
+  const cacheKeyRef = useRef("cd_cache_home_posts_v1");
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -575,6 +577,11 @@ export default function HomeClient() {
     let active = true;
     const fetchPosts = async () => {
       setLoadingPosts(true);
+      const cached = getCache<CardData[]>(cacheKeyRef.current, 5 * 60 * 1000);
+      if (cached && cached.length) {
+        setCards(sortByRecent(cached));
+        setLoadingPosts(false);
+      }
       const supabase = getSupabaseBrowserClient();
       const { data, error } = await supabase.from("posts").select("*").order("created_at", {
         ascending: false,
@@ -613,7 +620,9 @@ export default function HomeClient() {
           createdAt: row.created_at ?? undefined,
         };
       }) as CardData[];
-      setCards(sortByRecent(mapped));
+      const sorted = sortByRecent(mapped);
+      setCards(sorted);
+      setCache(cacheKeyRef.current, sorted);
       setLoadingPosts(false);
     };
     fetchPosts();
@@ -849,6 +858,14 @@ export default function HomeClient() {
     );
     setCreatedPost(null);
   }, [createdPost, setCreatedPost]);
+
+  useEffect(() => {
+    if (!cards.length) return;
+    const timer = window.setTimeout(() => {
+      setCache(cacheKeyRef.current, cards);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [cards]);
 
   useEffect(() => {
     if (popupIndex === null) return;
