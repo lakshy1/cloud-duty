@@ -1645,6 +1645,8 @@ body[data-route="inbox"] .inbox-chat-body::-webkit-scrollbar{
   border-radius:12px;border:1px solid var(--divider);background:var(--btn-bg);
   color:var(--btn-fg);padding:9px 14px;font-size:.74rem;font-weight:700;cursor:pointer;
   letter-spacing:.04em;text-transform:uppercase;
+  min-width:72px;
+  text-align:center;
 }
 .inbox-attach{
   width:36px;height:36px;border-radius:12px;border:1px solid var(--lp-panel-border);
@@ -2525,14 +2527,16 @@ button.profile-stat:hover{
   .my-posts-grid{grid-template-columns:1fr}
   .my-post{grid-template-columns:1fr}
   .my-post-media{height:160px}
-  .inbox-grid{grid-template-columns:1fr}
+  .inbox-grid{grid-template-columns:1fr;width:100%;margin:0 auto}
   .inbox-grid.show-chat .inbox-list{display:none}
   .inbox-grid:not(.show-chat) .inbox-chat{display:none}
   .inbox-chat{min-height:0;height:100%}
   .inbox-card{
     padding:12px;
-    min-height:400px;
-    margin-bottom:12px;
+    min-height:0;
+    width:100%;
+    max-width:560px;
+    margin:0 auto 12px;
   }
   .inbox-back{display:inline-flex}
   .inbox-back{width:34px;height:34px;font-size:.8rem;border-radius:10px}
@@ -2541,11 +2545,15 @@ button.profile-stat:hover{
   .inbox-bubble{max-width:82%}
   .inbox-chat-input{padding:10px}
   body[data-route="inbox"] .inbox-card{
-    height:calc(100vh - var(--hdr-h) - var(--ftr-h) - 16px);
+    height:100%;
+    min-height:0;
   }
   body[data-route="inbox"] .inbox-chat-body{
     padding:16px 14px;
+    scrollbar-gutter:auto;
   }
+  body[data-route="inbox"] .inbox-chat-body::-webkit-scrollbar{display:none}
+  body[data-route="inbox"] .inbox-chat-body{scrollbar-width:none}
   .inbox-chat-input{
     position:sticky;bottom:env(safe-area-inset-bottom);background:var(--surface);
     padding-bottom:calc(10px + env(safe-area-inset-bottom));
@@ -2558,6 +2566,7 @@ button.profile-stat:hover{
   .inbox-modal{width:92vw}
   .inbox-thread-menu-btn{display:none}
   .inbox-msg-menu-btn{display:none}
+  .inbox-bubble{padding-right:12px}
   .inbox-search input{width:86px}
   .inbox-search input:focus{width:140px}
 }

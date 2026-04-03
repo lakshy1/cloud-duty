@@ -9,6 +9,7 @@ import {
   useEffect,
   useRef,
 } from "react";
+import { usePathname } from "next/navigation";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 
 export type Toast = {
@@ -53,6 +54,8 @@ type UIState = {
 const UIStateContext = createContext<UIState | null>(null);
 
 export function UIStateProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const notificationsActive = pathname?.startsWith("/notifications") ?? false;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [popupOpen, setPopupOpen] = useState(false);
   const [popupIndex, setPopupIndex] = useState<number | null>(null);
@@ -67,6 +70,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const [inboxUnreadCount, setInboxUnreadCount] = useState(0);
   const inboxRefreshRef = useRef<() => void>(() => {});
+  const notificationsActiveRef = useRef(false);
   const lastNotifToastRef = useRef<string | null>(null);
   const lastMessageToastRef = useRef<string | null>(null);
   const inboxUserIdRef = useRef<string | null>(null);
@@ -222,6 +226,13 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
+    notificationsActiveRef.current = notificationsActive;
+    if (notificationsActive) {
+      setHasUnreadNotifications(false);
+    }
+  }, [notificationsActive]);
+
+  useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -240,7 +251,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
         .eq("user_id", userId)
         .neq("type", "message")
         .is("read_at", null);
-      if (active) setHasUnreadNotifications((count ?? 0) > 0);
+      if (active) setHasUnreadNotifications(notificationsActiveRef.current ? false : (count ?? 0) > 0);
 
       channel = supabase
         .channel("notifications-realtime")
@@ -255,7 +266,9 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
               type?: string | null;
             };
             if (row.type === "message") return;
-            setHasUnreadNotifications(true);
+            if (!notificationsActiveRef.current) {
+              setHasUnreadNotifications(true);
+            }
             const createdAt = row?.created_at ?? null;
             if (createdAt && lastNotifToastRef.current === createdAt) return;
             if (createdAt) lastNotifToastRef.current = createdAt;
@@ -289,7 +302,9 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
               (payload.new as { read_at?: string | null; type?: string | null }).read_at === null &&
               (payload.new as { type?: string | null }).type !== "message"
             ) {
-              setHasUnreadNotifications(true);
+              if (!notificationsActiveRef.current) {
+                setHasUnreadNotifications(true);
+              }
             }
           }
         )
@@ -302,7 +317,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
           .eq("user_id", userId)
           .neq("type", "message")
           .is("read_at", null);
-        if (active) setHasUnreadNotifications((nextCount ?? 0) > 0);
+        if (active) setHasUnreadNotifications(notificationsActiveRef.current ? false : (nextCount ?? 0) > 0);
       }, 20000);
     };
 
