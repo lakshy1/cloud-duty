@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { AppShell } from "../components/AppShell";
@@ -28,6 +28,7 @@ export default function MyPostsPage() {
   const [editSummary, setEditSummary] = useState("");
   const [editDetails, setEditDetails] = useState("");
   const [editTag, setEditTag] = useState("Project");
+  const [editTagOpen, setEditTagOpen] = useState(false);
   const [editBannerFile, setEditBannerFile] = useState<File | null>(null);
   const [editBannerPreview, setEditBannerPreview] = useState<string | null>(null);
   const [editBannerUploading, setEditBannerUploading] = useState(false);
@@ -35,6 +36,7 @@ export default function MyPostsPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const { pushToast, searchQuery, setCreateOpen } = useUIState();
   const tagOptions = ["Project", "Design", "Engineering", "Marketing", "Research", "Product"];
+  const editTagMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -106,6 +108,7 @@ export default function MyPostsPage() {
     setEditBannerFile(null);
     setEditBannerPreview(null);
     setEditBannerIsObject(false);
+    setEditTagOpen(false);
     setEditingPost(null);
   };
 
@@ -116,6 +119,19 @@ export default function MyPostsPage() {
       }
     };
   }, [editBannerPreview, editBannerIsObject]);
+
+  useEffect(() => {
+    if (!editTagOpen) return;
+    const handler = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (!editTagMenuRef.current?.contains(target)) {
+        setEditTagOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", handler);
+    return () => window.removeEventListener("mousedown", handler);
+  }, [editTagOpen]);
 
   const uploadBanner = async () => {
     if (!editBannerFile) return null;
@@ -423,13 +439,36 @@ export default function MyPostsPage() {
                   </label>
                   <label className="edit-field">
                     <span>Tag</span>
-                    <select value={editTag} onChange={(e) => setEditTag(e.target.value)}>
-                      {tagOptions.map((tag) => (
-                        <option key={tag} value={tag}>
-                          {tag}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="edit-tag-select" ref={editTagMenuRef}>
+                      <button
+                        type="button"
+                        className={`edit-tag-trigger${editTagOpen ? " open" : ""}`}
+                        onClick={() => setEditTagOpen((prev) => !prev)}
+                        aria-haspopup="listbox"
+                        aria-expanded={editTagOpen}
+                      >
+                        <span>{editTag}</span>
+                      </button>
+                      {editTagOpen ? (
+                        <div className="edit-tag-menu" role="listbox" aria-label="Tag">
+                          {tagOptions.map((tag) => (
+                            <button
+                              key={tag}
+                              type="button"
+                              className={`edit-tag-option${editTag === tag ? " active" : ""}`}
+                              role="option"
+                              aria-selected={editTag === tag}
+                              onClick={() => {
+                                setEditTag(tag);
+                                setEditTagOpen(false);
+                              }}
+                            >
+                              {tag}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
                   </label>
                   <label className="edit-field">
                     <span>Title</span>

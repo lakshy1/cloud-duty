@@ -85,7 +85,6 @@ export default function InboxClient() {
   const [chatLoading, setChatLoading] = useState(false);
   const [draft, setDraft] = useState("");
   const [showChat, setShowChat] = useState(false);
-  const [isSending, setIsSending] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadLabel, setUploadLabel] = useState<string | null>(null);
   const [attachmentPreview, setAttachmentPreview] = useState<{
@@ -333,7 +332,7 @@ export default function InboxClient() {
     scrollToBottom();
     const raf = window.requestAnimationFrame(scrollToBottom);
     return () => window.cancelAnimationFrame(raf);
-  }, [activeThreadId, chatMessages.length, aiMessagesByThread, isSending]);
+  }, [activeThreadId, chatMessages.length, aiMessagesByThread]);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -795,7 +794,7 @@ export default function InboxClient() {
 
   const handleSend = async () => {
     const text = draft.trim();
-    if (!text || isSending) return;
+    if (!text) return;
 
     if (isAiThread) {
       const threadId = AI_THREAD_ID;
@@ -811,14 +810,11 @@ export default function InboxClient() {
         [threadId]: threadMessages,
       }));
       setDraft("");
-      setIsSending(true);
       await requestAiReply(threadId, threadMessages);
       return;
     }
 
     if (!activeThread || activeThread.type !== "chat" || !activeThread.chatId || !userId) return;
-    setIsSending(true);
-
     const supabase = getSupabaseBrowserClient();
     let otherUserId = activeThread.userId ?? null;
     if (!otherUserId) {
@@ -847,7 +843,6 @@ export default function InboxClient() {
         message: "You both need to follow each other to enable messaging.",
         tone: "warning",
       });
-      setIsSending(false);
       return;
     }
 
@@ -862,7 +857,6 @@ export default function InboxClient() {
       setDraft("");
       // message notifications are handled via inbox unread state (no bell notifications)
     }
-    setIsSending(false);
   };
 
   const handleDeleteMessage = async (messageId: string) => {
@@ -913,7 +907,6 @@ export default function InboxClient() {
   };
 
   const handleAttach = () => {
-    if (isSending) return;
     fileInputRef.current?.click();
   };
 
@@ -1016,7 +1009,6 @@ export default function InboxClient() {
         [threadId]: threadMessages,
       }));
 
-      setIsSending(true);
       await requestAiReply(threadId, threadMessages);
       event.target.value = "";
       return;
@@ -1027,7 +1019,6 @@ export default function InboxClient() {
       return;
     }
 
-    setIsSending(true);
     const supabase = getSupabaseBrowserClient();
     let otherUserId = activeThread.userId ?? null;
     if (!otherUserId) {
@@ -1060,7 +1051,6 @@ export default function InboxClient() {
     if (uploadError) {
       setUploadProgress(null);
       setUploadLabel(null);
-      setIsSending(false);
       pushToast({ message: uploadError.message, tone: "error" });
       event.target.value = "";
       return;
@@ -1101,7 +1091,6 @@ export default function InboxClient() {
         });
       }
     }
-    setIsSending(false);
     event.target.value = "";
   };
 
@@ -1504,16 +1493,6 @@ export default function InboxClient() {
                         </div>
                       );
                     })}
-                {isSending && isAiThread ? (
-                  <div className="inbox-bubble them inbox-bubble-typing" aria-live="polite">
-                    <div className="typing-dots" aria-hidden="true">
-                      <span />
-                      <span />
-                      <span />
-                    </div>
-                    <span className="typing-label">CloudDuty AI is typing</span>
-                  </div>
-                ) : null}
               </div>
 
                   <div className="inbox-chat-input">
@@ -1521,7 +1500,6 @@ export default function InboxClient() {
                   className="inbox-attach"
                   type="button"
                   onClick={handleAttach}
-                  disabled={isSending}
                 >
                   +
                 </button>
@@ -1545,10 +1523,9 @@ export default function InboxClient() {
                       handleSend();
                     }
                   }}
-                  disabled={isSending}
                 />
-                <button type="button" onClick={handleSend} disabled={!draft.trim() || isSending}>
-                  {isSending ? "Sending..." : "Send"}
+                <button type="button" onClick={handleSend} disabled={!draft.trim()}>
+                  Send
                 </button>
                   </div>
                   {uploadProgress !== null ? (

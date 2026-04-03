@@ -49,6 +49,7 @@ export default function SearchPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterMode>("posts");
+  const [filterOpen, setFilterOpen] = useState(false);
   const [profiles, setProfiles] = useState<ProfileResult[]>([]);
   const [posts, setPosts] = useState<CardData[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
@@ -64,6 +65,7 @@ export default function SearchPage() {
   const popupPanelRef = useRef<HTMLDivElement | null>(null);
   const popupOverlayRef = useRef<HTMLDivElement | null>(null);
   const isOpenRef = useRef(false);
+  const filterMenuRef = useRef<HTMLDivElement | null>(null);
 
   const filteredPostsRef = useRef<CardData[]>([]);
   const suggestions = ["System design", "AI Tools", "Payments", "Portfolio"];
@@ -80,6 +82,19 @@ export default function SearchPage() {
       if (data) setSavedIds(new Set(data.map((r) => r.post_id)));
     });
   }, [currentUserId]);
+
+  useEffect(() => {
+    if (!filterOpen) return;
+    const handleOutside = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (!filterMenuRef.current?.contains(target)) {
+        setFilterOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", handleOutside);
+    return () => window.removeEventListener("mousedown", handleOutside);
+  }, [filterOpen]);
 
   const loadProfiles = async () => {
     setLoadingProfiles(true);
@@ -349,7 +364,7 @@ export default function SearchPage() {
             </div>
             <input
               type="text"
-              placeholder="Search for profiles or posts..."
+              placeholder="Search post or profile"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -369,15 +384,45 @@ export default function SearchPage() {
                 Posts
               </button>
             </div>
-            <div className="search-filter-select">
-              <select
-                value={filter}
-                onChange={(event) => setFilter(event.target.value as FilterMode)}
+            <div className="search-filter-select" ref={filterMenuRef}>
+              <button
+                type="button"
+                className={`search-filter-trigger${filterOpen ? " open" : ""}`}
+                onClick={() => setFilterOpen((prev) => !prev)}
+                aria-haspopup="listbox"
+                aria-expanded={filterOpen}
                 aria-label="Filter results"
               >
-                <option value="profiles">Profiles</option>
-                <option value="posts">Posts</option>
-              </select>
+                <span>{filter === "posts" ? "Posts" : "Profiles"}</span>
+              </button>
+              {filterOpen ? (
+                <div className="search-filter-menu" role="listbox" aria-label="Filter results">
+                  <button
+                    type="button"
+                    className={`search-filter-option${filter === "profiles" ? " active" : ""}`}
+                    role="option"
+                    aria-selected={filter === "profiles"}
+                    onClick={() => {
+                      setFilter("profiles");
+                      setFilterOpen(false);
+                    }}
+                  >
+                    Profiles
+                  </button>
+                  <button
+                    type="button"
+                    className={`search-filter-option${filter === "posts" ? " active" : ""}`}
+                    role="option"
+                    aria-selected={filter === "posts"}
+                    onClick={() => {
+                      setFilter("posts");
+                      setFilterOpen(false);
+                    }}
+                  >
+                    Posts
+                  </button>
+                </div>
+              ) : null}
             </div>
             {query ? (
               <button type="button" className="search-hero-clear" onClick={() => setQuery("")}>
