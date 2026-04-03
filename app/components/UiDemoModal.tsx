@@ -20,19 +20,20 @@ export function UiDemoModal({ open, mode, onClose }: UiDemoModalProps) {
         "Click any card to open the full project view.",
       ];
 
+  const easeInOut: [number, number, number, number] = [0.42, 0, 0.58, 1];
   const flipAnim = {
     rotateY: [0, 0, 180, 180, 0],
-    transition: { duration: 5, repeat: Infinity, ease: "easeInOut" },
+    transition: { duration: 5, repeat: Infinity, ease: easeInOut },
   };
   const pulseAnim = {
     scale: [1, 1.12, 1],
     opacity: [0.35, 0.9, 0.35],
-    transition: { duration: 1.4, repeat: Infinity, ease: "easeInOut" },
+    transition: { duration: 1.4, repeat: Infinity, ease: easeInOut },
   };
   const expandAnim = {
     scale: [0.86, 1, 1, 0.86],
     opacity: [0, 1, 1, 0],
-    transition: { duration: 5, repeat: Infinity, ease: "easeInOut" },
+    transition: { duration: 5, repeat: Infinity, ease: easeInOut },
   };
 
   return (
