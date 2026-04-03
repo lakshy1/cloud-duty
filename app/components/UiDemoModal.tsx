@@ -9,16 +9,31 @@ type UiDemoModalProps = {
 };
 
 export function UiDemoModal({ open, mode, onClose }: UiDemoModalProps) {
-  const lines =
-    mode === "desktop"
-      ? [
-          "Hover for auto flip card for 5s",
-          "Clicking on any card expands it fully",
-        ]
-      : [
-          "Tap a card to auto flip for 5s",
-          "Read more opens the project card fully",
-        ];
+  const isMobile = mode === "mobile";
+  const lines = isMobile
+    ? [
+        "Tap a card to preview it for 5 seconds.",
+        "Tap Read more to open the full project card.",
+      ]
+    : [
+        "Hover a card to preview it for 5 seconds.",
+        "Click any card to open the full project view.",
+      ];
+
+  const flipAnim = {
+    rotateY: [0, 0, 180, 180, 0],
+    transition: { duration: 5, repeat: Infinity, ease: "easeInOut" },
+  };
+  const pulseAnim = {
+    scale: [1, 1.12, 1],
+    opacity: [0.35, 0.9, 0.35],
+    transition: { duration: 1.4, repeat: Infinity, ease: "easeInOut" },
+  };
+  const expandAnim = {
+    scale: [0.86, 1, 1, 0.86],
+    opacity: [0, 1, 1, 0],
+    transition: { duration: 5, repeat: Infinity, ease: "easeInOut" },
+  };
 
   return (
     <AnimatePresence>
@@ -70,61 +85,50 @@ export function UiDemoModal({ open, mode, onClose }: UiDemoModalProps) {
               </div>
 
               <div className="demo-stage">
-                <div className="demo-ui">
-                  <div className="demo-sidebar">
-                    <span className="demo-dot" />
-                    <span className="demo-dot" />
-                    <span className="demo-dot" />
-                    <span className="demo-dot" />
+                <div className="demo-seq">
+                  <div className="demo-step">
+                    <div className="demo-step-label">Step 1</div>
+                    <div className="demo-mini">
+                      <motion.div className="demo-mini-card demo-mini-card--flip" animate={flipAnim}>
+                        <div className="demo-mini-face">Front</div>
+                        <div className="demo-mini-face back">Back</div>
+                      </motion.div>
+                      <motion.div className="demo-pulse" animate={pulseAnim} />
+                      <div className="demo-gesture">{isMobile ? "Tap" : "Hover"}</div>
+                    </div>
                   </div>
-                  <div className="demo-topbar">
-                    <div className="demo-search" />
-                    <div className="demo-pill" />
-                  </div>
-                  <div className="demo-feed">
-                    <motion.div
-                      className="demo-card demo-card--a"
-                      animate={{ rotateY: [0, 180, 0] }}
-                      transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    >
-                      <div className="demo-card-face">Front</div>
-                      <div className="demo-card-face back">Back</div>
-                    </motion.div>
-                    <motion.div
-                      className="demo-card demo-card--b"
-                      animate={{ rotateY: [0, 180, 0] }}
-                      transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.6 }}
-                    >
-                      <div className="demo-card-face">Front</div>
-                      <div className="demo-card-face back">Back</div>
-                    </motion.div>
-                    <motion.div
-                      className="demo-card demo-card--c"
-                      animate={{ rotateY: [0, 180, 0] }}
-                      transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}
-                    >
-                      <div className="demo-card-face">Front</div>
-                      <div className="demo-card-face back">Back</div>
-                    </motion.div>
+
+                  <div className="demo-step">
+                    <div className="demo-step-label">Step 2</div>
+                    <div className="demo-mini demo-mini--expand">
+                      <div className="demo-mini-grid">
+                        <div className="demo-mini-card demo-mini-card--b" />
+                        <div className="demo-mini-card demo-mini-card--c" />
+                      </div>
+                      {isMobile ? (
+                        <motion.div className="demo-readmore" animate={pulseAnim}>
+                          Read more
+                        </motion.div>
+                      ) : (
+                        <motion.div className="demo-click" animate={pulseAnim}>
+                          Click
+                        </motion.div>
+                      )}
+                      <motion.div className="demo-expand-card" animate={expandAnim}>
+                        <div className="demo-expand-head">
+                          <div className="demo-avatar" />
+                          <div className="demo-title-bar" />
+                        </div>
+                        <div className="demo-expand-body" />
+                        <div className="demo-expand-actions">
+                          <span />
+                          <span />
+                          <span />
+                        </div>
+                      </motion.div>
+                    </div>
                   </div>
                 </div>
-
-                <motion.div
-                  className="demo-expand"
-                  animate={{ scale: [0.8, 1, 0.8], opacity: [0, 1, 0] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}
-                >
-                  <div className="demo-expand-head">
-                    <div className="demo-avatar" />
-                    <div className="demo-title-bar" />
-                  </div>
-                  <div className="demo-expand-body" />
-                  <div className="demo-expand-actions">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                </motion.div>
               </div>
             </div>
           </motion.div>

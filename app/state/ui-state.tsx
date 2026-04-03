@@ -322,6 +322,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let messageChannel: ReturnType<typeof supabase.channel> | null = null;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
+    const chatKeyRef = { current: "" };
 
     const loadInboxUnread = async () => {
       const { data } = await supabase.auth.getSession();
@@ -354,11 +355,23 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       loadInboxUnread();
     };
 
-    const setupInboxRealtime = async () => {
+    const syncInboxRealtime = async () => {
       const chatIds = await loadInboxUnread();
-      if (!active || chatIds.length === 0) {
-        return;
+      if (!active) return;
+      const nextKey = [...chatIds].sort().join(",");
+      if (nextKey === chatKeyRef.current) return;
+      chatKeyRef.current = nextKey;
+
+      if (channel) {
+        supabase.removeChannel(channel);
+        channel = null;
       }
+      if (messageChannel) {
+        supabase.removeChannel(messageChannel);
+        messageChannel = null;
+      }
+      if (chatIds.length === 0) return;
+
       channel = supabase
         .channel("inbox-unread-realtime")
         .on(
@@ -424,8 +437,11 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
           }
         )
         .subscribe();
+    };
 
-      pollTimer = setInterval(loadInboxUnread, 20000);
+    const setupInboxRealtime = async () => {
+      await syncInboxRealtime();
+      pollTimer = setInterval(syncInboxRealtime, 20000);
     };
 
     setupInboxRealtime();
