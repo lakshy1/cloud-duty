@@ -1481,7 +1481,15 @@ body[data-route="inbox"] .feed{overflow:hidden}
   cursor:pointer;
 }
 .inbox-chat-action.ghost{color:var(--muted)}
-.inbox-chat-body{flex:1;display:flex;flex-direction:column;gap:10px;padding:20px 22px;overflow:auto}
+.inbox-chat-body{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:20px 22px;
+  overflow:auto;
+  scrollbar-gutter:stable;
+}
 .inbox-chat-body{min-height:0}
 .inbox-message-block{display:flex;flex-direction:column;gap:8px}
 .inbox-list,
