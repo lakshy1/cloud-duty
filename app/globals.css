@@ -2698,7 +2698,8 @@ button.profile-stat:hover{
   .inbox-grid{grid-template-columns:1fr;width:100%;margin:0 auto;gap:12px}
   .inbox-grid.show-chat .inbox-list{display:none}
   .inbox-grid:not(.show-chat) .inbox-chat{display:none}
-  .inbox-chat{min-height:0;height:100%}
+  .inbox-grid.show-chat{justify-items:stretch}
+  .inbox-chat{min-height:0;height:100%;width:100%;margin:0;align-self:stretch}
   .inbox-card{
     padding:0;
     min-height:0;
