@@ -1488,6 +1488,7 @@ export default function InboxClient() {
                   className="inbox-attach"
                   type="button"
                   onClick={handleAttach}
+                  aria-label="Add attachment"
                 >
                   +
                 </button>
@@ -1512,8 +1513,16 @@ export default function InboxClient() {
                     }
                   }}
                 />
-                <button type="button" onClick={handleSend} disabled={!draft.trim()}>
-                  Send
+                <button
+                  className="inbox-send"
+                  type="button"
+                  onClick={handleSend}
+                  disabled={!draft.trim()}
+                  aria-label="Send message"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M20.5 11.5l-16-7 4.5 7-4.5 7 16-7z" fill="currentColor" />
+                  </svg>
                 </button>
                   </div>
                   {uploadProgress !== null ? (
