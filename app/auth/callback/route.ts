@@ -11,5 +11,10 @@ export async function GET(request: Request) {
     await supabase.auth.exchangeCodeForSession(code);
   }
 
-  return NextResponse.redirect(`${origin}${next}`);
+  const baseUrl =
+    process.env.PROJECT_URL ?? process.env.NEXT_PUBLIC_PROJECT_URL ?? origin;
+  const safeNext = next.startsWith("http")
+    ? next
+    : `${baseUrl}${next.startsWith("/") ? next : `/${next}`}`;
+  return NextResponse.redirect(safeNext);
 }

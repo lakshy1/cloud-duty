@@ -98,6 +98,7 @@ export default function AuthClient() {
   const supabase = getSupabaseBrowserClient();
   const fallbackBase = "https://cloudduty.vercel.app";
   const siteUrl =
+    process.env.NEXT_PUBLIC_PROJECT_URL ??
     process.env.NEXT_PUBLIC_SITE_URL ??
     (typeof window !== "undefined" ? window.location.origin : fallbackBase);
   const redirectBase = siteUrl.includes("netlify.app") ? fallbackBase : siteUrl || fallbackBase;

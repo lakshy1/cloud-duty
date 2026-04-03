@@ -109,7 +109,8 @@ export default function SettingsPage() {
     setSecurityBusy((prev) => ({ ...prev, reset: true }));
     setStatus(null);
     const supabase = getSupabaseBrowserClient();
-    const redirectTo = `${window.location.origin}/reset-password`;
+    const baseUrl = process.env.NEXT_PUBLIC_PROJECT_URL ?? window.location.origin;
+    const redirectTo = `${baseUrl}/reset-password`;
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo });
     if (error) {
       pushToast({ tone: "error", message: error.message });
