@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CardData } from "../data/card-data";
+import { MarkdownText } from "./MarkdownText";
 
 type CardItemProps = {
   data: CardData;
@@ -413,7 +414,9 @@ export function CardItem({
             </div>
             <div className="b-sep" />
             <div className="b-title">{renderHighlight(data.title)}</div>
-            <div className="b-desc">{renderHighlight(data.details)}</div>
+            <div className="b-desc">
+              <MarkdownText text={data.details} className="b-desc-md" />
+            </div>
             <div className="b-stats">
               <div className="b-stat">
                 <div className="b-stat-val">{data.views}</div>

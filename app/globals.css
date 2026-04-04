@@ -3099,6 +3099,17 @@ button.profile-stat:hover{
   flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;
   margin-bottom:10px;transition:color .4s;
 }
+.b-desc-md{
+  display:flex;flex-direction:column;gap:6px;
+  font-size:inherit;line-height:inherit;color:inherit;
+}
+.b-desc-md p{margin:0}
+.b-desc-md ul{
+  margin:0;padding-left:16px;display:flex;flex-direction:column;gap:4px;
+}
+.b-desc-md li{margin:0}
+.b-desc-md strong{color:inherit}
+.b-desc-md em{font-style:italic;color:inherit}
 
 /* ── 2-metric stats bar ──────────────────────────────────── */
 .b-stats{
@@ -3434,8 +3445,8 @@ button.profile-stat:hover{
   margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;
 }
 .pp-desc-md li{margin:0}
-.pp-desc-md strong{color:var(--text)}
-.pp-desc-md em{font-style:italic;color:color-mix(in srgb,var(--text) 75%, var(--muted))}
+.pp-desc-md strong{color:inherit}
+.pp-desc-md em{font-style:italic;color:inherit}
 /* stats — 2×2 grid, never overflows */
 .pp-stats{
   display:grid;
