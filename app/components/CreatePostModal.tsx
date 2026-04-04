@@ -195,7 +195,9 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
   const cropMetrics = useMemo(() => {
     if (!bannerMeta || !cropFrameSize) return null;
     if (!cropFrameSize.width || !cropFrameSize.height) return null;
-    const baseScale = Math.max(
+    const isMobile = cropFrameSize.width <= 560;
+    const scaleFn = isMobile ? Math.min : Math.max;
+    const baseScale = scaleFn(
       cropFrameSize.width / bannerMeta.width,
       cropFrameSize.height / bannerMeta.height
     );
@@ -558,9 +560,6 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
                     <div className="create-upload-sub">
                       PNG, JPG or WebP - Suggested 1200x800
                     </div>
-                  </div>
-                  <div className="create-upload-cta">
-                    {bannerFile ? "Replace" : "Upload"}
                   </div>
                 </div>
                 {bannerPreview ? (

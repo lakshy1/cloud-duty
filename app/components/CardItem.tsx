@@ -435,7 +435,7 @@ export function CardItem({
                 if (rect) onOpenPopup(index, rect);
               }}
             >
-              Read More {"->"}
+              Read More
             </button>
           </div>
         </div>
