@@ -57,6 +57,7 @@ export default function SettingsPage() {
   }, []);
 
   const meta = user?.user_metadata ?? {};
+  const isLoggedIn = Boolean(user);
   const phone: string | null = meta.phone ?? null;
   const provider: string = (() => {
     const p = meta.provider ?? meta.app_metadata?.provider ?? "";
@@ -174,103 +175,105 @@ export default function SettingsPage() {
         </section>
 
         {/* Account Information */}
-        <section className="page-card stgs-card">
-          <div className="stgs-section-head">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-            </svg>
-            <h2 className="stgs-section-title">Account Information</h2>
-            {!editMode ? (
-              <button className="stgs-action" type="button" onClick={() => setEditMode(true)}>
-                Edit
-              </button>
-            ) : null}
-          </div>
-          <div className="stgs-field-grid">
-            <div className="stgs-field">
-              <p className="stgs-label">Full Name</p>
-              {editMode ? (
-                <input
-                  className="stgs-input"
-                  value={editName}
-                  onChange={(event) => setEditName(event.target.value)}
-                  placeholder="Your name"
-                />
-              ) : (
-                <p className="stgs-value">{fullName || "Not set"}</p>
-              )}
-            </div>
-            <div className="stgs-field">
-              <p className="stgs-label">Email Address</p>
-              {editMode ? (
-                <input
-                  className="stgs-input"
-                  type="email"
-                  value={editEmail}
-                  onChange={(event) => setEditEmail(event.target.value)}
-                  placeholder="you@company.com"
-                />
-              ) : (
-                <p className="stgs-value">{user?.email ?? "Not set"}</p>
-              )}
-            </div>
-            <div className="stgs-field">
-              <p className="stgs-label">Phone Number</p>
-              {editMode ? (
-                <input
-                  className="stgs-input"
-                  type="tel"
-                  value={editPhone}
-                  onChange={(event) => setEditPhone(event.target.value)}
-                  placeholder="(555) 123-4567"
-                />
-              ) : (
-                <p className="stgs-value">{phone || "Not set"}</p>
-              )}
-            </div>
-            <div className="stgs-field">
-              <p className="stgs-label">Sign-in Method</p>
-              <p className="stgs-value">
-                <span className="stgs-badge">{provider}</span>
-              </p>
-            </div>
-          </div>
-          <div className="stgs-actions">
-            {editMode ? (
-              <>
-                <button
-                  className="stgs-primary"
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  {saving ? "Saving..." : "Save changes"}
+        {isLoggedIn ? (
+          <section className="page-card stgs-card">
+            <div className="stgs-section-head">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+              </svg>
+              <h2 className="stgs-section-title">Account Information</h2>
+              {!editMode ? (
+                <button className="stgs-action" type="button" onClick={() => setEditMode(true)}>
+                  Edit
                 </button>
-                <button
-                  className="stgs-secondary"
-                  type="button"
-                  onClick={() => {
-                    setEditMode(false);
-                    setEditName(fullName ?? "");
-                    setEditEmail(user?.email ?? "");
-                    setEditPhone(phone ?? "");
-                  }}
-                >
-                  Cancel
-                </button>
-              </>
-            ) : null}
-          </div>
-          {status ? <div className="stgs-status">{status}</div> : null}
-          <p className="stgs-footer-note">
-            To update your name or profile photo, visit your{" "}
-            <a href="/profile" className="stgs-link">
-              Profile page
-            </a>
-            .
-          </p>
-        </section>
+              ) : null}
+            </div>
+            <div className="stgs-field-grid">
+              <div className="stgs-field">
+                <p className="stgs-label">Full Name</p>
+                {editMode ? (
+                  <input
+                    className="stgs-input"
+                    value={editName}
+                    onChange={(event) => setEditName(event.target.value)}
+                    placeholder="Your name"
+                  />
+                ) : (
+                  <p className="stgs-value">{fullName || "Not set"}</p>
+                )}
+              </div>
+              <div className="stgs-field">
+                <p className="stgs-label">Email Address</p>
+                {editMode ? (
+                  <input
+                    className="stgs-input"
+                    type="email"
+                    value={editEmail}
+                    onChange={(event) => setEditEmail(event.target.value)}
+                    placeholder="you@company.com"
+                  />
+                ) : (
+                  <p className="stgs-value">{user?.email ?? "Not set"}</p>
+                )}
+              </div>
+              <div className="stgs-field">
+                <p className="stgs-label">Phone Number</p>
+                {editMode ? (
+                  <input
+                    className="stgs-input"
+                    type="tel"
+                    value={editPhone}
+                    onChange={(event) => setEditPhone(event.target.value)}
+                    placeholder="(555) 123-4567"
+                  />
+                ) : (
+                  <p className="stgs-value">{phone || "Not set"}</p>
+                )}
+              </div>
+              <div className="stgs-field">
+                <p className="stgs-label">Sign-in Method</p>
+                <p className="stgs-value">
+                  <span className="stgs-badge">{provider}</span>
+                </p>
+              </div>
+            </div>
+            <div className="stgs-actions">
+              {editMode ? (
+                <>
+                  <button
+                    className="stgs-primary"
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                  >
+                    {saving ? "Saving..." : "Save changes"}
+                  </button>
+                  <button
+                    className="stgs-secondary"
+                    type="button"
+                    onClick={() => {
+                      setEditMode(false);
+                      setEditName(fullName ?? "");
+                      setEditEmail(user?.email ?? "");
+                      setEditPhone(phone ?? "");
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : null}
+            </div>
+            {status ? <div className="stgs-status">{status}</div> : null}
+            <p className="stgs-footer-note">
+              To update your name or profile photo, visit your{" "}
+              <a href="/profile" className="stgs-link">
+                Profile page
+              </a>
+              .
+            </p>
+          </section>
+        ) : null}
 
         {/* Appearance */}
         <section className="page-card stgs-card">
@@ -311,79 +314,83 @@ export default function SettingsPage() {
         </section>
 
         {/* Notifications */}
-        <section className="page-card stgs-card">
-          <div className="stgs-section-head">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-            <h2 className="stgs-section-title">Notifications</h2>
-          </div>
-          <div className="stgs-toggle-grid">
-            <label className="stgs-toggle">
-              <input type="checkbox" disabled />
-              <span className="stgs-toggle-ui" />
-              <span className="stgs-toggle-text">Email alerts (coming soon)</span>
-            </label>
-            <label className="stgs-toggle">
-              <input type="checkbox" disabled />
-              <span className="stgs-toggle-ui" />
-              <span className="stgs-toggle-text">Push notifications (coming soon)</span>
-            </label>
-          </div>
-        </section>
+        {isLoggedIn ? (
+          <section className="page-card stgs-card">
+            <div className="stgs-section-head">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              <h2 className="stgs-section-title">Notifications</h2>
+            </div>
+            <div className="stgs-toggle-grid">
+              <label className="stgs-toggle">
+                <input type="checkbox" disabled />
+                <span className="stgs-toggle-ui" />
+                <span className="stgs-toggle-text">Email alerts (coming soon)</span>
+              </label>
+              <label className="stgs-toggle">
+                <input type="checkbox" disabled />
+                <span className="stgs-toggle-ui" />
+                <span className="stgs-toggle-text">Push notifications (coming soon)</span>
+              </label>
+            </div>
+          </section>
+        ) : null}
 
         {/* Security */}
-        <section className="page-card stgs-card">
-          <div className="stgs-section-head">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-            <h2 className="stgs-section-title">Security</h2>
-          </div>
-          <div className="stgs-security-grid">
-            <button
-              className="stgs-primary"
-              type="button"
-              onClick={handlePasswordReset}
-              disabled={securityBusy.reset || !user?.email}
-            >
-              {securityBusy.reset ? "Sending..." : "Send password reset"}
-            </button>
-            <button
-              className="stgs-secondary"
-              type="button"
-              onClick={handleSignOutOthers}
-              disabled={securityBusy.signout}
-            >
-              {securityBusy.signout ? "Working..." : "Sign out other sessions"}
-            </button>
-            <button
-              className="stgs-danger"
-              type="button"
-              onClick={() => setDeleteOpen(true)}
-              disabled={securityBusy.del}
-            >
-              {securityBusy.del ? "Deleting..." : "Delete account"}
-            </button>
-          </div>
-          <div className="stgs-toggle-grid">
-            <label className="stgs-toggle">
-              <input type="checkbox" disabled />
-              <span className="stgs-toggle-ui" />
-              <span className="stgs-toggle-text">Two-factor authentication (coming soon)</span>
-            </label>
-            <label className="stgs-toggle">
-              <input type="checkbox" disabled />
-              <span className="stgs-toggle-ui" />
-              <span className="stgs-toggle-text">Login alerts (coming soon)</span>
-            </label>
-          </div>
-        </section>
+        {isLoggedIn ? (
+          <section className="page-card stgs-card">
+            <div className="stgs-section-head">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <h2 className="stgs-section-title">Security</h2>
+            </div>
+            <div className="stgs-security-grid">
+              <button
+                className="stgs-primary"
+                type="button"
+                onClick={handlePasswordReset}
+                disabled={securityBusy.reset || !user?.email}
+              >
+                {securityBusy.reset ? "Sending..." : "Send password reset"}
+              </button>
+              <button
+                className="stgs-secondary"
+                type="button"
+                onClick={handleSignOutOthers}
+                disabled={securityBusy.signout}
+              >
+                {securityBusy.signout ? "Working..." : "Sign out other sessions"}
+              </button>
+              <button
+                className="stgs-danger"
+                type="button"
+                onClick={() => setDeleteOpen(true)}
+                disabled={securityBusy.del}
+              >
+                {securityBusy.del ? "Deleting..." : "Delete account"}
+              </button>
+            </div>
+            <div className="stgs-toggle-grid">
+              <label className="stgs-toggle">
+                <input type="checkbox" disabled />
+                <span className="stgs-toggle-ui" />
+                <span className="stgs-toggle-text">Two-factor authentication (coming soon)</span>
+              </label>
+              <label className="stgs-toggle">
+                <input type="checkbox" disabled />
+                <span className="stgs-toggle-ui" />
+                <span className="stgs-toggle-text">Login alerts (coming soon)</span>
+              </label>
+            </div>
+          </section>
+        ) : null}
       </div>
 
-      {deleteOpen ? (
+      {isLoggedIn && deleteOpen ? (
         <div
           className="delete-overlay"
           role="dialog"

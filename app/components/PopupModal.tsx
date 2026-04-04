@@ -6,6 +6,7 @@ import { RefObject } from "react";
 import type { CardData } from "../data/card-data";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { FollowButton } from "./FollowButton";
+import { MarkdownText } from "./MarkdownText";
 
 export type PopupInteractions = {
   like: boolean;
@@ -82,39 +83,42 @@ export function PopupModal({
           ) : null}
         </div>
         <div className="pp-right">
-          <div
-            className={`pp-author${data?.userId ? " pp-author--clickable" : ""}`}
-            onClick={data?.userId ? handleViewProfile : undefined}
-            role={data?.userId ? "button" : undefined}
-            tabIndex={data?.userId ? 0 : undefined}
-            onKeyDown={data?.userId ? (e) => e.key === "Enter" && handleViewProfile() : undefined}
-            aria-label={data?.userId ? `View ${data.author}'s profile` : undefined}
-          >
-            {data ? (
-              <Image
-                className="pp-ava"
-                id="ppAva"
-                src={data.ava}
-                alt={data.author}
-                width={38}
-                height={38}
-              />
-            ) : null}
-            <div className="pp-author-info">
-              <div className="pp-author-name" id="ppAuthorName">
-                {data?.author ?? ""}
-              </div>
-              <div className="pp-author-handle" id="ppAuthorHandle">
-                {data?.handle ?? ""}
+          <div className="pp-author">
+            <div
+              className={`pp-author-main${data?.userId ? " pp-author--clickable" : ""}`}
+              onClick={data?.userId ? handleViewProfile : undefined}
+              role={data?.userId ? "button" : undefined}
+              tabIndex={data?.userId ? 0 : undefined}
+              onKeyDown={data?.userId ? (e) => e.key === "Enter" && handleViewProfile() : undefined}
+              aria-label={data?.userId ? `View ${data.author}'s profile` : undefined}
+            >
+              {data ? (
+                <Image
+                  className="pp-ava"
+                  id="ppAva"
+                  src={data.ava}
+                  alt={data.author}
+                  width={38}
+                  height={38}
+                />
+              ) : null}
+              <div className="pp-author-info">
+                <div className="pp-author-name" id="ppAuthorName">
+                  {data?.author ?? ""}
+                </div>
+                <div className="pp-author-handle" id="ppAuthorHandle">
+                  {data?.handle ?? ""}
+                </div>
               </div>
             </div>
+            <FollowButton targetUserId={data?.userId} size="sm" className="pp-author-follow" />
           </div>
           <div className="pp-title" id="ppTitle">
             {data?.title ?? ""}
           </div>
           <div className="pp-line" />
           <div className="pp-desc" id="ppDesc">
-            {data?.details ?? ""}
+            <MarkdownText text={data?.details ?? ""} className="pp-desc-md" />
           </div>
 
           <div className="pp-stats">
@@ -189,22 +193,6 @@ export function PopupModal({
             </button>
           </div>
 
-          <div className="pp-actions">
-            <FollowButton targetUserId={data?.userId} size="md" className="pp-act-primary" />
-            {data?.userId ? (
-              <button className="pp-act-secondary" onClick={handleViewProfile} type="button">
-                <span>View Profile</span>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M5 12h12" />
-                  <path d="M13 6l6 6-6 6" />
-                </svg>
-              </button>
-            ) : (
-              <button className="pp-act-secondary" type="button">
-                Share {"->"}
-              </button>
-            )}
-          </div>
         </div>
       </div>
     </>

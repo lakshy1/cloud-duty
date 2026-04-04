@@ -47,6 +47,7 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
   const [dragActive, setDragActive] = useState(false);
   const [cropFrameSize, setCropFrameSize] = useState<{ width: number; height: number } | null>(null);
   const cropFrameRef = useRef<HTMLDivElement | null>(null);
+  const tagMenuRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<{
     startX: number;
     startY: number;
@@ -57,6 +58,7 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
   const [summary, setSummary] = useState("");
   const [details, setDetails] = useState("");
   const [tag, setTag] = useState(DEFAULT_TAG);
+  const [tagOpen, setTagOpen] = useState(false);
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [aiDetailsLoading, setAiDetailsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -73,6 +75,19 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
     setError("");
     setAiError(null);
   }, [open]);
+
+  useEffect(() => {
+    if (!tagOpen) return;
+    const handleOutside = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (!tagMenuRef.current?.contains(target)) {
+        setTagOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", handleOutside);
+    return () => window.removeEventListener("mousedown", handleOutside);
+  }, [tagOpen]);
 
   useEffect(() => {
     if (!open) return;
@@ -569,19 +584,7 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
                     />
                   </div>
                 ) : null}
-                {bannerPreview ? (
-                  <div className="create-crop-controls">
-                    <span>Zoom</span>
-                    <input
-                      type="range"
-                      min={1}
-                      max={2.5}
-                      step={0.05}
-                      value={cropZoom}
-                      onChange={(event) => setCropZoom(Number(event.target.value))}
-                    />
-                  </div>
-                ) : null}
+                {bannerPreview ? <div className="create-crop-controls" aria-hidden="true" /> : null}
               </div>
             </label>
 
@@ -599,17 +602,36 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
 
             <label className="create-field">
               <span className="create-label">Category</span>
-              <select
-                className="create-select"
-                value={tag}
-                onChange={(event) => setTag(event.target.value)}
-              >
-                {TAG_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+              <div className="create-tag-select" ref={tagMenuRef}>
+                <button
+                  type="button"
+                  className={`create-tag-trigger${tagOpen ? " open" : ""}`}
+                  onClick={() => setTagOpen((prev) => !prev)}
+                  aria-haspopup="listbox"
+                  aria-expanded={tagOpen}
+                >
+                  <span>{tag}</span>
+                </button>
+                {tagOpen ? (
+                  <div className="create-tag-menu" role="listbox" aria-label="Category">
+                    {TAG_OPTIONS.map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        className={`create-tag-option${tag === option ? " active" : ""}`}
+                        role="option"
+                        aria-selected={tag === option}
+                        onClick={() => {
+                          setTag(option);
+                          setTagOpen(false);
+                        }}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </label>
 
             <label className="create-field">
@@ -698,7 +720,7 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
               <div className="create-preview-tag">{tag || DEFAULT_TAG}</div>
               <p>{summary || "Summary text appears here."}</p>
               <p className="create-preview-details">
-                {details ? `${details.substring(0, 140)}...` : "Details preview appears here."}
+                {details || "Details preview appears here."}
               </p>
             </div>
           </div>

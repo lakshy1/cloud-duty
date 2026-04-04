@@ -18,6 +18,15 @@ type MyPost = {
   tag?: string;
 };
 
+const normalizeMarkdownForEdit = (input: string) => {
+  if (!input) return "";
+  let text = input.replace(/\r\n/g, "\n").trim();
+  text = text.replace(/([.?!])\s+\*\*/g, "$1\n\n**");
+  text = text.replace(/\s+([*-])\s+/g, "\n$1 ");
+  text = text.replace(/\n{3,}/g, "\n\n");
+  return text;
+};
+
 export default function MyPostsPage() {
   const [posts, setPosts] = useState<MyPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,7 +103,7 @@ export default function MyPostsPage() {
     setEditingPost(post);
     setEditTitle(post.title);
     setEditSummary(post.summary);
-    setEditDetails(post.desc ?? "");
+    setEditDetails(normalizeMarkdownForEdit(post.desc ?? ""));
     setEditTag(post.tag ?? "Project");
     setEditBannerFile(null);
     setEditBannerPreview(post.img ?? null);
@@ -486,6 +495,21 @@ export default function MyPostsPage() {
                       onChange={(e) => setEditDetails(e.target.value)}
                     />
                   </label>
+                  <div className="create-preview edit-preview-card">
+                    {editBannerPreview ? (
+                      <img src={editBannerPreview} alt="Banner preview" />
+                    ) : (
+                      <div className="create-preview-empty">Banner preview</div>
+                    )}
+                    <div className="create-preview-meta">
+                      <h3>{editTitle || "Post title"}</h3>
+                      <div className="create-preview-tag">{editTag || "Project"}</div>
+                      <p>{editSummary || "Summary text appears here."}</p>
+                      <p className="create-preview-details">
+                        {editDetails ? `${editDetails.substring(0, 140)}...` : "Details preview appears here."}
+                      </p>
+                    </div>
+                  </div>
                 </div>
                 <div className="edit-actions">
                   <button className="edit-secondary" type="button" onClick={closeEdit}>
