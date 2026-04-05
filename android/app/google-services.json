@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "283570584056",
+    "project_id": "cloudduty-8cea8",
+    "storage_bucket": "cloudduty-8cea8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:283570584056:android:8cd83f584dc531146cbe0d",
+        "android_client_info": {
+          "package_name": "com.cloudduty.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBh22Y9shT8dMKUnszr-eGgK86vUJNiLbw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

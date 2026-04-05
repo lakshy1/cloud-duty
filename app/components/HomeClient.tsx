@@ -9,7 +9,6 @@ import { PopupModal, PopupInteractions } from "./PopupModal";
 import { ReportModal } from "./ReportModal";
 import { Loader } from "./Loader";
 import { Skeleton } from "./Skeleton";
-import { UiDemoModal } from "./UiDemoModal";
 import type { CardData } from "../data/card-data";
 import { cardData } from "../data/card-data";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
@@ -85,8 +84,6 @@ export default function HomeClient() {
     message: "",
   });
   const [reportSubmitting, setReportSubmitting] = useState(false);
-  const [demoOpen, setDemoOpen] = useState(false);
-  const [demoMode, setDemoMode] = useState<"desktop" | "mobile">("desktop");
 
   const popupPanelRef = useRef<HTMLDivElement | null>(null);
   const popupOverlayRef = useRef<HTMLDivElement | null>(null);
@@ -111,19 +108,6 @@ export default function HomeClient() {
     checkSession();
   }, []);
 
-  useEffect(() => {
-    if (!authChecked || !userId) return;
-    try {
-      const key = `cd-demo-${userId}`;
-      if (window.localStorage.getItem(key)) return;
-      const isMobile = window.innerWidth <= 640;
-      setDemoMode(isMobile ? "mobile" : "desktop");
-      setDemoOpen(true);
-      window.localStorage.setItem(key, new Date().toISOString());
-    } catch {
-      // ignore storage errors
-    }
-  }, [authChecked, userId]);
 
   const popupData = popupIndex !== null ? cards[popupIndex] : null;
   const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -960,7 +944,6 @@ export default function HomeClient() {
         onSubmit={submitReport}
       />
 
-      <UiDemoModal open={demoOpen} mode={demoMode} onClose={() => setDemoOpen(false)} />
     </>
   );
 }

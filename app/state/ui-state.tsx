@@ -11,6 +11,7 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
+import { Capacitor } from "@capacitor/core";
 
 export type Toast = {
   id: string;
@@ -290,7 +291,18 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
               preview: (payload.new as { metadata?: { preview?: string | null } | null })?.metadata?.preview,
             });
             playNotificationPing(row.type);
-            pushToast(toast);
+            if (Capacitor.isNativePlatform()) {
+              const { LocalNotifications } = await import("@capacitor/local-notifications");
+              await LocalNotifications.schedule({
+                notifications: [{
+                  id: Date.now(),
+                  title: toast.title ?? "CloudDuty",
+                  body: toast.message,
+                }],
+              }).catch(() => {});
+            } else {
+              pushToast(toast);
+            }
           }
         )
         .on(
@@ -448,7 +460,18 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
               senderName,
             });
             playNotificationPing("message");
-            pushToast(toast);
+            if (Capacitor.isNativePlatform()) {
+              const { LocalNotifications } = await import("@capacitor/local-notifications");
+              await LocalNotifications.schedule({
+                notifications: [{
+                  id: Date.now(),
+                  title: toast.title ?? "CloudDuty",
+                  body: toast.message,
+                }],
+              }).catch(() => {});
+            } else {
+              pushToast(toast);
+            }
           }
         )
         .subscribe();

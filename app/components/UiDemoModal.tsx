@@ -20,22 +20,6 @@ export function UiDemoModal({ open, mode, onClose }: UiDemoModalProps) {
         "Click any card to open the full project view.",
       ];
 
-  const easeInOut: [number, number, number, number] = [0.42, 0, 0.58, 1];
-  const flipAnim = {
-    rotateY: [0, 0, 180, 180, 0],
-    transition: { duration: 5, repeat: Infinity, ease: easeInOut },
-  };
-  const pulseAnim = {
-    scale: [1, 1.12, 1],
-    opacity: [0.35, 0.9, 0.35],
-    transition: { duration: 1.4, repeat: Infinity, ease: easeInOut },
-  };
-  const expandAnim = {
-    scale: [0.86, 1, 1, 0.86],
-    opacity: [0, 1, 1, 0],
-    transition: { duration: 5, repeat: Infinity, ease: easeInOut },
-  };
-
   return (
     <AnimatePresence>
       {open ? (
@@ -90,11 +74,11 @@ export function UiDemoModal({ open, mode, onClose }: UiDemoModalProps) {
                   <div className="demo-step">
                     <div className="demo-step-label">Step 1</div>
                     <div className="demo-mini">
-                      <motion.div className="demo-mini-card demo-mini-card--flip" animate={flipAnim}>
+                      <div className="demo-mini-card demo-mini-card--flip">
                         <div className="demo-mini-face">Front</div>
                         <div className="demo-mini-face back">Back</div>
-                      </motion.div>
-                      <motion.div className="demo-pulse" animate={pulseAnim} />
+                      </div>
+                      <div className="demo-pulse" />
                       <div className="demo-gesture">{isMobile ? "Tap" : "Hover"}</div>
                     </div>
                   </div>
@@ -107,15 +91,15 @@ export function UiDemoModal({ open, mode, onClose }: UiDemoModalProps) {
                         <div className="demo-mini-card demo-mini-card--c" />
                       </div>
                       {isMobile ? (
-                        <motion.div className="demo-readmore" animate={pulseAnim}>
+                        <div className="demo-readmore">
                           Read more
-                        </motion.div>
+                        </div>
                       ) : (
-                        <motion.div className="demo-click" animate={pulseAnim}>
+                        <div className="demo-click">
                           Click
-                        </motion.div>
+                        </div>
                       )}
-                      <motion.div className="demo-expand-card" animate={expandAnim}>
+                      <div className="demo-expand-card">
                         <div className="demo-expand-head">
                           <div className="demo-avatar" />
                           <div className="demo-title-bar" />
@@ -126,7 +110,7 @@ export function UiDemoModal({ open, mode, onClose }: UiDemoModalProps) {
                           <span />
                           <span />
                         </div>
-                      </motion.div>
+                      </div>
                     </div>
                   </div>
                 </div>

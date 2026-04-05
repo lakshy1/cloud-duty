@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./theme-provider";
 import { UIStateProvider } from "./state/ui-state";
+import PushNotificationsProvider from "./components/push-notifications-provider";
 
 const dmSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -37,7 +38,10 @@ export default function RootLayout({
     >
       <body className="min-h-full">
         <ThemeProvider>
-          <UIStateProvider>{children}</UIStateProvider>
+          <UIStateProvider>
+            <PushNotificationsProvider />
+            {children}
+          </UIStateProvider>
         </ThemeProvider>
       </body>
     </html>
