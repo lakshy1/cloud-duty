@@ -29,6 +29,12 @@ export default function PushNotificationsBridge({
 
     const register = async () => {
       try {
+        // Request LocalNotifications permission (needed for foreground + realtime notifications)
+        const localPerm = await LocalNotifications.checkPermissions();
+        if (localPerm.display !== "granted") {
+          await LocalNotifications.requestPermissions();
+        }
+
         let permission = await PushNotifications.checkPermissions();
         if (permission.receive !== "granted") {
           permission = await PushNotifications.requestPermissions();
