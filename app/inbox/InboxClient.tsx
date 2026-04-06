@@ -120,6 +120,8 @@ export default function InboxClient() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const threadMenuRef = useRef<HTMLDivElement | null>(null);
   const messageMenuRef = useRef<HTMLDivElement | null>(null);
+  const showChatRef = useRef(showChat);
+  const hiddenChatIdsRef = useRef(hiddenChatIds);
 
   const isAiThread = activeThreadId === AI_THREAD_ID;
   const inboxThreadsCacheKey = userId ? `cd_cache_inbox_threads_${userId}` : null;
@@ -131,6 +133,9 @@ export default function InboxClient() {
   useEffect(() => {
     setHydrated(true);
   }, []);
+
+  useEffect(() => { showChatRef.current = showChat; }, [showChat]);
+  useEffect(() => { hiddenChatIdsRef.current = hiddenChatIds; }, [hiddenChatIds]);
 
   const formatTime = (iso: string) =>
     new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
@@ -432,15 +437,16 @@ export default function InboxClient() {
         .order("created_at", { ascending: false });
 
       const chatRows = chats ?? [];
-      const visibleChats = chatRows.filter((chat) => !hiddenChatIds.has(chat.id));
-      const visibleChatIds = visibleChats.map((chat) => chat.id);
-      setThreadChatIds(visibleChatIds);
+      // Load ALL chats (including hidden) so subscriptions cover them all.
+      // Visibility filtering happens in filteredThreads (useMemo) — not here.
+      const allChatIds = chatRows.map((chat) => chat.id);
+      setThreadChatIds(allChatIds);
       let unreadMap = new Map<string, number>();
-      if (visibleChatIds.length > 0) {
+      if (allChatIds.length > 0) {
         const { data: unreadRows } = await supabase
             .from("chat_messages")
             .select("chat_id,sender_id,read_at")
-            .in("chat_id", visibleChatIds)
+            .in("chat_id", allChatIds)
             .is("read_at", null)
             .neq("sender_id", userId);
         unreadRows?.forEach((row) => {
@@ -448,7 +454,7 @@ export default function InboxClient() {
           unreadMap.set(row.chat_id, (unreadMap.get(row.chat_id) ?? 0) + 1);
         });
       }
-      const otherIds = visibleChats.map((chat) => (chat.user_a === userId ? chat.user_b : chat.user_a));
+      const otherIds = chatRows.map((chat) => (chat.user_a === userId ? chat.user_b : chat.user_a));
       const { data: profiles } = otherIds.length
         ? await supabase
             .from("profiles")
@@ -461,7 +467,7 @@ export default function InboxClient() {
       );
 
       const chatThreads: Thread[] = await Promise.all(
-        visibleChats.map(async (chat) => {
+        chatRows.map(async (chat) => {
           const otherId = chat.user_a === userId ? chat.user_b : chat.user_a;
           const profile = profileMap.get(otherId);
           const { data: lastRows } = await supabase
@@ -501,7 +507,7 @@ export default function InboxClient() {
     };
 
     loadThreads();
-  }, [aiMessagesByThread, inboxThreadsCacheKey, userId, threadsReloadKey, hiddenChatIds]);
+  }, [aiMessagesByThread, inboxThreadsCacheKey, userId, threadsReloadKey]);
 
   const unreadThreadCount = useMemo(
     () => threads.reduce((acc, thread) => (thread.unreadCount && thread.unreadCount > 0 ? acc + 1 : acc), 0),
@@ -521,10 +527,6 @@ export default function InboxClient() {
   useEffect(() => {
     if (!userId || threadChatIds.length === 0) return;
     const supabase = getSupabaseBrowserClient();
-    const handleThreadRefresh = () => {
-      if (showChat) return;
-      setThreadsReloadKey((prev) => prev + 1);
-    };
     const channel = supabase
       .channel("inbox-thread-refresh")
       .on(
@@ -535,7 +537,28 @@ export default function InboxClient() {
           table: "chat_messages",
           filter: `chat_id=in.(${threadChatIds.join(",")})`,
         },
-        handleThreadRefresh
+        (payload) => {
+          const chatId = (payload.new as { chat_id?: string }).chat_id;
+          const isHidden = chatId ? hiddenChatIdsRef.current.has(chatId) : false;
+          if (chatId && isHidden) {
+            // WhatsApp behavior: new message resurfaces a hidden chat
+            setHiddenChatIds((prev) => {
+              if (!prev.has(chatId)) return prev;
+              const next = new Set(prev);
+              next.delete(chatId);
+              const storageKey = `inbox_hidden_chats_${userId}`;
+              try {
+                window.localStorage.setItem(storageKey, JSON.stringify(Array.from(next)));
+              } catch {}
+              return next;
+            });
+          }
+          // Refresh thread list unless user is in a chat view (to avoid jank),
+          // but always refresh if a hidden thread was resurfaced.
+          if (!showChatRef.current || isHidden) {
+            setThreadsReloadKey((prev) => prev + 1);
+          }
+        }
       )
       .on(
         "postgres_changes",
@@ -545,13 +568,17 @@ export default function InboxClient() {
           table: "chat_messages",
           filter: `chat_id=in.(${threadChatIds.join(",")})`,
         },
-        handleThreadRefresh
+        () => {
+          if (!showChatRef.current) {
+            setThreadsReloadKey((prev) => prev + 1);
+          }
+        }
       )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [threadChatIds, userId, showChat]);
+  }, [threadChatIds, userId]);
 
   useEffect(() => {
     if (!activeChatId || !userId) {
@@ -883,7 +910,22 @@ export default function InboxClient() {
       pushToast({ message: error.message, tone: "error" });
     } else {
       setDraft("");
-      // message notifications are handled via inbox unread state (no bell notifications)
+      if (otherUserId) {
+        supabase.auth.getSession().then(({ data: sessionData }) => {
+          if (!sessionData.session?.access_token) return;
+          fetch("/api/send-push", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recipientId: otherUserId,
+              title: "New message",
+              body: text,
+              data: { chat_id: activeThread.chatId ?? "" },
+              accessToken: sessionData.session.access_token,
+            }),
+          }).catch(() => {});
+        });
+      }
     }
   };
 
@@ -909,12 +951,9 @@ export default function InboxClient() {
 
   const handleDeleteThread = async (thread: Thread) => {
     if (!userId || thread.type !== "chat" || !thread.chatId) return;
-    const supabase = getSupabaseBrowserClient();
-    await supabase
-      .from("chat_messages")
-      .update({ deleted_at: new Date().toISOString(), deleted_by: userId })
-      .eq("chat_id", thread.chatId)
-      .eq("sender_id", userId);
+    // "Delete chat" is a per-user hide operation only — no messages are soft-deleted.
+    // Individual message deletion is a separate action. This keeps the other
+    // participant's view intact and allows the chat to resurface when they reply.
     const key = `inbox_hidden_chats_${userId}`;
     setHiddenChatIds((prev) => {
       const next = new Set(prev);
@@ -1116,6 +1155,20 @@ export default function InboxClient() {
           entity_id: activeThread.chatId,
           message: "You received an attachment",
           metadata: { chat_id: activeThread.chatId, attachment: file.name },
+        });
+        supabase.auth.getSession().then(({ data: sessionData }) => {
+          if (!sessionData.session?.access_token) return;
+          fetch("/api/send-push", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recipientId: otherUserId,
+              title: "New attachment",
+              body: file.name,
+              data: { chat_id: activeThread.chatId ?? "" },
+              accessToken: sessionData.session.access_token,
+            }),
+          }).catch(() => {});
         });
       }
     }
