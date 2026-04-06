@@ -9,27 +9,38 @@ type TokenRegistrationHandler = (token: string) => void;
 
 const logPrefix = "[PushNotifications]";
 
+// Maps the notification_type value sent in the data payload to a human-readable label.
+function getTypeLabel(type?: string): string {
+  switch (type) {
+    case "message":    return "New message";
+    case "attachment": return "Sent an attachment";
+    case "like":       return "Liked your post";
+    case "dislike":    return "Disliked your post";
+    case "follow":     return "Started following you";
+    case "unfollow":   return "Unfollowed you";
+    case "comment":    return "Commented on your post";
+    case "save":       return "Saved your post";
+    default:           return type ?? "New notification";
+  }
+}
+
 export default function PushNotificationsBridge({
   onToken,
 }: {
   onToken?: TokenRegistrationHandler;
 }) {
-  // Keep a stable ref so the registration effect runs once, not on every render
   const onTokenRef = useRef(onToken);
   useEffect(() => {
     onTokenRef.current = onToken;
   });
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) {
-      return;
-    }
+    if (!Capacitor.isNativePlatform()) return;
 
     let active = true;
 
     const register = async () => {
       try {
-        // Request LocalNotifications permission (needed for foreground + realtime notifications)
         const localPerm = await LocalNotifications.checkPermissions();
         if (localPerm.display !== "granted") {
           await LocalNotifications.requestPermissions();
@@ -39,7 +50,6 @@ export default function PushNotificationsBridge({
         if (permission.receive !== "granted") {
           permission = await PushNotifications.requestPermissions();
         }
-
         if (permission.receive !== "granted") {
           console.info(`${logPrefix} permission not granted`);
           return;
@@ -58,20 +68,32 @@ export default function PushNotificationsBridge({
           console.error(`${logPrefix} registration error`, err);
         });
 
-        // When the app is in the foreground, Android suppresses the system
-        // notification. Display it manually via LocalNotifications instead.
+        // When the app is in the foreground Android suppresses the system
+        // notification — show a rich LocalNotification instead.
         PushNotifications.addListener("pushNotificationReceived", async (notification) => {
           if (!active) return;
           console.info(`${logPrefix} received`, notification);
+
+          const d = notification.data as Record<string, string> | undefined;
+          const senderName  = d?.sender_name  || notification.title  || "CloudDuty";
+          const typeLabel   = getTypeLabel(d?.notification_type) || notification.body || "";
+          const content     = d?.content ?? "";
 
           try {
             await LocalNotifications.schedule({
               notifications: [
                 {
                   id: Date.now(),
-                  title: notification.title ?? "CloudDuty",
-                  body: notification.body ?? "",
-                  extra: notification.data,
+                  // Top line: who sent it
+                  title: senderName,
+                  // Bottom line (collapsed): what happened
+                  body: typeLabel,
+                  // Expanded text — Android shows a down-arrow to expand into this
+                  largeBody: content || typeLabel,
+                  // Summary shown in grouped/expanded view
+                  summaryText: content || typeLabel,
+                  extra: d ?? {},
+                  iconColor: "#2563EB",
                 },
               ],
             });
@@ -80,13 +102,10 @@ export default function PushNotificationsBridge({
           }
         });
 
-        PushNotifications.addListener(
-          "pushNotificationActionPerformed",
-          (action) => {
-            if (!active) return;
-            console.info(`${logPrefix} action`, action);
-          }
-        );
+        PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
+          if (!active) return;
+          console.info(`${logPrefix} action`, action);
+        });
       } catch (error) {
         console.error(`${logPrefix} setup error`, error);
       }
@@ -98,7 +117,7 @@ export default function PushNotificationsBridge({
       active = false;
       void PushNotifications.removeAllListeners();
     };
-  }, []); // runs once — onToken changes are handled via onTokenRef
+  }, []);
 
   return null;
 }

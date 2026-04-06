@@ -95,6 +95,7 @@ export default function InboxClient() {
   } | null>(null);
   const [threadQuery, setThreadQuery] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
+  const [senderProfile, setSenderProfile] = useState<{ name: string; avatarUrl: string | null } | null>(null);
   const [threadsReloadKey, setThreadsReloadKey] = useState(0);
   const [threadChatIds, setThreadChatIds] = useState<string[]>([]);
   const [newModalOpen, setNewModalOpen] = useState(false);
@@ -337,8 +338,21 @@ export default function InboxClient() {
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
-    supabase.auth.getSession().then(({ data }) => {
-      setUserId(data.session?.user.id ?? null);
+    supabase.auth.getSession().then(async ({ data }) => {
+      const uid = data.session?.user.id ?? null;
+      setUserId(uid);
+      if (!uid) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, username, avatar_url")
+        .eq("user_id", uid)
+        .maybeSingle();
+      if (profile) {
+        setSenderProfile({
+          name: profile.full_name || profile.username || "Someone",
+          avatarUrl: profile.avatar_url ?? null,
+        });
+      }
     });
   }, []);
 
@@ -918,8 +932,10 @@ export default function InboxClient() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               recipientId: otherUserId,
-              title: "New message",
-              body: text,
+              senderName: senderProfile?.name ?? "Someone",
+              senderAvatar: senderProfile?.avatarUrl ?? "",
+              notificationType: "New message",
+              content: text,
               data: { chat_id: activeThread.chatId ?? "" },
               accessToken: sessionData.session.access_token,
             }),
@@ -1163,8 +1179,10 @@ export default function InboxClient() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               recipientId: otherUserId,
-              title: "New attachment",
-              body: file.name,
+              senderName: senderProfile?.name ?? "Someone",
+              senderAvatar: senderProfile?.avatarUrl ?? "",
+              notificationType: "Sent an attachment",
+              content: file.name,
               data: { chat_id: activeThread.chatId ?? "" },
               accessToken: sessionData.session.access_token,
             }),
