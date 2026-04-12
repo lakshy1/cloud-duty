@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { AppShell } from "../components/AppShell";
-import { Loader } from "../components/Loader";
+import { Skeleton } from "../components/Skeleton";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 import { useUIState } from "../state/ui-state";
 
@@ -275,7 +275,16 @@ export default function MyPostsPage() {
 
         <section className="page-card my-posts-card">
           {loading ? (
-            <Loader label="Loading your posts" />
+            <div className="masonry" aria-hidden="true">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div className="skeleton-card" key={`sk-${i}`}>
+                  <Skeleton className="skeleton-thumb" />
+                  <Skeleton className="skeleton-line skeleton-w-80" />
+                  <Skeleton className="skeleton-line skeleton-w-60" />
+                  <Skeleton className="skeleton-line sm skeleton-w-40" />
+                </div>
+              ))}
+            </div>
           ) : filteredPosts.length === 0 ? (
             <div className="my-posts-empty">
               <p className="page-subtitle">

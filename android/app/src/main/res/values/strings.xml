@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">CloudDuty</string>
-    <string name="title_activity_main">CloudDuty</string>
-    <string name="package_name">com.cloudduty.app</string>
-    <string name="custom_url_scheme">com.cloudduty.app</string>
+    <string name="app_name">Reading Queue</string>
+    <string name="title_activity_main">Reading Queue</string>
+    <string name="package_name">com.readingqueue.app</string>
+    <string name="custom_url_scheme">com.readingqueue.app</string>
 </resources>

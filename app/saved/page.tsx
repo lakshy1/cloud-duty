@@ -6,7 +6,7 @@ import { CardGrid } from "../components/CardGrid";
 import { PopupModal, PopupInteractions } from "../components/PopupModal";
 import type { CardData } from "../data/card-data";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
-import { Loader } from "../components/Loader";
+import { Skeleton } from "../components/Skeleton";
 import { useUIState } from "../state/ui-state";
 
 function formatCount(value: number) {
@@ -559,7 +559,16 @@ export default function SavedPostsPage() {
         </section>
 
         {loading ? (
-          <Loader label="Loading saved posts" />
+          <div className="masonry" aria-hidden="true">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div className="skeleton-card" key={`sk-${i}`}>
+                <Skeleton className="skeleton-thumb" />
+                <Skeleton className="skeleton-line skeleton-w-80" />
+                <Skeleton className="skeleton-line skeleton-w-60" />
+                <Skeleton className="skeleton-line sm skeleton-w-40" />
+              </div>
+            ))}
+          </div>
         ) : filteredCards.length === 0 ? (
           <section className="page-card">
             <p className="page-subtitle">

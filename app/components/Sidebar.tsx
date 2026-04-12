@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useRef } from "react";
 import { Icon } from "./Icon";
 import { useUIState } from "../state/ui-state";
 
@@ -16,6 +17,18 @@ export function Sidebar({ onCreate, onSearch }: SidebarProps) {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
   const { createOpen, isLoggedIn, setLoginPromptOpen, hasUnreadNotifications, inboxUnreadCount } = useUIState();
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handleMouseEnter = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.currentTime = 0;
+    v.play();
+  };
+
+  const handleMouseLeave = () => {
+    // let the video finish playing completely — paused by onEnded
+  };
 
   const requireAuth = (action: () => void) => {
     if (isLoggedIn) {
@@ -27,8 +40,18 @@ export function Sidebar({ onCreate, onSearch }: SidebarProps) {
 
   return (
     <aside className="sidebar">
-      <Link className="sb-logo" href="/">
-        <Icon name="cloud" stroke="#fff" />
+      <Link className="sb-logo" href="/" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
+          onEnded={() => videoRef.current?.pause()}
+          style={{ width: 48, height: 47, borderRadius: 7, background: "transparent", display: "block" }}
+        >
+          <source src="/logo-video-transparent.webm" type="video/webm" />
+          <source src="/logo-video.mp4" type="video/mp4" />
+        </video>
       </Link>
       <div className="sb-sep" />
       <Link className={`sb-btn${isActive("/") ? " active" : ""}`} href="/" aria-label="Home">

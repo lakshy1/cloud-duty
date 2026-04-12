@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { Icon } from "../components/Icon";
@@ -68,7 +69,7 @@ const initialAiMessages: Record<string, AiMessage[]> = {
     {
       id: "m0",
       from: "them",
-      text: "Hi! I'm CloudDuty AI. I can help summarize posts and find insights.",
+      text: "Hi! I'm Reading Queue AI. I can help summarize posts and find insights.",
       createdAt: new Date().toISOString(),
     },
   ],
@@ -423,8 +424,8 @@ export default function InboxClient() {
       const aiThread: Thread = {
         id: AI_THREAD_ID,
         type: "ai",
-        name: "CloudDuty AI Bot",
-        handle: "@cloudduty-ai",
+        name: "Reading Queue AI Bot",
+        handle: "@readingqueue-ai",
         last: aiLast?.text ?? "Start a conversation",
         time: aiLast ? formatTimeSafe(aiLast.createdAt) : "",
       };
@@ -1292,7 +1293,7 @@ export default function InboxClient() {
                             {(thread.name || "U")[0]?.toUpperCase()}
                           </span>
                         ) : (
-                          <Icon name="cloud" stroke="#fff" />
+                          <Image src="/bot.svg" alt="Reading Queue AI Bot" width={36} height={36} placeholder="empty" style={{ background: "transparent" }} />
                         )}
                       </div>
                       <div className="inbox-thread-main">
@@ -1409,7 +1410,7 @@ export default function InboxClient() {
                             {(activeThread?.name || "U")[0]?.toUpperCase()}
                           </span>
                         ) : (
-                          <Icon name="cloud" stroke="#fff" />
+                          <Image src="/bot.svg" alt="Reading Queue AI Bot" width={36} height={36} placeholder="empty" style={{ background: "transparent" }} />
                         )}
                       </div>
                       <div className="inbox-chat-title">
@@ -1417,7 +1418,7 @@ export default function InboxClient() {
                           <div className="inbox-chat-name">{activeThread?.name ?? ""}</div>
                         </div>
                         <div className="inbox-chat-status">
-                          {activeThread?.type === "chat" ? "Direct message" : "CloudDuty AI"}
+                          {activeThread?.type === "chat" ? "Direct message" : "Reading Queue AI"}
                         </div>
                       </div>
                     </div>

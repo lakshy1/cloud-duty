@@ -20,8 +20,8 @@ const syne = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "CloudDuty",
-  description: "CloudDuty SaaS dashboard experience",
+  title: "Reading Queue",
+  description: "Reading Queue SaaS dashboard experience",
 };
 
 export default function RootLayout({

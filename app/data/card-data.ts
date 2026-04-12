@@ -22,15 +22,15 @@ export const cardData: CardData[] = [
   {
     img: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&q=85",
     ava: "/cloud-avatar.svg",
-    author: "CloudDuty",
-    handle: "@CloudDuty",
+    author: "Reading Queue",
+    handle: "@Reading Queue",
     verified: true,
     tag: "Announcement",
-    title: "Welcome to CloudDuty",
+    title: "Welcome to Reading Queue",
     summary:
-      "CloudDuty is a platform for developers to showcase there projects and make a attractive portfolio to showcase to other people, they can also connect and interact with other developers !",
+      "Reading Queue is a platform for developers to showcase there projects and make a attractive portfolio to showcase to other people, they can also connect and interact with other developers !",
     details:
-      "CloudDuty is a platform for developers to showcase there projects and make a attractive portfolio to showcase to other people, they can also connect and interact with other developers !",
+      "Reading Queue is a platform for developers to showcase there projects and make a attractive portfolio to showcase to other people, they can also connect and interact with other developers !",
     views: "0",
     likes: "0",
     comments: "0",

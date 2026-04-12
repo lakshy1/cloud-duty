@@ -3,7 +3,12 @@
     "allow": [
       "Bash(npx cap:*)",
       "Bash(npm run:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(grep -n \"loading\\\\|Loading\" /c/Users/laksh/OneDrive/Desktop/Cloudduty.io/01-cloud-duty/app/my-posts/page.tsx /c/Users/laksh/OneDrive/Desktop/Cloudduty.io/01-cloud-duty/app/saved/page.tsx /c/Users/laksh/OneDrive/Desktop/Cloudduty.io/01-cloud-duty/app/user/[userId]/page.tsx)",
+      "Bash(magick --version)",
+      "Bash(convert --version)",
+      "Bash(node -e \"require\\('sharp'\\); console.log\\('sharp OK'\\)\")",
+      "Bash(node -e ':*)"
     ]
   }
 }

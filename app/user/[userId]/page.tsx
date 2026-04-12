@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { AppShell } from "../../components/AppShell";
-import { Loader } from "../../components/Loader";
+import { Skeleton } from "../../components/Skeleton";
 import { FollowButton } from "../../components/FollowButton";
 import { CardGrid } from "../../components/CardGrid";
 import { PopupModal, PopupInteractions } from "../../components/PopupModal";
@@ -450,8 +450,25 @@ export default function UserProfilePage() {
   if (loading) {
     return (
       <AppShell>
-        <div className="up-loading">
-          <Loader label="Loading profile" />
+        <div className="up-loading" aria-hidden="true">
+          <div className="up-header">
+            <Skeleton className="skeleton-thumb" style={{ height: 160, borderRadius: 0 }} />
+            <div className="up-meta">
+              <Skeleton className="skeleton-circle" style={{ width: 72, height: 72 }} />
+              <Skeleton className="skeleton-line skeleton-w-60" style={{ marginTop: 8 }} />
+              <Skeleton className="skeleton-line sm skeleton-w-40" />
+            </div>
+          </div>
+          <div className="masonry" style={{ marginTop: 24 }}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div className="skeleton-card" key={`sk-${i}`}>
+                <Skeleton className="skeleton-thumb" />
+                <Skeleton className="skeleton-line skeleton-w-80" />
+                <Skeleton className="skeleton-line skeleton-w-60" />
+                <Skeleton className="skeleton-line sm skeleton-w-40" />
+              </div>
+            ))}
+          </div>
         </div>
       </AppShell>
     );

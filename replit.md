@@ -1,6 +1,6 @@
-# CloudDuty
+# Reading Queue
 
-A Next.js 16 social platform for developers. Hosted at https://cloudduty.netlify.app.
+A Next.js 16 social platform for developers. Hosted at https://readingqueue.netlify.app.
 
 ## Stack
 - **Framework**: Next.js 16 (App Router, Turbopack)

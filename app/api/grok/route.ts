@@ -6,7 +6,7 @@ type GrokMessage = {
 const SYSTEM_PROMPT: GrokMessage = {
   role: "system",
   content:
-    "You are CloudDuty AI, a friendly assistant for the CloudDuty workspace. Keep responses concise, actionable, and focused on helping users manage posts, boards, and insights. If a request is unclear, ask a brief follow-up question.",
+    "You are Reading Queue AI, a friendly assistant for the Reading Queue workspace. Keep responses concise, actionable, and focused on helping users manage posts, boards, and insights. If a request is unclear, ask a brief follow-up question.",
 };
 
 export const runtime = "nodejs";
@@ -42,9 +42,9 @@ export async function POST(request: Request) {
   if (lastUser) {
     const content = lastUser.content.toLowerCase();
     const normalized = content.replace(/[^a-z]/g, "");
-    const mentionsCloudDuty = content.includes("cloud duty") || normalized.includes("cloudduty");
-    const aboutCloudDuty =
-      mentionsCloudDuty &&
+    const mentionsReadingQueue = content.includes("reading queue") || normalized.includes("readingqueue");
+    const aboutReadingQueue =
+      mentionsReadingQueue &&
       (content.includes("what is") ||
         content.includes("about") ||
         content.includes("tell me about") ||
@@ -54,12 +54,12 @@ export async function POST(request: Request) {
         content.includes("describe") ||
         content.includes("what's") ||
         content.includes("whats") ||
-        normalized.includes("whatiscloudduty") ||
-        normalized.includes("aboutcloudduty"));
-    if (aboutCloudDuty) {
+        normalized.includes("whatisreadingqueue") ||
+        normalized.includes("aboutreadingqueue"));
+    if (aboutReadingQueue) {
       return Response.json({
         message:
-          "CloudDuty is an AI-powered developer social platform where developers can showcase projects, interact with others, and discover relevant content through intelligent features like chatbot assistance and personalized feeds.",
+          "Reading Queue is an AI-powered developer social platform where developers can showcase projects, interact with others, and discover relevant content through intelligent features like chatbot assistance and personalized feeds.",
       });
     }
   }

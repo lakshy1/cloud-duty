@@ -10,8 +10,63 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="66c084c5-23a0-4cd7-b5a2-59137f2a0954" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/../.claude/settings.local.json" beforeDir="false" afterPath="$PROJECT_DIR$/../.claude/settings.local.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.replit" beforeDir="false" afterPath="$PROJECT_DIR$/../.replit" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/deploymentTargetSelector.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/deploymentTargetSelector.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/google-services.json" beforeDir="false" afterPath="$PROJECT_DIR$/app/google-services.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/cloudduty/app/MainActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/cloudduty/app/MainActivity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-hdpi/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-hdpi/ic_launcher.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-hdpi/ic_launcher_round.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-hdpi/ic_launcher_round.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-mdpi/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-mdpi/ic_launcher.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-mdpi/ic_launcher_round.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-mdpi/ic_launcher_round.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xhdpi/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xhdpi/ic_launcher.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values/strings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/api/grok/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../app/api/grok/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/api/send-push/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../app/api/send-push/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/auth/AuthClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/auth/AuthClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/components/Footer.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/components/Footer.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/components/HomeClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/components/HomeClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/components/Loader.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/components/Loader.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/components/LoginPromptModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/components/LoginPromptModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/components/MobileDrawer.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/components/MobileDrawer.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/components/Sidebar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/components/Sidebar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/components/push-notifications-bridge.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/components/push-notifications-bridge.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/data/card-data.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../app/data/card-data.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/email-confirmed/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/email-confirmed/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/globals.css" beforeDir="false" afterPath="$PROJECT_DIR$/../app/globals.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/inbox/InboxClient.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/inbox/InboxClient.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/my-posts/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/my-posts/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/reset-password/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/reset-password/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/saved/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/saved/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/search/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/search/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/state/ui-state.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/state/ui-state.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../app/user/[userId]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/../app/user/[userId]/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../capacitor.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../capacitor.config.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ios/App/App.xcodeproj/project.pbxproj" beforeDir="false" afterPath="$PROJECT_DIR$/../ios/App/App.xcodeproj/project.pbxproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png" beforeDir="false" afterPath="$PROJECT_DIR$/../ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ios/App/App/Info.plist" beforeDir="false" afterPath="$PROJECT_DIR$/../ios/App/App/Info.plist" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/../package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../replit.md" beforeDir="false" afterPath="$PROJECT_DIR$/../replit.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../supabase/email-templates/change-email.html" beforeDir="false" afterPath="$PROJECT_DIR$/../supabase/email-templates/change-email.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../supabase/email-templates/confirm-signup.html" beforeDir="false" afterPath="$PROJECT_DIR$/../supabase/email-templates/confirm-signup.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../supabase/email-templates/invite.html" beforeDir="false" afterPath="$PROJECT_DIR$/../supabase/email-templates/invite.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../supabase/email-templates/password-reset.html" beforeDir="false" afterPath="$PROJECT_DIR$/../supabase/email-templates/password-reset.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../supabase/posts.sql" beforeDir="false" afterPath="$PROJECT_DIR$/../supabase/posts.sql" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -56,22 +111,22 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Android App.app.executor": "Run",
-    "Android App.cloud-duty.android.app.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.cidr.known.project.marker": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.readMode.enableVisualFormatting": "true",
-    "cf.first.check.clang-format": "false",
-    "cidr.known.project.marker": "true",
-    "git-widget-placeholder": "master",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/laksh/OneDrive/Desktop/Cloudduty.io/01-cloud-duty/android"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Android App.app.executor&quot;: &quot;Run&quot;,
+    &quot;Android App.cloud-duty.android.app.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
+    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
+    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/laksh/OneDrive/Desktop/Cloudduty.io/01-cloud-duty/android&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="Android App.app">
     <configuration name="app" type="AndroidRunConfigurationType" factoryName="Android App" activateToolWindowBeforeRun="false">
       <module name="android.app" />

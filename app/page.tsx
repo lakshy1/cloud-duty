@@ -1,11 +1,18 @@
 import { Suspense } from "react";
+import { Skeleton } from "./components/Skeleton";
 import HomeClient from "./components/HomeClient";
 
 function HomeFallback() {
   return (
-    <div className="loader-shell loader-screen" role="status" aria-live="polite">
-      <div className="loader-spinner" aria-hidden="true" />
-      <div className="loader-text">Loading...</div>
+    <div className="masonry" aria-hidden="true">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div className="skeleton-card" key={`sk-${i}`}>
+          <Skeleton className="skeleton-thumb" />
+          <Skeleton className="skeleton-line skeleton-w-80" />
+          <Skeleton className="skeleton-line skeleton-w-60" />
+          <Skeleton className="skeleton-line sm skeleton-w-40" />
+        </div>
+      ))}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { RefObject } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "./Icon";
@@ -48,9 +49,9 @@ export function MobileDrawer({ open, panelRef, onClose, onCreate, onSearch }: Mo
         <div className="m-drawer-head">
           <Link className="m-drawer-logo" href="/" onClick={onClose}>
             <div className="m-drawer-logo-icon">
-              <Icon name="cloud" stroke="#fff" />
+              <Image src="/logo.png" alt="Cloudduty logo" width={40} height={40} placeholder="empty" style={{ background: "transparent" }} />
             </div>
-            <span className="m-drawer-title">CloudDuty</span>
+            <span className="m-drawer-title">Reading Queue</span>
           </Link>
           <button className="m-drawer-close" onClick={onClose} aria-label="Close menu">
             <svg viewBox="0 0 24 24">

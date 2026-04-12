@@ -88,12 +88,12 @@ export async function POST(request: Request) {
     return Response.json({ sent: 0, reason: "FCM not configured" });
   }
 
-  const projectId = process.env.FIREBASE_PROJECT_ID ?? "cloudduty-8cea8";
+  const projectId = process.env.FIREBASE_PROJECT_ID ?? "readingqueue";
 
   // title   = sender name  (top line of notification)
   // body    = notification type label  (bottom line, collapsed)
   // content = actual message text  (shown when notification is expanded)
-  const notifTitle = senderName ?? "CloudDuty";
+  const notifTitle = senderName ?? "Reading Queue";
   const notifBody = notificationType ?? "New message";
 
   // Data payload is available in the bridge for foreground rich rendering
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
               android: {
                 priority: "high",
                 notification: {
-                  channel_id: "cloudduty_messages",
+                  channel_id: "readingqueue_messages",
                   notification_priority: "PRIORITY_HIGH",
                   default_sound: true,
                   default_vibrate_timings: true,

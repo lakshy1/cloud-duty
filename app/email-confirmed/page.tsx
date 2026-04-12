@@ -28,7 +28,7 @@ export default function EmailConfirmedPage() {
       <header className="email-confirmed-header">
         <div className="email-confirmed-brand">
           <span className="email-confirmed-dot" />
-          <span className="email-confirmed-wordmark">CloudDuty</span>
+          <span className="email-confirmed-wordmark">Reading Queue</span>
         </div>
         <Link href="/" className="email-confirmed-nav">
           Go to Dashboard
@@ -58,7 +58,7 @@ export default function EmailConfirmedPage() {
         <div className="email-confirmed-kicker">Email confirmed</div>
         <h1 className="email-confirmed-title">Hi {name}, you&apos;re in.</h1>
         <p className="email-confirmed-body">
-          Your CloudDuty account is now active. Jump back into your workspace.
+          Your Reading Queue account is now active. Jump back into your workspace.
         </p>
 
         <Link href="/" className="email-confirmed-cta">
@@ -67,7 +67,7 @@ export default function EmailConfirmedPage() {
       </div>
 
       <footer className="email-confirmed-footer">
-        <span>CloudDuty</span>
+        <span>Reading Queue</span>
         <span className="email-confirmed-footer-sep" />
         <span>Security notice: this link works only after email confirmation.</span>
       </footer>

@@ -1,0 +1,227 @@
+================================================================
+  READING QUEUE — SUPABASE MIGRATION SETUP GUIDE
+================================================================
+Use this file whenever you move the app to a new Supabase account.
+Follow every step in order to avoid dependency errors.
+================================================================
+
+
+----------------------------------------------------------------
+STEP 1 — CREATE A NEW SUPABASE PROJECT
+----------------------------------------------------------------
+1. Go to https://supabase.com and sign in.
+2. Click "New Project".
+3. Fill in:
+   - Project name : Reading Queue
+   - Database password : (save this somewhere safe)
+   - Region : pick the closest to your users
+4. Wait for the project to fully initialize (~2 minutes).
+
+
+----------------------------------------------------------------
+STEP 2 — RUN SQL FILES (in this exact order)
+----------------------------------------------------------------
+Go to: Supabase Dashboard → SQL Editor → New Query
+
+Paste and run each file one at a time in the order listed below.
+Do NOT skip or reorder — later files depend on earlier ones.
+
+  1. supabase/posts.sql
+     Creates: posts, saved_posts, post_reactions, profiles,
+              post_impressions tables + log_reaction() and
+              log_impression() functions + all RLS policies +
+              update own posts policy + seed welcome post.
+
+  2. supabase/follows.sql
+     Creates: follows table + RLS policies.
+
+  3. supabase/profile-bio-skills.sql
+     Adds:    bio (text) and skills (text[]) columns to profiles.
+
+  4. supabase/notifications.sql
+     Creates: notifications table + RLS policies.
+
+  5. supabase/messages.sql
+     Creates: chats, chat_messages tables +
+              is_mutual_follow() function + RLS policies.
+
+  6. supabase/device-tokens.sql
+     Creates: device_tokens table + get_push_tokens() function +
+              touch_device_token_updated_at trigger + RLS policies.
+
+  7. supabase/attachments.sql
+     Creates: chat_attachments_meta table +
+              chat-attachments storage bucket + storage policies.
+
+  8. supabase/storage-buckets.sql
+     Creates: post-images, profile-photos, profile-covers
+              storage buckets + RLS policies for all three.
+
+
+----------------------------------------------------------------
+STEP 3 — CONFIGURE AUTH SETTINGS (Supabase Dashboard)
+----------------------------------------------------------------
+Go to: Authentication → URL Configuration
+
+  Site URL:
+    https://your-production-domain.com
+    (use https://readingqueue.netlify.app if deploying to Netlify)
+
+  Redirect URLs (add all of these):
+    https://your-production-domain.com/auth/callback
+    https://your-production-domain.com/auth/callback?next=/
+    http://localhost:5000/auth/callback
+    http://localhost:5000/auth/callback?next=/
+
+
+----------------------------------------------------------------
+STEP 4 — SET UP EMAIL TEMPLATES (Supabase Dashboard)
+----------------------------------------------------------------
+Go to: Authentication → Email Templates
+
+Paste the HTML content from each file into the matching template:
+
+  Template: Confirm signup
+  File:     supabase/email-templates/confirm-signup.html
+
+  Template: Invite user
+  File:     supabase/email-templates/invite.html
+
+  Template: Reset password
+  File:     supabase/email-templates/password-reset.html
+
+  Template: Change email address
+  File:     supabase/email-templates/change-email.html
+
+NOTE: After pasting, update any URLs inside the templates that
+still reference the old domain to your new production domain.
+
+
+----------------------------------------------------------------
+STEP 5 — GET YOUR NEW PROJECT CREDENTIALS
+----------------------------------------------------------------
+Go to: Project Settings → API
+
+Copy these two values — you will need them in Step 6:
+
+  Project URL   →  NEXT_PUBLIC_SUPABASE_URL
+  Anon/Public key →  NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+
+----------------------------------------------------------------
+STEP 6 — UPDATE ENVIRONMENT VARIABLES
+----------------------------------------------------------------
+Update your .env (or .env.local) file with the new credentials:
+
+  NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY=your-new-anon-key-here
+  NEXT_PUBLIC_SITE_URL=https://your-production-domain.com
+
+  # Storage bucket names (these should already match):
+  NEXT_PUBLIC_POST_IMAGES_BUCKET=post-images
+  NEXT_PUBLIC_PROFILE_IMAGES_BUCKET=profile-photos
+  NEXT_PUBLIC_COVER_IMAGES_BUCKET=profile-covers
+
+If deploying on Netlify/Vercel, set these same variables
+in the hosting platform's environment variable settings too.
+
+
+----------------------------------------------------------------
+STEP 7 — FIREBASE / PUSH NOTIFICATIONS (Android & iOS)
+----------------------------------------------------------------
+The Firebase project ID (cloudduty-8cea8) in
+android/app/google-services.json is tied to the old Firebase
+project. Push notifications will NOT work until you:
+
+  1. Go to https://console.firebase.google.com
+  2. Create a new Firebase project named "Reading Queue"
+  3. Register app with package name: com.readingqueue.app
+  4. Download the new google-services.json and replace:
+       android/app/google-services.json
+  5. For iOS, download GoogleService-Info.plist and replace:
+       ios/App/App/GoogleService-Info.plist
+  6. Update FIREBASE_PROJECT_ID in your server environment
+     to the new Firebase project ID.
+
+
+----------------------------------------------------------------
+STEP 8 — ANDROID PACKAGE DIRECTORY (optional cleanup)
+----------------------------------------------------------------
+The Java source directory still uses the old package path:
+  android/app/src/main/java/com/cloudduty/app/
+
+To fully align with com.readingqueue.app:
+  1. Open the project in Android Studio
+  2. Right-click the com.cloudduty.app package
+  3. Refactor → Rename → update to com.readingqueue.app
+  4. Android Studio will move the files and update imports
+
+This is cosmetic — the app will build correctly either way
+since the namespace is already updated in build.gradle.
+
+
+----------------------------------------------------------------
+STEP 9 — VERIFY EVERYTHING WORKS
+----------------------------------------------------------------
+Checklist after completing all steps:
+
+  [ ] npm run dev starts without errors
+  [ ] Sign up creates a new user in Supabase Auth
+  [ ] Confirmation email arrives and redirects correctly
+  [ ] Profile, posts, saves, follows all read/write to DB
+  [ ] Avatar and cover photo uploads work
+  [ ] Post image uploads work
+  [ ] Direct messages work
+  [ ] Push notifications arrive on Android / iOS (needs Firebase)
+
+
+----------------------------------------------------------------
+TABLES SUMMARY (all tables in this project)
+----------------------------------------------------------------
+
+  public.posts               — post cards shown in the feed
+  public.saved_posts         — posts saved by users
+  public.post_reactions      — likes and dislikes on posts
+  public.post_impressions    — view tracking per post per user
+  public.profiles            — user profile data
+  public.follows             — follower / following relationships
+  public.notifications       — in-app notification events
+  public.chats               — direct message chat threads
+  public.chat_messages       — individual messages in a chat
+  public.chat_attachments_meta — file attachment metadata
+  public.device_tokens       — FCM push tokens per device
+
+
+----------------------------------------------------------------
+STORAGE BUCKETS SUMMARY
+----------------------------------------------------------------
+
+  post-images        — cover images for posts
+  profile-photos     — user avatar images
+  profile-covers     — user banner/cover images
+  chat-attachments   — file attachments in direct messages
+
+
+----------------------------------------------------------------
+FUNCTIONS SUMMARY
+----------------------------------------------------------------
+
+  public.log_reaction(post_id, reaction)
+    — toggles like/dislike and updates counts on posts
+
+  public.log_impression(post_id)
+    — records a unique view and updates impressions_count
+
+  public.is_mutual_follow(user_one, user_two)
+    — returns true if both users follow each other (used for DMs)
+
+  public.get_push_tokens(target_user_id)
+    — returns FCM tokens for a user (used by /api/send-push)
+
+  public.touch_device_token_updated_at()
+    — trigger function to keep updated_at current on device_tokens
+
+
+================================================================
+  END OF SETUP GUIDE
+================================================================

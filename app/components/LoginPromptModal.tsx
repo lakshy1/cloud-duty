@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Image from "next/image";
 import { Icon } from "./Icon";
 
 type LoginPromptModalProps = {
@@ -36,7 +37,7 @@ export function LoginPromptModal({ open, onClose }: LoginPromptModalProps) {
         </button>
 
         <div className="login-prompt-icon">
-          <Icon name="cloud" stroke="currentColor" />
+          <Image src="/logo.png" alt="Cloudduty logo" width={48} height={48} placeholder="empty" style={{ background: "transparent" }} />
         </div>
 
         <h2 className="login-prompt-title">Login required</h2>

@@ -75,7 +75,7 @@ export default function PushNotificationsBridge({
           console.info(`${logPrefix} received`, notification);
 
           const d = notification.data as Record<string, string> | undefined;
-          const senderName  = d?.sender_name  || notification.title  || "CloudDuty";
+          const senderName  = d?.sender_name  || notification.title  || "Reading Queue";
           const typeLabel   = getTypeLabel(d?.notification_type) || notification.body || "";
           const content     = d?.content ?? "";
 

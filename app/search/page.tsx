@@ -446,7 +446,7 @@ export default function SearchPage() {
 
           {!normalizedQuery ? (
             <div className="search-empty-panel">
-              <div className="search-empty-title">Search the CloudDuty workspace</div>
+              <div className="search-empty-title">Search the Reading Queue workspace</div>
               <div className="search-empty-sub">
                 Try a tag, project name, or teammate handle.
               </div>
@@ -511,7 +511,7 @@ export default function SearchPage() {
                         onClick={() => router.push(`/user/${profile.user_id}`)}
                         style={{ cursor: "pointer" }}
                       >
-                        <div className="profile-row-name">{profile.full_name ?? "CloudDuty User"}</div>
+                        <div className="profile-row-name">{profile.full_name ?? "Reading Queue User"}</div>
                         <div className="profile-row-username">
                           {profile.username ? `@${profile.username}` : "@user"}
                         </div>

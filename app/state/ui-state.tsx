@@ -296,7 +296,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
               await LocalNotifications.schedule({
                 notifications: [{
                   id: Date.now(),
-                  title: toast.title ?? "CloudDuty",
+                  title: toast.title ?? "Reading Queue",
                   body: toast.message,
                 }],
               }).catch(() => {});
@@ -465,7 +465,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
               await LocalNotifications.schedule({
                 notifications: [{
                   id: Date.now(),
-                  title: toast.title ?? "CloudDuty",
+                  title: toast.title ?? "Reading Queue",
                   body: toast.message,
                 }],
               }).catch(() => {});

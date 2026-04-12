@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { Provider, User } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
+import { PrivacyPolicyModal } from "../components/PrivacyPolicyModal";
+import { TermsOfServiceModal } from "../components/TermsOfServiceModal";
 
 type AuthMode = "login" | "signup";
 type LoginMode = "password" | "phone";
@@ -96,7 +98,7 @@ function PasswordEyeIcon({ visible }: { visible: boolean }) {
 export default function AuthClient() {
   const searchParams = useSearchParams();
   const supabase = getSupabaseBrowserClient();
-  const fallbackBase = "https://cloudduty.vercel.app";
+  const fallbackBase = "https://readingqueue.vercel.app";
   const siteUrl =
     process.env.NEXT_PUBLIC_PROJECT_URL ??
     process.env.NEXT_PUBLIC_SITE_URL ??
@@ -104,6 +106,8 @@ export default function AuthClient() {
   const redirectBase = siteUrl.includes("netlify.app") ? fallbackBase : siteUrl || fallbackBase;
   const paramMode = searchParams?.get("mode") === "signup" ? "signup" : "login";
   const [authMode, setAuthMode] = useState<AuthMode>(paramMode);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
 
   useEffect(() => {
     setAuthMode(paramMode);
@@ -905,23 +909,25 @@ export default function AuthClient() {
             {signupError ? <p className="auth-error">{signupError}</p> : null}
 
             <p className="auth-hint">
-              By continuing you agree to CloudDuty&apos;s{" "}
-              <a className="auth-hint-link" href="/terms">
+              By continuing you agree to Reading Queue&apos;s{" "}
+              <button className="auth-hint-link" type="button" onClick={() => setTermsOpen(true)}>
                 Terms of Service
-              </a>{" "}
+              </button>{" "}
               and{" "}
-              <a className="auth-hint-link" href="/privacy">
+              <button className="auth-hint-link" type="button" onClick={() => setPrivacyOpen(true)}>
                 Privacy Policy
-              </a>
+              </button>
               .
             </p>
+            {termsOpen && <TermsOfServiceModal onClose={() => setTermsOpen(false)} />}
+            {privacyOpen && <PrivacyPolicyModal onClose={() => setPrivacyOpen(false)} />}
           </div>
         </section>
 
         <div className="auth-dual__overlay">
           <div className="auth-dual__overlay-inner">
             <div className="auth-dual__overlay-panel auth-dual__overlay-left">
-              <p className="auth-brand">CloudDuty</p>
+              <p className="auth-brand">Reading Queue</p>
               <h2 className="auth-slide-title">Welcome back.</h2>
               <p className="auth-slide-text">To keep connected, sign in with your personal info.</p>
               <button
@@ -933,7 +939,7 @@ export default function AuthClient() {
               </button>
             </div>
             <div className="auth-dual__overlay-panel auth-dual__overlay-right">
-              <p className="auth-brand">CloudDuty</p>
+              <p className="auth-brand">Reading Queue</p>
               <h2 className="auth-slide-title">Start your workspace.</h2>
               <p className="auth-slide-text">Create your account and launch in minutes.</p>
               <button

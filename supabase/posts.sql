@@ -39,6 +39,13 @@ create policy "public insert posts"
   for insert
   with check (true);
 
+drop policy if exists "update own posts" on public.posts;
+create policy "update own posts"
+  on public.posts
+  for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
 drop policy if exists "delete own posts" on public.posts;
 create policy "delete own posts"
   on public.posts
@@ -299,13 +306,13 @@ insert into public.posts (img, ava, author, handle, tag, title, summary, slug, "
 (
   $$https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&q=85$$,
   $$/cloud-avatar.svg$$,
-  $$CloudDuty$$,
-  $$@CloudDuty$$,
+  $$Reading Queue$$,
+  $$@Reading Queue$$,
   $$Announcement$$,
-  $$Welcome to CloudDuty$$,
-  $$CloudDuty is a platform for developers to showcase there projects and make a attractive portfolio to showcase to other people, they can also connect and interact with other developers !$$,
-  $$welcome-to-cloudduty$$,
-  $$CloudDuty is a platform for developers to showcase there projects and make a attractive portfolio to showcase to other people, they can also connect and interact with other developers !$$,
+  $$Welcome to Reading Queue$$,
+  $$Reading Queue is a platform for developers to showcase there projects and make a attractive portfolio to showcase to other people, they can also connect and interact with other developers !$$,
+  $$welcome-to-reading-queue$$,
+  $$Reading Queue is a platform for developers to showcase there projects and make a attractive portfolio to showcase to other people, they can also connect and interact with other developers !$$,
   $$0$$,
   $$0$$,
   $$0$$,

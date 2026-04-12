@@ -1,4 +1,4 @@
-package com.cloudduty.app;
+package com.readingqueue.app;
 
 import com.getcapacitor.BridgeActivity;
 

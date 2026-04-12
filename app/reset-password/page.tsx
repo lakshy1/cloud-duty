@@ -58,7 +58,7 @@ export default function ResetPasswordPage() {
         <section className="auth-panel auth-panel--slide">
           <div className="auth-slide-glow" />
           <div className="auth-slide-inner">
-            <p className="auth-brand">CloudDuty</p>
+            <p className="auth-brand">Reading Queue</p>
             <h1 className="auth-slide-title">Reset your password.</h1>
             <p className="auth-slide-text">
               Choose a new password to secure your workspace.

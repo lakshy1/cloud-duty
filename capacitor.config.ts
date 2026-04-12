@@ -4,8 +4,8 @@ const serverUrl = process.env.CAPACITOR_SERVER_URL;
 const isHttp = typeof serverUrl === "string" && serverUrl.startsWith("http://");
 
 const config: CapacitorConfig = {
-  appId: "com.cloudduty.app",
-  appName: "CloudDuty",
+  appId: "com.readingqueue.app",
+  appName: "Reading Queue",
   webDir: "out",
   plugins: {
     PushNotifications: {
