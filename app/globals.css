@@ -1143,37 +1143,6 @@ body{
 }
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* app intro video splash */
-.app-intro{
-  position:fixed;inset:0;z-index:9500;
-  display:flex;align-items:center;justify-content:center;
-  background:radial-gradient(circle at top, color-mix(in srgb,var(--accent) 12%,transparent), rgba(0,0,0,.55) 45%, rgba(0,0,0,.75) 100%);
-  backdrop-filter:blur(10px);
-}
-.app-intro-card{
-  display:flex;flex-direction:column;align-items:center;gap:14px;
-}
-.app-intro-orb{
-  width:190px;height:190px;border-radius:50%;
-  background:color-mix(in srgb,var(--surface) 55%,transparent);
-  border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));
-  box-shadow:0 24px 60px rgba(0,0,0,.45),0 0 0 6px color-mix(in srgb,var(--accent) 12%,transparent);
-  display:grid;place-items:center;overflow:hidden;
-}
-.app-intro-video{
-  width:140%;height:140%;object-fit:contain;
-}
-.app-intro-title{
-  font-family:var(--font-display),sans-serif;
-  font-size:1rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase;
-  color:var(--text);
-}
-@media(max-width:580px){
-  .app-intro-orb{width:160px;height:160px;}
-  .app-intro-video{width:150%;height:150%;}
-  .app-intro-title{font-size:.9rem;letter-spacing:.14em;}
-}
-
 
 /* skeletons */
 .skeleton{

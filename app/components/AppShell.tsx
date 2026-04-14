@@ -28,6 +28,21 @@ export function AppShell({
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
+    const hideSplash = async () => {
+      try {
+        // @ts-ignore - Capacitor types may not be available
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SplashScreen) {
+          // @ts-ignore
+          await window.Capacitor.Plugins.SplashScreen.hide();
+        }
+      } catch (e) {
+        // SplashScreen plugin not available (web only)
+      }
+    };
+    hideSplash();
+  }, []);
+
+  useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     const checkAuth = async () => {
       const { data } = await supabase.auth.getSession();

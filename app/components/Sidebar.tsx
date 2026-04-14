@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useRef } from "react";
+import { Capacitor } from "@capacitor/core";
 import { Icon } from "./Icon";
 import { useUIState } from "../state/ui-state";
 
@@ -18,6 +20,7 @@ export function Sidebar({ onCreate, onSearch }: SidebarProps) {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
   const { createOpen, isLoggedIn, setLoginPromptOpen, hasUnreadNotifications, inboxUnreadCount } = useUIState();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const isNative = Capacitor.isNativePlatform();
 
   const handleMouseEnter = () => {
     const v = videoRef.current;
@@ -40,18 +43,34 @@ export function Sidebar({ onCreate, onSearch }: SidebarProps) {
 
   return (
     <aside className="sidebar">
-      <Link className="sb-logo" href="/" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-        <video
-          ref={videoRef}
-          autoPlay
-          muted
-          playsInline
-          onEnded={() => videoRef.current?.pause()}
-          style={{ width: 48, height: 47, borderRadius: 7, background: "transparent", display: "block" }}
-        >
-          <source src="/logo-video-transparent.webm" type="video/webm" />
-          <source src="/logo-video.mp4" type="video/mp4" />
-        </video>
+      <Link
+        className="sb-logo"
+        href="/"
+        onMouseEnter={isNative ? undefined : handleMouseEnter}
+        onMouseLeave={isNative ? undefined : handleMouseLeave}
+      >
+        {isNative ? (
+          <Image
+            src="/logo.png"
+            alt="Reading Queue logo"
+            width={48}
+            height={47}
+            priority
+            style={{ borderRadius: 7, background: "transparent", display: "block" }}
+          />
+        ) : (
+          <video
+            ref={videoRef}
+            autoPlay={!isNative}
+            muted
+            playsInline
+            onEnded={() => videoRef.current?.pause()}
+            style={{ width: 48, height: 47, borderRadius: 7, background: "transparent", display: "block" }}
+          >
+            <source src="/logo-video-transparent.webm" type="video/webm" />
+            <source src="/logo-video.mp4" type="video/mp4" />
+          </video>
+        )}
       </Link>
       <div className="sb-sep" />
       <Link className={`sb-btn${isActive("/") ? " active" : ""}`} href="/" aria-label="Home">

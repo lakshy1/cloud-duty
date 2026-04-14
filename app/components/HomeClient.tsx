@@ -72,7 +72,6 @@ export default function HomeClient() {
   const [reactions, setReactions] = useState<Map<string, "like" | "dislike">>(new Map());
   const [userId, setUserId] = useState<string | null>(null);
   const [loadingPosts, setLoadingPosts] = useState(true);
-  const [showIntro, setShowIntro] = useState(false);
   const [popupInteractions, setPopupInteractions] = useState<PopupInteractions>(
     initialPopupInteractions
   );
@@ -108,25 +107,6 @@ export default function HomeClient() {
     checkSession();
   }, []);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const isCapacitor = !!(window as { Capacitor?: unknown }).Capacitor;
-    if (!isCapacitor) return;
-    const alreadyShown = window.sessionStorage.getItem("rq_intro_seen") === "1";
-    if (!alreadyShown) {
-      setShowIntro(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!showIntro) return;
-    if (!authChecked || loadingPosts) return;
-    const timer = window.setTimeout(() => {
-      window.sessionStorage.setItem("rq_intro_seen", "1");
-      setShowIntro(false);
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [authChecked, loadingPosts, showIntro]);
 
 
   const popupData = popupIndex !== null ? cards[popupIndex] : null;
@@ -922,23 +902,6 @@ export default function HomeClient() {
 
   return (
     <>
-      {showIntro ? (
-        <div className="app-intro" role="status" aria-live="polite">
-          <div className="app-intro-card">
-            <div className="app-intro-orb" aria-hidden="true">
-              <video
-                className="app-intro-video"
-                src="/logo%20video%20transparent.webm"
-                autoPlay
-                loop
-                muted
-                playsInline
-              />
-            </div>
-            <div className="app-intro-title">Reading Queue</div>
-          </div>
-        </div>
-      ) : null}
       <AppShell>
         <PaletteRow />
         {loadingPosts ? (
