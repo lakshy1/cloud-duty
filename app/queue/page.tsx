@@ -83,8 +83,9 @@ export default function QueuePage() {
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     const loadUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUserId(data.user?.id ?? null);
+      // getSession reads from localStorage — works offline
+      const { data } = await supabase.auth.getSession();
+      setUserId(data.session?.user?.id ?? null);
     };
     loadUser();
   }, []);
