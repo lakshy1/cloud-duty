@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
+import { Capacitor } from "@capacitor/core";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 import { Icon } from "./Icon";
 import { useUIState } from "../state/ui-state";
@@ -32,6 +33,7 @@ export function Topbar({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const cacheKey = "cd_profile_cache";
   const logoVideoRef = useRef<HTMLVideoElement | null>(null);
+  const isNative = Capacitor.isNativePlatform();
 
   useEffect(() => {
     const onDocClick = (event: MouseEvent) => {
@@ -140,19 +142,31 @@ export function Topbar({
         aria-label="Reading Queue home"
         onClick={handleMobileLogoClick}
       >
-        <video
-          ref={logoVideoRef}
-          muted
-          playsInline
-          preload="auto"
-          onEnded={() => {
-            const video = logoVideoRef.current;
-            if (video) video.pause();
-          }}
-        >
-          <source src="/logo-video-transparent.webm" type="video/webm" />
-          <source src="/logo-video.mp4" type="video/mp4" />
-        </video>
+        {isNative ? (
+          <Image
+            src="/logo.png"
+            alt="Reading Queue logo"
+            width={36}
+            height={36}
+            priority
+            style={{ borderRadius: 7, background: "transparent", display: "block" }}
+          />
+        ) : (
+          <video
+            ref={logoVideoRef}
+            muted
+            playsInline
+            preload="auto"
+            poster="/logo.png"
+            onEnded={() => {
+              const video = logoVideoRef.current;
+              if (video) video.pause();
+            }}
+          >
+            <source src="/logo-video-transparent.webm" type="video/webm" />
+            <source src="/logo-video.mp4" type="video/mp4" />
+          </video>
+        )}
       </button>
 
       {/* ── DESKTOP ONLY: hamburger + search ─────────────── */}

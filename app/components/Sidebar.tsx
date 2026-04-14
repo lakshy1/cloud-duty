@@ -64,6 +64,7 @@ export function Sidebar({ onCreate, onSearch }: SidebarProps) {
             autoPlay={!isNative}
             muted
             playsInline
+            poster="/logo.png"
             onEnded={() => videoRef.current?.pause()}
             style={{ width: 48, height: 47, borderRadius: 7, background: "transparent", display: "block" }}
           >
