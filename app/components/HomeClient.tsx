@@ -12,6 +12,7 @@ import type { CardData } from "../data/card-data";
 import { cardData } from "../data/card-data";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 import { getCache, setCache } from "../lib/client-cache";
+import { setReaderMode, shouldUseReadingMode, isReaderModeActive } from "../lib/reading-mode";
 import { useUIState } from "../state/ui-state";
 
 type PopupState = {
@@ -72,6 +73,10 @@ export default function HomeClient() {
   const [reactions, setReactions] = useState<Map<string, "like" | "dislike">>(new Map());
   const [userId, setUserId] = useState<string | null>(null);
   const [loadingPosts, setLoadingPosts] = useState(true);
+  const [isOnline, setIsOnline] = useState<boolean>(
+    typeof window === "undefined" ? true : window.navigator.onLine
+  );
+  const [offlineReady, setOfflineReady] = useState(false);
   const [popupInteractions, setPopupInteractions] = useState<PopupInteractions>(
     initialPopupInteractions
   );
@@ -96,6 +101,18 @@ export default function HomeClient() {
   });
   const openedFromQueryRef = useRef(false);
   const cacheKeyRef = useRef("cd_cache_home_posts_v1");
+
+  useEffect(() => {
+    const syncOnline = () => {
+      setIsOnline(window.navigator.onLine);
+    };
+    window.addEventListener("online", syncOnline);
+    window.addEventListener("offline", syncOnline);
+    return () => {
+      window.removeEventListener("online", syncOnline);
+      window.removeEventListener("offline", syncOnline);
+    };
+  }, []);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -133,6 +150,9 @@ export default function HomeClient() {
   const getTargetRect = useCallback(() => {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+    if (isReaderModeActive()) {
+      return { x: 0, y: 0, w: vw, h: vh, mobile: true };
+    }
     const isMobile = vw <= 580;
     if (isMobile) {
       const h = vh * 0.9;
@@ -176,6 +196,7 @@ export default function HomeClient() {
     }
 
     overlay.classList.remove("active");
+    const wasReaderMode = isReaderModeActive();
 
     if (mobile) {
       state.activeAnim = panel.animate(
@@ -232,7 +253,12 @@ export default function HomeClient() {
         state.savedCardRect = null;
         state.activeAnim = null;
         setPopupIndex(null);
+        if (wasReaderMode) {
+          setReaderMode(false);
+        }
       };
+    } else if (wasReaderMode) {
+      setReaderMode(false);
     }
   }, [getTargetRect, setPopupIndex, setPopupOpen]);
 
@@ -252,6 +278,9 @@ export default function HomeClient() {
 
       state.currentPopupIndex = index;
       panel.classList.remove("content-visible", "ready");
+
+      const readerMode = shouldUseReadingMode(cards[index]);
+      setReaderMode(readerMode);
 
       state.savedCardRect = cardRect;
       const { x: tx, y: ty, w: tw, h: th, mobile } = getTargetRect();
@@ -314,7 +343,7 @@ export default function HomeClient() {
         };
       }
     },
-    [applyFinalGeometry, getTargetRect, setPopupIndex, setPopupOpen]
+    [applyFinalGeometry, cards, getTargetRect, setPopupIndex, setPopupOpen]
   );
 
   useEffect(() => {
@@ -564,7 +593,16 @@ export default function HomeClient() {
       const cached = getCache<CardData[]>(cacheKeyRef.current, 5 * 60 * 1000);
       if (cached && cached.length) {
         setCards(sortByRecent(cached));
+        setOfflineReady(false);
         setLoadingPosts(false);
+      }
+      if (!isOnline) {
+        const fallback = cached && cached.length ? cached : cardData;
+        setCards(sortByRecent(fallback));
+        setOfflineReady(true);
+        setCache(cacheKeyRef.current, sortByRecent(fallback));
+        setLoadingPosts(false);
+        return;
       }
       const supabase = getSupabaseBrowserClient();
       const { data, error } = await supabase.from("posts").select("*").order("created_at", {
@@ -572,7 +610,12 @@ export default function HomeClient() {
       });
       if (!active) return;
       if (error || !data) {
-        setCards(cardData);
+        const fallback = cached && cached.length ? cached : cardData;
+        setCards(sortByRecent(fallback));
+        setOfflineReady(false);
+        if (!cached || !cached.length) {
+          setCache(cacheKeyRef.current, sortByRecent(fallback));
+        }
         setLoadingPosts(false);
         return;
       }
@@ -607,13 +650,14 @@ export default function HomeClient() {
       const sorted = sortByRecent(mapped);
       setCards(sorted);
       setCache(cacheKeyRef.current, sorted);
+      setOfflineReady(false);
       setLoadingPosts(false);
     };
     fetchPosts();
     return () => {
       active = false;
     };
-  }, []);
+  }, [isOnline]);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -904,6 +948,21 @@ export default function HomeClient() {
     <>
       <AppShell>
         <PaletteRow />
+        {!isOnline || offlineReady ? (
+          <section className="offline-banner" role="status" aria-live="polite">
+            <div className="offline-banner-copy">
+              <div className="offline-banner-title">No connection, no problem.</div>
+              <p>Go to your reading queue. Available offline as well.</p>
+            </div>
+            <button
+              className="offline-banner-cta"
+              type="button"
+              onClick={() => router.push("/queue")}
+            >
+              Open Queue
+            </button>
+          </section>
+        ) : null}
         {loadingPosts ? (
           <div className="masonry" aria-hidden="true">
             {Array.from({ length: 6 }).map((_, index) => (

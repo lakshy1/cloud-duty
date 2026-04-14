@@ -10,6 +10,7 @@ import { FollowButton } from "../components/FollowButton";
 import { PopupModal, PopupInteractions } from "../components/PopupModal";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 import type { CardData } from "../data/card-data";
+import { isReaderModeActive, setReaderMode, shouldUseReadingMode } from "../lib/reading-mode";
 
 type ProfileResult = {
   user_id: string;
@@ -211,6 +212,14 @@ export default function SearchPage() {
     if (!panel) return;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+    if (isReaderModeActive()) {
+      panel.style.left = "0px";
+      panel.style.top = "0px";
+      panel.style.width = "100vw";
+      panel.style.height = "100vh";
+      panel.style.borderRadius = "0";
+      return;
+    }
     const mobile = vw <= 580;
     if (mobile) {
       panel.style.left = "0px";
@@ -242,6 +251,7 @@ export default function SearchPage() {
       if (!panel || !overlay) return;
 
       panel.classList.remove("ready", "content-visible");
+      setReaderMode(shouldUseReadingMode(filteredPosts[index]));
       applyPanelGeometry();
       panel.style.opacity = "0";
       panel.style.transform = "scale(0.94)";
@@ -271,6 +281,7 @@ export default function SearchPage() {
     if (!panel || !overlay) return;
 
     panel.classList.remove("ready", "content-visible");
+    const wasReaderMode = isReaderModeActive();
     overlay.classList.remove("active");
     panel.style.transition = "opacity 0.18s ease, transform 0.2s ease";
     panel.style.opacity = "0";
@@ -279,6 +290,7 @@ export default function SearchPage() {
     setTimeout(() => {
       panel.style.cssText = "left:-9999px;opacity:0;";
       setPopupIndex(null);
+      if (wasReaderMode) setReaderMode(false);
     }, 220);
   }, []);
 

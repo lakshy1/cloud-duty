@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -12,12 +13,14 @@ type TopbarProps = {
   drawerOpen: boolean;
   onToggleDrawer: () => void;
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
+  hidden?: boolean;
 };
 
 export function Topbar({
   drawerOpen,
   onToggleDrawer,
   searchInputRef,
+  hidden = false,
 }: TopbarProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -28,6 +31,7 @@ export function Topbar({
   const [userName, setUserName] = useState("Account");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const cacheKey = "cd_profile_cache";
+  const logoVideoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     const onDocClick = (event: MouseEvent) => {
@@ -110,33 +114,74 @@ export function Topbar({
     window.location.href = "/";
   }, []);
 
+  const playMobileLogo = () => {
+    const video = logoVideoRef.current;
+    if (!video) return;
+    video.currentTime = 0;
+    void video.play();
+  };
+
+  const handleMobileLogoClick = () => {
+    playMobileLogo();
+    if (pathname !== "/") {
+      window.setTimeout(() => {
+        router.push("/");
+      }, 120);
+    }
+  };
+
   return (
-    <header className="topbar">
+    <header className={`topbar${hidden ? " topbar--hidden" : ""}`}>
+
+      {/* ── MOBILE ONLY: logo on left ─────────────────────── */}
       <button
-        className={`m-burger${drawerOpen ? " open" : ""}`}
-        id="mBurger"
-        onClick={onToggleDrawer}
-        aria-label="Menu"
-        aria-expanded={drawerOpen}
-        aria-controls="mDrawer"
+        className="mob-topbar-logo"
+        type="button"
+        aria-label="Reading Queue home"
+        onClick={handleMobileLogoClick}
       >
-        <span />
-        <span />
-        <span />
+        <video
+          ref={logoVideoRef}
+          muted
+          playsInline
+          preload="auto"
+          onEnded={() => {
+            const video = logoVideoRef.current;
+            if (video) video.pause();
+          }}
+        >
+          <source src="/logo-video-transparent.webm" type="video/webm" />
+          <source src="/logo-video.mp4" type="video/mp4" />
+        </video>
       </button>
 
-      {pathname === "/" ? (
-        <div className="search-bar search-bar--wide">
-          <Icon name="search" className="search-ico" />
-          <input
-            ref={searchInputRef}
-            id="globalSearch"
-            type="text"
-            placeholder="Search posts, boards..."
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-          />
-          {searchQuery ? (
+      {/* ── DESKTOP ONLY: hamburger + search ─────────────── */}
+      <div className="topbar-desk-left">
+        <button
+          className={`m-burger${drawerOpen ? " open" : ""}`}
+          id="mBurger"
+          onClick={onToggleDrawer}
+          aria-label="Menu"
+          aria-expanded={drawerOpen}
+          aria-controls="mDrawer"
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+
+        {pathname === "/" ? (
+          <div className="search-bar search-bar--wide">
+            <Icon name="search" className="search-ico" />
+            <input
+              ref={searchInputRef}
+              id="globalSearch"
+              type="text"
+              placeholder="Search posts, boards..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+            {searchQuery ? (
               <button
                 className="search-clear"
                 type="button"
@@ -146,103 +191,110 @@ export function Topbar({
                   searchInputRef?.current?.focus();
                 }}
               >
-              x
+                x
               </button>
-          ) : null}
-        </div>
-      ) : null}
+            ) : null}
+          </div>
+        ) : null}
+      </div>
 
       <div className="topbar-space" />
 
+      {/* ── RIGHT SIDE: icons + profile ──────────────────── */}
       {isLoggedIn === true ? (
         <div className="topbar-right">
-          <button
-            className="topbar-inbox"
-            type="button"
-            aria-label="Inbox"
-            onClick={() => router.push("/inbox")}
-          >
-            <Icon name="messages" />
-            <span
-              className="topbar-inbox-count"
-              data-empty={inboxUnreadCount === 0 ? "true" : "false"}
-              aria-label={inboxUnreadCount ? `${inboxUnreadCount} unread threads` : undefined}
-              aria-hidden={inboxUnreadCount === 0}
+          {/* Inbox & bell — desktop only (bottom nav has these on mobile) */}
+          <div className="topbar-desk-icons">
+            <button
+              className="topbar-inbox"
+              type="button"
+              aria-label="Inbox"
+              onClick={() => router.push("/inbox")}
             >
-              {inboxUnreadCount > 99 ? "99+" : inboxUnreadCount || ""}
-            </span>
-          </button>
-          <button
-            className="topbar-bell"
-            type="button"
-            aria-label="Notifications"
-            onClick={() => router.push("/notifications")}
-          >
-            <Icon name="notifications" />
-            {hasUnreadNotifications ? <span className="topbar-bell-dot" aria-hidden="true" /> : null}
-          </button>
-          <div className={`prof-drop${profOpen ? " open" : ""}`} id="profDrop" ref={profDropRef}>
-          <div
-            className="prof"
-            role="button"
-            tabIndex={0}
-            aria-haspopup="menu"
-            aria-expanded={profOpen}
-            aria-controls="profMenu"
-            onClick={(event) => {
-              event.stopPropagation();
-              setProfOpen((prev) => !prev);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                setProfOpen((prev) => !prev);
-              }
-            }}
-          >
-            <div className="prof-ava" aria-label={userName}>
-              {avatarUrl ? <img src={avatarUrl} alt={userName} /> : initials}
-            </div>
-            <Icon name="chevron-down" className="prof-chev" />
-          </div>
-          <div className="prof-menu" id="profMenu">
-            <Link className="prof-opt" href="/profile">
-              <svg viewBox="0 0 24 24">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-              Profile
-            </Link>
-            <Link className="prof-opt" href="/my-posts">
-              <svg viewBox="0 0 24 24">
-                <path d="M6 3h9l3 3v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
-                <path d="M9 13h6" />
-                <path d="M9 17h6" />
-                <path d="M9 9h3" />
-              </svg>
-              My Posts
-            </Link>
-            <Link className="prof-opt" href="/saved">
-              <svg viewBox="0 0 24 24">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-              </svg>
-              Saved Posts
-            </Link>
-            <Link className="prof-opt" href="/settings">
-              <Icon name="settings" />
-              Settings
-            </Link>
-            <div className="prof-menu-sep" />
-            <button className="prof-opt danger" type="button" onClick={handleLogout}>
-              <svg viewBox="0 0 24 24">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-              Log Out
+              <Icon name="messages" />
+              <span
+                className="topbar-inbox-count"
+                data-empty={inboxUnreadCount === 0 ? "true" : "false"}
+                aria-label={inboxUnreadCount ? `${inboxUnreadCount} unread threads` : undefined}
+                aria-hidden={inboxUnreadCount === 0}
+              >
+                {inboxUnreadCount > 99 ? "99+" : inboxUnreadCount || ""}
+              </span>
+            </button>
+            <button
+              className="topbar-bell"
+              type="button"
+              aria-label="Notifications"
+              onClick={() => router.push("/notifications")}
+            >
+              <Icon name="notifications" />
+              {hasUnreadNotifications ? <span className="topbar-bell-dot" aria-hidden="true" /> : null}
             </button>
           </div>
-        </div>
+
+          {/* Profile — visible on both mobile and desktop */}
+          <div className={`prof-drop${profOpen ? " open" : ""}`} id="profDrop" ref={profDropRef}>
+            <div
+              className="prof"
+              role="button"
+              tabIndex={0}
+              aria-haspopup="menu"
+              aria-expanded={profOpen}
+              aria-controls="profMenu"
+              onClick={(event) => {
+                event.stopPropagation();
+                setProfOpen((prev) => !prev);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setProfOpen((prev) => !prev);
+                }
+              }}
+            >
+              <div className="prof-ava" aria-label={userName}>
+                {avatarUrl ? <img src={avatarUrl} alt={userName} /> : initials}
+              </div>
+              <Icon name="chevron-down" className="prof-chev" />
+            </div>
+            <div className="prof-menu" id="profMenu">
+              <Link className="prof-opt" href="/profile">
+                <svg viewBox="0 0 24 24">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                Profile
+              </Link>
+              <Link className="prof-opt" href="/my-posts">
+                <svg viewBox="0 0 24 24">
+                  <path d="M6 3h9l3 3v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+                  <path d="M9 13h6" />
+                  <path d="M9 17h6" />
+                  <path d="M9 9h3" />
+                </svg>
+                My Posts
+              </Link>
+              <Link className="prof-opt" href="/saved">
+                <svg viewBox="0 0 24 24">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                </svg>
+                Saved Posts
+              </Link>
+              <Link className="prof-opt" href="/settings">
+                <Icon name="settings" />
+                Settings
+              </Link>
+              <div className="prof-menu-sep" />
+              <button className="prof-opt danger" type="button" onClick={handleLogout}>
+                <svg viewBox="0 0 24 24">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                Log Out
+              </button>
+            </div>
+          </div>
         </div>
       ) : (
         <Link className="topbar-login-btn" href="/auth?mode=login">
@@ -252,5 +304,3 @@ export function Topbar({
     </header>
   );
 }
-
-

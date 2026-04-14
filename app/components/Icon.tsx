@@ -8,6 +8,7 @@ type IconName =
   | "messages"
   | "settings"
   | "file"
+  | "queue"
   | "mic"
   | "chevron-down"
   | "google"
@@ -115,6 +116,16 @@ export function Icon({
           <path d="M7 3h7l3 3v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
           <path d="M10 11h5" />
           <path d="M10 15h5" />
+        </svg>
+      );
+    case "queue":
+      return (
+        <svg {...common}>
+          {title ? <title>{title}</title> : null}
+          {/* stacked layers — reading queue */}
+          <polygon points="12 2 2 7 12 12 22 7 12 2" />
+          <polyline points="2 12 12 17 22 12" />
+          <polyline points="2 17 12 22 22 17" />
         </svg>
       );
     case "mic":

@@ -1,12 +1,14 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { RefObject } from "react";
 import type { CardData } from "../data/card-data";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { FollowButton } from "./FollowButton";
 import { MarkdownText } from "./MarkdownText";
+import { setReaderMode, shouldUseReadingMode } from "../lib/reading-mode";
 
 export type PopupInteractions = {
   like: boolean;
@@ -45,6 +47,18 @@ export function PopupModal({
   useFocusTrap(panelRef, open, { onEscape: onClose });
   const router = useRouter();
 
+  useEffect(() => {
+    return () => setReaderMode(false);
+  }, []);
+
+  useEffect(() => {
+    if (open && data && shouldUseReadingMode(data)) {
+      setReaderMode(true);
+    } else if (!open) {
+      setReaderMode(false);
+    }
+  }, [open, data]);
+
   const handleViewProfile = () => {
     if (data?.userId) {
       onClose();
@@ -67,8 +81,23 @@ export function PopupModal({
         aria-describedby="ppDesc"
         tabIndex={-1}
       >
+        {/* Bar is always in DOM; CSS shows it only when body has .reader-mode */}
+        <div className="pp-reader-bar">
+          <div className="pp-reader-pill">Reading mode</div>
+          <button className="pp-reader-close" type="button" onClick={onClose} aria-label="Close reader">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
         <div className="pp-left">
-          <button className="pp-close" id="ppClose" onClick={onClose} aria-label="Close dialog">
+          <button
+            className="pp-close"
+            id="ppClose"
+            onClick={onClose}
+            aria-label="Close dialog"
+          >
             <svg viewBox="0 0 24 24">
               <path d="M18 6 6 18M6 6l12 12" />
             </svg>

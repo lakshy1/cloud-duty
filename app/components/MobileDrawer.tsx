@@ -73,12 +73,12 @@ export function MobileDrawer({ open, panelRef, onClose, onCreate, onSearch }: Mo
           Search
         </button>
         <button
-          className={`m-nav-item${isActive("/my-posts") ? " active" : ""}`}
+          className={`m-nav-item${isActive("/queue") ? " active" : ""}`}
           type="button"
-          onClick={() => requireAuth(() => router.push("/my-posts"))}
+          onClick={() => requireAuth(() => router.push("/queue"))}
         >
-          <Icon name="file" />
-          My Posts
+          <Icon name="queue" />
+          Queue
         </button>
         <button
           className={`m-nav-item${isActive("/inbox") ? " active" : ""}`}

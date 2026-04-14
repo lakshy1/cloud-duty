@@ -58,7 +58,7 @@ const initialPopupInteractions: PopupInteractions = {
   saveSweep: false,
 };
 
-export default function SavedPostsPage() {
+export default function QueuePage() {
   const { searchQuery } = useUIState();
   const [cards, setCards] = useState<CardData[]>([]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
@@ -142,13 +142,11 @@ export default function SavedPostsPage() {
           };
         }) as CardData[];
       setCards(mapped);
-      setSavedIds(new Set(mapped.map((post) => post.id!).filter(Boolean)));
+      setSavedIds(new Set(mapped.map((p) => p.id!).filter(Boolean)));
       setLoading(false);
     };
     loadSaved();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [userId]);
 
   useEffect(() => {
@@ -164,10 +162,7 @@ export default function SavedPostsPage() {
     const isMobile = vw <= 580;
     if (isMobile) {
       const h = vh * 0.9;
-      const w = vw;
-      const x = 0;
-      const y = vh - h;
-      return { x, y, w, h, mobile: true };
+      return { x: 0, y: vh - h, w: vw, h, mobile: true };
     }
     const w = Math.min(vw * 0.84, 880);
     const h = Math.min(vh * 0.84, 590);
@@ -189,72 +184,35 @@ export default function SavedPostsPage() {
     const panel = popupPanelRef.current;
     const overlay = popupOverlayRef.current;
     if (!panel || !overlay) return;
-
     const state = popupStateRef.current;
     if (!state.isOpen) return;
-
     state.isOpen = false;
     setPopupOpen(false);
     panel.classList.remove("content-visible", "ready");
     const { x: tx, y: ty, w: tw, h: th, mobile } = getTargetRect();
-
-    if (state.activeAnim) {
-      state.activeAnim.cancel();
-      state.activeAnim = null;
-    }
-
+    if (state.activeAnim) { state.activeAnim.cancel(); state.activeAnim = null; }
     overlay.classList.remove("active");
     const wasReaderMode = isReaderModeActive();
-
     if (mobile) {
       state.activeAnim = panel.animate(
-        [
-          { transform: "translateY(0)", opacity: 1 },
-          { transform: "translateY(105%)", opacity: 0 },
-        ],
-        {
-          duration: 340,
-          easing: "cubic-bezier(0.55,0,0.8,0.2)",
-          fill: "forwards",
-        }
+        [{ transform: "translateY(0)", opacity: 1 }, { transform: "translateY(105%)", opacity: 0 }],
+        { duration: 340, easing: "cubic-bezier(0.55,0,0.8,0.2)", fill: "forwards" }
       );
     } else {
-      const saved = state.savedCardRect || {
-        left: window.innerWidth / 2,
-        top: window.innerHeight / 2,
-        width: 140,
-        height: 180,
-      };
+      const saved = state.savedCardRect || { left: window.innerWidth / 2, top: window.innerHeight / 2, width: 140, height: 180 };
       const dx = saved.left + saved.width / 2 - (tx + tw / 2);
       const dy = saved.top + saved.height / 2 - (ty + th / 2);
       const sx = saved.width / tw;
       const sy = saved.height / th;
       state.activeAnim = panel.animate(
         [
-          {
-            transform: "translate(0,0) scale(1,1)",
-            opacity: 1,
-            borderRadius: "24px",
-          },
-          {
-            transform: `translate(${dx * 0.6}px,${dy * 0.6}px) scale(${sx * 0.6 + 0.4},${sy * 0.6 + 0.4})`,
-            opacity: 0.55,
-            borderRadius: "20px",
-          },
-          {
-            transform: `translate(${dx}px,${dy}px) scale(${sx},${sy})`,
-            opacity: 0,
-            borderRadius: "16px",
-          },
+          { transform: "translate(0,0) scale(1,1)", opacity: 1, borderRadius: "24px" },
+          { transform: `translate(${dx * 0.6}px,${dy * 0.6}px) scale(${sx * 0.6 + 0.4},${sy * 0.6 + 0.4})`, opacity: 0.55, borderRadius: "20px" },
+          { transform: `translate(${dx}px,${dy}px) scale(${sx},${sy})`, opacity: 0, borderRadius: "16px" },
         ],
-        {
-          duration: 360,
-          easing: "cubic-bezier(0.55,0,0.8,0.2)",
-          fill: "forwards",
-        }
+        { duration: 360, easing: "cubic-bezier(0.55,0,0.8,0.2)", fill: "forwards" }
       );
     }
-
     if (state.activeAnim) {
       state.activeAnim.onfinish = () => {
         panel.style.cssText = "left:-9999px;opacity:0;";
@@ -273,19 +231,15 @@ export default function SavedPostsPage() {
       const panel = popupPanelRef.current;
       const overlay = popupOverlayRef.current;
       if (!panel || !overlay) return;
-
       const state = popupStateRef.current;
       if (state.isOpen) return;
-
       state.isOpen = true;
       setPopupIndex(index);
       setPopupOpen(true);
       setPopupInteractions({ ...initialPopupInteractions });
-
       state.currentPopupIndex = index;
       panel.classList.remove("content-visible", "ready");
       setReaderMode(shouldUseReadingMode(cards[index]));
-
       state.savedCardRect = cardRect;
       const { x: tx, y: ty, w: tw, h: th, mobile } = getTargetRect();
       const { left: cx, top: cy, width: cw, height: ch } = state.savedCardRect;
@@ -293,52 +247,25 @@ export default function SavedPostsPage() {
       const dy = cy + ch / 2 - (ty + th / 2);
       const sx = cw / tw;
       const sy = ch / th;
-
       applyFinalGeometry();
       panel.style.opacity = "0";
-      panel.style.transform = mobile
-        ? "translateY(100%)"
-        : `translate(${dx}px,${dy}px) scale(${sx},${sy})`;
+      panel.style.transform = mobile ? "translateY(100%)" : `translate(${dx}px,${dy}px) scale(${sx},${sy})`;
       overlay.classList.add("active");
-      if (state.activeAnim) {
-        state.activeAnim.cancel();
-        state.activeAnim = null;
-      }
-
+      if (state.activeAnim) { state.activeAnim.cancel(); state.activeAnim = null; }
       if (mobile) {
         state.activeAnim = panel.animate(
-          [
-            { transform: "translateY(100%)", opacity: 0 },
-            { transform: "translateY(0)", opacity: 1 },
-          ],
-          {
-            duration: 420,
-            easing: "cubic-bezier(0.32,0.72,0,1)",
-            fill: "forwards",
-          }
+          [{ transform: "translateY(100%)", opacity: 0 }, { transform: "translateY(0)", opacity: 1 }],
+          { duration: 420, easing: "cubic-bezier(0.32,0.72,0,1)", fill: "forwards" }
         );
       } else {
         state.activeAnim = panel.animate(
           [
-            {
-              transform: `translate(${dx}px,${dy}px) scale(${sx},${sy})`,
-              opacity: 0,
-              borderRadius: "20px",
-            },
-            {
-              transform: "translate(0,0) scale(1,1)",
-              opacity: 1,
-              borderRadius: "24px",
-            },
+            { transform: `translate(${dx}px,${dy}px) scale(${sx},${sy})`, opacity: 0, borderRadius: "20px" },
+            { transform: "translate(0,0) scale(1,1)", opacity: 1, borderRadius: "24px" },
           ],
-          {
-            duration: 520,
-            easing: "cubic-bezier(0.34,1.42,0.64,1)",
-            fill: "forwards",
-          }
+          { duration: 520, easing: "cubic-bezier(0.34,1.42,0.64,1)", fill: "forwards" }
         );
       }
-
       if (state.activeAnim) {
         state.activeAnim.onfinish = () => {
           panel.style.transform = "";
@@ -353,57 +280,32 @@ export default function SavedPostsPage() {
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     const channel = supabase
-      .channel("saved-posts-realtime")
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "posts" },
-        (payload) => {
-          const updated = payload.new as {
-            id: string;
-            impressions_count?: number;
-            likes_count?: number;
-            dislikes_count?: number;
-          };
-          setCards((prev) =>
-            prev.map((card) =>
-              card.id === updated.id
-                ? {
-                    ...card,
-                    views:
-                      typeof updated.impressions_count === "number"
-                        ? formatCount(updated.impressions_count)
-                        : card.views,
-                    likes:
-                      typeof updated.likes_count === "number"
-                        ? formatCount(updated.likes_count)
-                        : card.likes,
-                    dislikes:
-                      typeof updated.dislikes_count === "number"
-                        ? formatCount(updated.dislikes_count)
-                        : card.dislikes,
-                  }
-                : card
-            )
-          );
-        }
-      )
+      .channel("queue-posts-realtime")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "posts" }, (payload) => {
+        const updated = payload.new as { id: string; impressions_count?: number; likes_count?: number; dislikes_count?: number };
+        setCards((prev) =>
+          prev.map((card) =>
+            card.id === updated.id
+              ? {
+                  ...card,
+                  views: typeof updated.impressions_count === "number" ? formatCount(updated.impressions_count) : card.views,
+                  likes: typeof updated.likes_count === "number" ? formatCount(updated.likes_count) : card.likes,
+                  dislikes: typeof updated.dislikes_count === "number" ? formatCount(updated.dislikes_count) : card.dislikes,
+                }
+              : card
+          )
+        );
+      })
       .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   useEffect(() => {
-    if (!userId) {
-      setReactions(new Map());
-      return;
-    }
+    if (!userId) { setReactions(new Map()); return; }
     let active = true;
     const supabase = getSupabaseBrowserClient();
     const loadReactions = async () => {
-      const { data, error } = await supabase
-        .from("post_reactions")
-        .select("post_id,reaction");
+      const { data, error } = await supabase.from("post_reactions").select("post_id,reaction");
       if (!active) return;
       if (error || !data) return;
       const next = new Map<string, "like" | "dislike">();
@@ -415,9 +317,7 @@ export default function SavedPostsPage() {
       setReactions(next);
     };
     loadReactions();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [userId]);
 
   const toggleReaction = useCallback(
@@ -429,18 +329,13 @@ export default function SavedPostsPage() {
       if (current === reaction) {
         next.delete(postId);
         setReactions(next);
-        const { error } = await supabase
-          .from("post_reactions")
-          .delete()
-          .eq("post_id", postId);
+        const { error } = await supabase.from("post_reactions").delete().eq("post_id", postId);
         if (error) setReactions(reactions);
         return;
       }
       next.set(postId, reaction);
       setReactions(next);
-      const { error } = await supabase
-        .from("post_reactions")
-        .upsert({ post_id: postId, user_id: userId, reaction });
+      const { error } = await supabase.from("post_reactions").upsert({ post_id: postId, user_id: userId, reaction });
       if (error) setReactions(reactions);
     },
     [reactions, userId]
@@ -450,61 +345,32 @@ export default function SavedPostsPage() {
     async (postId: string) => {
       if (!userId) return;
       const next = new Set(savedIds);
-      if (next.has(postId)) {
-        next.delete(postId);
-      } else {
-        next.add(postId);
-      }
+      if (next.has(postId)) { next.delete(postId); } else { next.add(postId); }
       setSavedIds(next);
       const supabase = getSupabaseBrowserClient();
       const { error } = await supabase.from("saved_posts").delete().eq("post_id", postId);
-      if (error) {
-        setSavedIds(savedIds);
-        return;
-      }
-      setCards((prev) => prev.filter((post) => post.id !== postId));
+      if (error) { setSavedIds(savedIds); return; }
+      setCards((prev) => prev.filter((p) => p.id !== postId));
     },
     [savedIds, userId]
   );
 
   const handlePopupLike = useCallback(() => {
     const postId = popupIndex !== null ? cards[popupIndex]?.id : undefined;
-    if (postId) {
-      toggleReaction(postId, "like");
-    }
-    setPopupInteractions((prev) => ({
-      ...prev,
-      like: !prev.like,
-      dislike: prev.like ? prev.dislike : false,
-      likePop: !prev.like,
-      dislikePop: false,
-    }));
+    if (postId) toggleReaction(postId, "like");
+    setPopupInteractions((prev) => ({ ...prev, like: !prev.like, dislike: prev.like ? prev.dislike : false, likePop: !prev.like, dislikePop: false }));
   }, [cards, popupIndex, toggleReaction]);
 
   const handlePopupDislike = useCallback(() => {
     const postId = popupIndex !== null ? cards[popupIndex]?.id : undefined;
-    if (postId) {
-      toggleReaction(postId, "dislike");
-    }
-    setPopupInteractions((prev) => ({
-      ...prev,
-      like: prev.dislike ? prev.like : false,
-      dislike: !prev.dislike,
-      likePop: false,
-      dislikePop: !prev.dislike,
-    }));
+    if (postId) toggleReaction(postId, "dislike");
+    setPopupInteractions((prev) => ({ ...prev, like: prev.dislike ? prev.like : false, dislike: !prev.dislike, likePop: false, dislikePop: !prev.dislike }));
   }, [cards, popupIndex, toggleReaction]);
 
   const handlePopupSave = useCallback(() => {
     const postId = popupIndex !== null ? cards[popupIndex]?.id : undefined;
-    if (postId) {
-      toggleSave(postId);
-    }
-    setPopupInteractions((prev) => ({
-      ...prev,
-      save: !prev.save,
-      saveSweep: !prev.save,
-    }));
+    if (postId) toggleSave(postId);
+    setPopupInteractions((prev) => ({ ...prev, save: !prev.save, saveSweep: !prev.save }));
   }, [cards, popupIndex, toggleSave]);
 
   useEffect(() => {
@@ -512,12 +378,7 @@ export default function SavedPostsPage() {
     const postId = cards[popupIndex]?.id;
     const saved = postId ? savedIds.has(postId) : false;
     const reaction = postId ? reactions.get(postId) : undefined;
-    setPopupInteractions((prev) => ({
-      ...prev,
-      save: saved,
-      like: reaction === "like",
-      dislike: reaction === "dislike",
-    }));
+    setPopupInteractions((prev) => ({ ...prev, save: saved, like: reaction === "like", dislike: reaction === "dislike" }));
   }, [cards, popupIndex, reactions, savedIds]);
 
   useEffect(() => {
@@ -528,11 +389,7 @@ export default function SavedPostsPage() {
     const log = async () => {
       const { data } = await supabase.rpc("log_impression", { p_post_id: postId });
       if (typeof data === "number") {
-        setCards((prev) =>
-          prev.map((card) =>
-            card.id === postId ? { ...card, views: formatCount(data) } : card
-          )
-        );
+        setCards((prev) => prev.map((card) => card.id === postId ? { ...card, views: formatCount(data) } : card));
       }
     };
     log();
@@ -541,30 +398,37 @@ export default function SavedPostsPage() {
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredCards = normalizedQuery
     ? cards.filter((card) => {
-        const title = (card.title ?? "").toLowerCase();
-        const summary = (card.summary ?? "").toLowerCase();
-        const details = (card.details ?? "").toLowerCase();
-        const author = (card.author ?? "").toLowerCase();
-        const handle = (card.handle ?? "").toLowerCase();
-        const tag = (card.tag ?? "").toLowerCase();
-        return (
-          title.includes(normalizedQuery) ||
-          summary.includes(normalizedQuery) ||
-          details.includes(normalizedQuery) ||
-          author.includes(normalizedQuery) ||
-          handle.includes(normalizedQuery) ||
-          tag.includes(normalizedQuery)
-        );
+        const t = (card.title ?? "").toLowerCase();
+        const s = (card.summary ?? "").toLowerCase();
+        const d = (card.details ?? "").toLowerCase();
+        const a = (card.author ?? "").toLowerCase();
+        const h = (card.handle ?? "").toLowerCase();
+        const g = (card.tag ?? "").toLowerCase();
+        return t.includes(normalizedQuery) || s.includes(normalizedQuery) || d.includes(normalizedQuery) || a.includes(normalizedQuery) || h.includes(normalizedQuery) || g.includes(normalizedQuery);
       })
     : cards;
 
   return (
     <AppShell>
       <div className="page-shell">
-        <section className="page-hero">
-          <p className="page-kicker">Saved Posts</p>
-          <h1 className="page-title">Your saved inspirations</h1>
-          <p className="page-subtitle">Everything you bookmark appears here.</p>
+        {/* Queue hero header */}
+        <section className="queue-hero">
+          <div className="queue-hero-eyebrow">Reading Queue</div>
+          <h1 className="queue-hero-title">
+            <span className="queue-hero-line">Your Career.</span>
+            <span className="queue-hero-line">Your Interest.</span>
+            <span className="queue-hero-line queue-hero-line--accent">Your Queue.</span>
+          </h1>
+          <p className="queue-hero-sub">
+            {cards.length > 0 ? (
+              <>
+                <span className="queue-hero-count">{cards.length}</span>
+                {` post${cards.length === 1 ? "" : "s"} in your reading queue`}
+              </>
+            ) : (
+              "Posts you save appear here"
+            )}
+          </p>
         </section>
 
         {loading ? (
@@ -579,14 +443,21 @@ export default function SavedPostsPage() {
             ))}
           </div>
         ) : filteredCards.length === 0 ? (
-          <section className="page-card">
-            <p className="page-subtitle">
-              {normalizedQuery ? "No posts match your search." : "No saved posts yet."}
+          <section className="queue-empty">
+            <div className="queue-empty-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 12 12 17 22 12" />
+                <polyline points="2 17 12 22 22 17" />
+              </svg>
+            </div>
+            <p className="queue-empty-title">
+              {normalizedQuery ? "No matches found" : "Your queue is empty"}
             </p>
-            <p className="page-note">
+            <p className="queue-empty-sub">
               {normalizedQuery
-                ? "Try a different title or summary keyword."
-                : "Tap the bookmark icon on any post to save it here."}
+                ? "Try a different search term."
+                : "Bookmark posts from the feed and they'll show up here."}
             </p>
           </section>
         ) : (
@@ -602,6 +473,7 @@ export default function SavedPostsPage() {
           />
         )}
       </div>
+
       <PopupModal
         open={popupOpen}
         data={popupIndex !== null ? cards[popupIndex] : null}

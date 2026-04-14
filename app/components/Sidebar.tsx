@@ -85,12 +85,12 @@ export function Sidebar({ onCreate, onSearch }: SidebarProps) {
         <Icon name="search" />
       </button>
       <button
-        className={`sb-btn${isActive("/my-posts") ? " active" : ""}`}
+        className={`sb-btn${isActive("/queue") ? " active" : ""}`}
         type="button"
-        aria-label="My Posts"
-        onClick={() => requireAuth(() => router.push("/my-posts"))}
+        aria-label="Queue"
+        onClick={() => requireAuth(() => router.push("/queue"))}
       >
-        <Icon name="file" />
+        <Icon name="queue" />
       </button>
       <button
         className={`sb-btn${isActive("/inbox") ? " active" : ""}`}

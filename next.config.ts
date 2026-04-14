@@ -4,6 +4,9 @@ const replitDevDomain = process.env.REPLIT_DEV_DOMAIN;
 
 const nextConfig: NextConfig = {
   ...(replitDevDomain ? { allowedDevOrigins: [replitDevDomain] } : {}),
+  // Hide the Next.js dev indicator; its draggable badge can throw pointer-capture
+  // errors on mobile interactions in this repo's dev setup.
+  devIndicators: false,
   images: {
     remotePatterns: [
       {
