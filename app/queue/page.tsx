@@ -96,8 +96,25 @@ export default function QueuePage() {
       setLoading(false);
       return;
     }
+    const CACHE_KEY = `cd_queue_${userId}`;
     let active = true;
     const supabase = getSupabaseBrowserClient();
+
+    // Load cached data immediately so the queue shows while fetching
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached) as CardData[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCards(parsed);
+          setSavedIds(new Set(parsed.map((p) => p.id!).filter(Boolean)));
+          setLoading(false);
+        }
+      }
+    } catch {
+      // ignore cache read errors
+    }
+
     const loadSaved = async () => {
       setLoading(true);
       const { data, error } = await supabase
@@ -144,6 +161,12 @@ export default function QueuePage() {
       setCards(mapped);
       setSavedIds(new Set(mapped.map((p) => p.id!).filter(Boolean)));
       setLoading(false);
+      // Persist to localStorage for offline use
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(mapped));
+      } catch {
+        // ignore storage errors
+      }
     };
     loadSaved();
     return () => { active = false; };

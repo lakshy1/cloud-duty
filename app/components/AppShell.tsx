@@ -36,6 +36,13 @@ export function AppShell({
   const [topbarHidden, setTopbarHidden] = useState(false);
   const showFab = pathname === "/";
 
+  // Register service worker for offline support
+  useEffect(() => {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+  }, []);
+
   // Hide Capacitor native splash screen once app shell mounts
   useEffect(() => {
     const hideSplash = async () => {
