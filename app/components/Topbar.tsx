@@ -35,9 +35,7 @@ export function Topbar({
     inboxUnreadCount,
   } = useUIState();
   const [profOpen, setProfOpen] = useState(false);
-  const [feedOpen, setFeedOpen] = useState(false);
   const profDropRef = useRef<HTMLDivElement | null>(null);
-  const feedDropRef = useRef<HTMLDivElement | null>(null);
   const [initials, setInitials] = useState("?");
   const [userName, setUserName] = useState("Account");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -50,9 +48,6 @@ export function Topbar({
       const target = event.target as Node;
       if (profDropRef.current && !profDropRef.current.contains(target)) {
         setProfOpen(false);
-      }
-      if (feedDropRef.current && !feedDropRef.current.contains(target)) {
-        setFeedOpen(false);
       }
     };
     document.addEventListener("click", onDocClick);
@@ -145,14 +140,12 @@ export function Topbar({
     }
   };
 
-  const feedLabel = feedMode === "general" ? "General" : "Personalised";
-  const feedOptions = [
-    { value: "personalised" as const, label: "Personalised", detail: "My topics" },
-    { value: "general" as const, label: "General", detail: "All posts" },
-  ];
+  const isHome = pathname === "/";
+  const showFeedToggle = isHome && isLoggedIn === true;
+
 
   return (
-    <header className={`topbar${hidden ? " topbar--hidden" : ""}`}>
+    <header className={`topbar${hidden ? " topbar--hidden" : ""}${showFeedToggle ? " topbar--has-pill" : ""}`}>
 
       {/* ── MOBILE ONLY: logo on left ─────────────────────── */}
       <button
@@ -188,7 +181,7 @@ export function Topbar({
         )}
       </button>
 
-      {/* ── DESKTOP ONLY: hamburger + search ─────────────── */}
+      {/* ── DESKTOP ONLY: hamburger + search (left zone) ─── */}
       <div className="topbar-desk-left">
         <button
           className={`m-burger${drawerOpen ? " open" : ""}`}
@@ -204,74 +197,74 @@ export function Topbar({
         </button>
 
         {pathname === "/" ? (
-          <>
-            <div className={`feed-drop${feedOpen ? " open" : ""}`} ref={feedDropRef}>
+          <div className="search-bar search-bar--wide">
+            <Icon name="search" className="search-ico" />
+            <input
+              ref={searchInputRef}
+              id="globalSearch"
+              type="text"
+              placeholder="Search posts, boards..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+            {searchQuery ? (
               <button
-                className="feed-trigger"
+                className="search-clear"
                 type="button"
-                aria-haspopup="menu"
-                aria-expanded={feedOpen}
-                aria-label={`Feed mode, current ${feedLabel}`}
-                onClick={() => setFeedOpen((prev) => !prev)}
+                aria-label="Clear search"
+                onClick={() => {
+                  setSearchQuery("");
+                  searchInputRef?.current?.focus();
+                }}
               >
-                <span className="feed-trigger-label">Feed</span>
-                <span className="feed-trigger-value">{feedLabel}</span>
-                <Icon name="chevron-down" className="feed-trigger-chev" />
+                x
               </button>
-              <div className="feed-menu" role="menu" aria-label="Feed mode">
-                {feedOptions.map((option) => {
-                  const active = feedMode === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      className="feed-option"
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={active}
-                      data-active={active ? "true" : "false"}
-                      onClick={() => {
-                        setFeedMode(option.value);
-                        setFeedOpen(false);
-                      }}
-                    >
-                      <span className="feed-option-copy">
-                        <span className="feed-option-title">{option.label}</span>
-                        <span className="feed-option-detail">{option.detail}</span>
-                      </span>
-                      <span className="feed-option-check" aria-hidden="true" />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="search-bar search-bar--wide">
-              <Icon name="search" className="search-ico" />
-              <input
-                ref={searchInputRef}
-                id="globalSearch"
-                type="text"
-                placeholder="Search posts, boards..."
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-              />
-              {searchQuery ? (
-                <button
-                  className="search-clear"
-                  type="button"
-                  aria-label="Clear search"
-                  onClick={() => {
-                    setSearchQuery("");
-                    searchInputRef?.current?.focus();
-                  }}
-                >
-                  x
-                </button>
-              ) : null}
-            </div>
-          </>
+            ) : null}
+          </div>
         ) : null}
       </div>
+
+      {/* ── DESKTOP ONLY: feed pill — absolutely centred ──── */}
+      {showFeedToggle ? (
+        <div className="desk-feed-pill" role="group" aria-label="Feed mode">
+          <button
+            className={`desk-feed-seg${feedMode === "personalised" ? " active" : ""}`}
+            type="button"
+            onClick={() => setFeedMode("personalised")}
+          >
+            For You
+          </button>
+          <button
+            className={`desk-feed-seg${feedMode === "general" ? " active" : ""}`}
+            type="button"
+            onClick={() => setFeedMode("general")}
+          >
+            General
+          </button>
+        </div>
+      ) : null}
+
+      {/* ── MOBILE ONLY: feed mode pill centred in topbar ──── */}
+      {showFeedToggle ? (
+        <div className="mob-feed-pill" role="group" aria-label="Feed mode">
+          <div className="mob-feed-pill-inner">
+            <button
+              className={`mob-feed-seg${feedMode === "personalised" ? " active" : ""}`}
+              type="button"
+              onClick={() => setFeedMode("personalised")}
+            >
+              For You
+            </button>
+            <button
+              className={`mob-feed-seg${feedMode === "general" ? " active" : ""}`}
+              type="button"
+              onClick={() => setFeedMode("general")}
+            >
+              General
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="topbar-space" />
 
@@ -348,12 +341,6 @@ export function Topbar({
                   <path d="M9 9h3" />
                 </svg>
                 My Posts
-              </Link>
-              <Link className="prof-opt" href="/saved">
-                <svg viewBox="0 0 24 24">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                </svg>
-                Saved Posts
               </Link>
               <Link className="prof-opt" href="/settings">
                 <Icon name="settings" />

@@ -69,15 +69,16 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [createdPost, setCreatedPost] = useState<import("../data/card-data").CardData | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [feedMode, setFeedMode] = useState<FeedMode>(() => {
-    if (typeof window === "undefined") return "personalised";
+  const [feedMode, setFeedMode] = useState<FeedMode>("personalised");
+
+  useEffect(() => {
     try {
       const stored = window.localStorage.getItem("cd_feed_mode");
-      return stored === "general" ? "general" : "personalised";
+      if (stored === "general") setFeedMode("general");
     } catch {
-      return "personalised";
+      // ignore
     }
-  });
+  }, []);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [loginPromptOpen, setLoginPromptOpen] = useState(false);

@@ -80,7 +80,6 @@ export default function HomeClient() {
     typeof window === "undefined" ? true : window.navigator.onLine
   );
   const [offlineReady, setOfflineReady] = useState(false);
-  const [offlineDismissed, setOfflineDismissed] = useState(false);
   const [popupInteractions, setPopupInteractions] = useState<PopupInteractions>(
     initialPopupInteractions
   );
@@ -110,7 +109,7 @@ export default function HomeClient() {
     const syncOnline = () => {
       const online = window.navigator.onLine;
       setIsOnline(online);
-      if (!online) setOfflineDismissed(false); // re-show when going offline
+      // banner auto-shows/hides based on isOnline
     };
     window.addEventListener("online", syncOnline);
     window.addEventListener("offline", syncOnline);
@@ -1046,21 +1045,24 @@ export default function HomeClient() {
 
       <AppShell>
         <PaletteRow />
-        {(!isOnline || offlineReady) && !offlineDismissed ? (
+        {(!isOnline || offlineReady) ? (
           <section className="offline-banner" role="status" aria-live="polite">
-            <button
-              className="offline-banner-dismiss"
-              type="button"
-              aria-label="Dismiss"
-              onClick={() => setOfflineDismissed(true)}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M18 6 6 18M6 6l12 12" />
+            <div className="offline-banner-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="1" y1="1" x2="23" y2="23" />
+                <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
+                <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
+                <path d="M10.71 5.05A16 16 0 0 1 22.56 9" />
+                <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88" />
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+                <circle cx="12" cy="20" r="1" fill="currentColor" />
               </svg>
-            </button>
+            </div>
             <div className="offline-banner-copy">
-              <div className="offline-banner-title">No connection, no problem.</div>
-              <p>Go to your reading queue. Available offline as well.</p>
+              <div className="offline-banner-title">
+                {offlineReady ? "Showing cached content" : "You're offline"}
+              </div>
+              <p>{offlineReady ? "Your feed is up to date from your last visit." : "No internet connection detected."}</p>
             </div>
             <button
               className="offline-banner-cta"
@@ -1068,6 +1070,9 @@ export default function HomeClient() {
               onClick={() => router.push("/queue")}
             >
               Open Queue
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
             </button>
           </section>
         ) : null}
