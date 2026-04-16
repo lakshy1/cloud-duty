@@ -134,9 +134,14 @@ export default function SettingsPage() {
     setStatus(null);
     const supabase = getSupabaseBrowserClient();
     try {
+      // Ensure the access token is fresh before making the request
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !refreshData.session) {
+        throw new Error("Could not verify your current session. Please log in again.");
+      }
       const { error } = await supabase.auth.signOut({ scope: "others" });
       if (error) throw error;
-      pushToast({ tone: "success", message: "Signed out of other sessions." });
+      pushToast({ tone: "success", message: "All other devices have been signed out." });
     } catch (err) {
       pushToast({
         tone: "error",
@@ -419,14 +424,20 @@ export default function SettingsPage() {
               >
                 {securityBusy.reset ? "Sending..." : "Send password reset"}
               </button>
-              <button
-                className="stgs-secondary"
-                type="button"
-                onClick={handleSignOutOthers}
-                disabled={securityBusy.signout}
-              >
-                {securityBusy.signout ? "Working..." : "Sign out other sessions"}
-              </button>
+              <div className="stgs-security-row">
+                <div className="stgs-security-info">
+                  <p className="stgs-security-label">Other devices</p>
+                  <p className="stgs-security-desc">Keeps this device logged in and signs out everywhere else.</p>
+                </div>
+                <button
+                  className="stgs-secondary"
+                  type="button"
+                  onClick={handleSignOutOthers}
+                  disabled={securityBusy.signout}
+                >
+                  {securityBusy.signout ? "Signing out..." : "Sign out other sessions"}
+                </button>
+              </div>
               <button
                 className="stgs-danger"
                 type="button"

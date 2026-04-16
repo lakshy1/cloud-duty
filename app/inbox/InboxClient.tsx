@@ -115,6 +115,8 @@ export default function InboxClient() {
   const chatLoadedRef = useRef<Set<string>>(new Set());
   const chatLoadIdRef = useRef<string | null>(null);
   const chatCacheRef = useRef<Map<string, ChatMessage[]>>(new Map());
+  const isSendingRef = useRef(false);
+  const mutualCacheRef = useRef<Map<string, boolean>>(new Map());
   const threadLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const threadLongPressFiredRef = useRef(false);
   const messageLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -864,7 +866,8 @@ export default function InboxClient() {
 
   const handleSend = async () => {
     const text = draft.trim();
-    if (!text) return;
+    // Guard: empty draft or already sending (prevents duplicates)
+    if (!text || isSendingRef.current) return;
 
     if (isAiThread) {
       const threadId = AI_THREAD_ID;
@@ -875,57 +878,75 @@ export default function InboxClient() {
         createdAt: new Date().toISOString(),
       };
       const threadMessages = [...(aiMessagesByThread[threadId] ?? []), newMessage];
-      setAiMessagesByThread((prev) => ({
-        ...prev,
-        [threadId]: threadMessages,
-      }));
+      setAiMessagesByThread((prev) => ({ ...prev, [threadId]: threadMessages }));
       setDraft("");
       await requestAiReply(threadId, threadMessages);
       return;
     }
 
     if (!activeThread || activeThread.type !== "chat" || !activeThread.chatId || !userId) return;
-    const supabase = getSupabaseBrowserClient();
-    let otherUserId = activeThread.userId ?? null;
-    if (!otherUserId) {
-      const { data: chatRow } = await supabase
-        .from("chats")
-        .select("user_a,user_b")
-        .eq("id", activeThread.chatId)
-        .maybeSingle();
-      if (chatRow) {
-        otherUserId = chatRow.user_a === userId ? chatRow.user_b : chatRow.user_a;
-      }
-    }
-    const { count: mutualA } = await supabase
-      .from("follows")
-      .select("follower_id", { count: "exact", head: true })
-      .eq("follower_id", userId)
-      .eq("following_id", otherUserId ?? "");
-    const { count: mutualB } = await supabase
-      .from("follows")
-      .select("follower_id", { count: "exact", head: true })
-      .eq("follower_id", otherUserId ?? "")
-      .eq("following_id", userId);
-    const isMutual = (mutualA ?? 0) > 0 && (mutualB ?? 0) > 0;
-    if (!isMutual) {
-      pushToast({
-        message: "You both need to follow each other to enable messaging.",
-        tone: "warning",
-      });
-      return;
-    }
 
-    const { error } = await supabase.from("chat_messages").insert({
-      chat_id: activeThread.chatId,
-      sender_id: userId,
-      body: text,
-    });
-    if (error) {
-      pushToast({ message: error.message, tone: "error" });
-    } else {
-      setDraft("");
-      if (otherUserId) {
+    isSendingRef.current = true;
+    // Clear draft immediately so the user can't re-send the same message
+    setDraft("");
+
+    const supabase = getSupabaseBrowserClient();
+    const chatId = activeThread.chatId;
+
+    try {
+      // Resolve otherUserId from thread (already known in most cases)
+      let otherUserId = activeThread.userId ?? null;
+      if (!otherUserId) {
+        const { data: chatRow } = await supabase
+          .from("chats")
+          .select("user_a,user_b")
+          .eq("id", chatId)
+          .maybeSingle();
+        if (chatRow) {
+          otherUserId = chatRow.user_a === userId ? chatRow.user_b : chatRow.user_a;
+        }
+      }
+
+      // Check mutual status — cached per chatId for the session so we only
+      // hit the DB once per thread, not on every message.
+      let isMutual = mutualCacheRef.current.get(chatId);
+      if (isMutual === undefined) {
+        const [{ count: mutualA }, { count: mutualB }] = await Promise.all([
+          supabase
+            .from("follows")
+            .select("follower_id", { count: "exact", head: true })
+            .eq("follower_id", userId)
+            .eq("following_id", otherUserId ?? ""),
+          supabase
+            .from("follows")
+            .select("follower_id", { count: "exact", head: true })
+            .eq("follower_id", otherUserId ?? "")
+            .eq("following_id", userId),
+        ]);
+        isMutual = (mutualA ?? 0) > 0 && (mutualB ?? 0) > 0;
+        mutualCacheRef.current.set(chatId, isMutual);
+      }
+
+      if (!isMutual) {
+        setDraft(text); // restore draft — user didn't do anything wrong
+        pushToast({
+          message: "You both need to follow each other to enable messaging.",
+          tone: "warning",
+        });
+        return;
+      }
+
+      const { error } = await supabase.from("chat_messages").insert({
+        chat_id: chatId,
+        sender_id: userId,
+        body: text,
+      });
+
+      if (error) {
+        setDraft(text); // restore draft on DB error
+        pushToast({ message: error.message, tone: "error" });
+      } else if (otherUserId) {
+        // Fire push notification in background — don't await
         supabase.auth.getSession().then(({ data: sessionData }) => {
           if (!sessionData.session?.access_token) return;
           fetch("/api/send-push", {
@@ -937,12 +958,14 @@ export default function InboxClient() {
               senderAvatar: senderProfile?.avatarUrl ?? "",
               notificationType: "New message",
               content: text,
-              data: { chat_id: activeThread.chatId ?? "" },
+              data: { chat_id: chatId },
               accessToken: sessionData.session.access_token,
             }),
           }).catch(() => {});
         });
       }
+    } finally {
+      isSendingRef.current = false;
     }
   };
 

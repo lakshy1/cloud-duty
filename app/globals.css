@@ -1178,17 +1178,57 @@ body{
   border:1px solid color-mix(in srgb,var(--accent) 25%, transparent);
 }
 .stgs-security-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-  gap:14px 16px;
-  align-items:stretch;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
 }
 .stgs-security-grid .stgs-primary,
-.stgs-security-grid .stgs-secondary,
 .stgs-security-grid .stgs-danger{
   min-width:0;
   width:100%;
   text-align:center;
+}
+/* sign-out-others row: label+desc on left, button on right */
+.stgs-security-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid var(--divider);
+  background:var(--surface);
+}
+.stgs-security-info{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  min-width:0;
+}
+.stgs-security-label{
+  font-size:.85rem;
+  font-weight:700;
+  color:var(--text);
+  line-height:1.2;
+}
+.stgs-security-desc{
+  font-size:.76rem;
+  color:var(--muted);
+  line-height:1.4;
+}
+.stgs-security-row .stgs-secondary{
+  flex-shrink:0;
+  white-space:nowrap;
+}
+@media(max-width:580px){
+  .stgs-security-row{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+  .stgs-security-row .stgs-secondary{
+    width:100%;
+    text-align:center;
+  }
 }
 .stgs-footer-note{
   margin-top:14px;font-size:.8rem;color:var(--muted);
