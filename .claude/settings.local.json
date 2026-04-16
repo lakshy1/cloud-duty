@@ -10,7 +10,11 @@
       "Bash(node -e \"require\\('sharp'\\); console.log\\('sharp OK'\\)\")",
       "Bash(node -e ':*)",
       "Bash(npx tsc:*)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "WebFetch(domain:vercel.com)",
+      "WebSearch",
+      "Bash(npm list *)",
+      "Bash(node -e \"const p = require\\('c:/Users/laksh/OneDrive/Desktop/Cloudduty.io/01-cloud-duty/node_modules/pdfjs-dist/package.json'\\); console.log\\(JSON.stringify\\(p.exports, null, 2\\)\\)\")"
     ]
   }
 }

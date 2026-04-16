@@ -6,6 +6,7 @@ import { AppShell } from "../components/AppShell";
 import { useTheme } from "../theme-provider";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 import { useUIState } from "../state/ui-state";
+import PersonalisationPopup from "../components/PersonalisationPopup";
 
 export default function SettingsPage() {
   const { theme, toggleTheme, mounted } = useTheme();
@@ -18,6 +19,9 @@ export default function SettingsPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [interests, setInterests] = useState<string[]>([]);
+  const [showPersonalisationPopup, setShowPersonalisationPopup] = useState(false);
+  const [isLinkedInLogin, setIsLinkedInLogin] = useState(false);
   const [securityBusy, setSecurityBusy] = useState<{
     reset: boolean;
     signout: boolean;
@@ -27,11 +31,13 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
-    supabase.auth.getSession().then(({ data }) => {
-      const u = data.session?.user ?? null;
+    // getUser() fetches fresh metadata from the server (not stale cached JWT)
+    supabase.auth.getUser().then(({ data }) => {
+      const u = data?.user ?? null;
       setUser(u);
       if (u) {
         const m = u.user_metadata ?? {};
+        const appMeta = u.app_metadata ?? {};
         const derivedName =
           [m.first_name, m.last_name].filter(Boolean).join(" ") ||
           m.full_name ||
@@ -41,6 +47,8 @@ export default function SettingsPage() {
         setEditName(derivedName ?? "");
         setEditEmail(u.email ?? "");
         setEditPhone(m.phone ?? "");
+        setInterests(Array.isArray(m.interests) ? m.interests : []);
+        setIsLinkedInLogin((appMeta.provider ?? "") === "linkedin_oidc");
         supabase
           .from("profiles")
           .select("full_name")
@@ -275,6 +283,60 @@ export default function SettingsPage() {
           </section>
         ) : null}
 
+        {/* Feed Personalisation */}
+        {isLoggedIn ? (
+          <section className="page-card stgs-card">
+            <div className="stgs-section-head">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              <h2 className="stgs-section-title">Feed Personalisation</h2>
+            </div>
+
+            {interests.length > 0 ? (
+              <>
+                <p className="stgs-pers-desc">
+                  Your feed is filtered by these interest keywords. Edit them anytime.
+                </p>
+                <div className="stgs-pers-pills">
+                  {interests.map((kw) => (
+                    <span key={kw} className="stgs-pers-pill">{kw}</span>
+                  ))}
+                </div>
+                <div className="stgs-pers-footer">
+                  <span className="stgs-pers-count">{interests.length} interest{interests.length !== 1 ? "s" : ""} saved</span>
+                  <button
+                    className="stgs-pers-redo"
+                    type="button"
+                    onClick={() => setShowPersonalisationPopup(true)}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M23 4v6h-6" />
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                    </svg>
+                    Redo personalisation
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="stgs-pers-empty">
+                <div className="stgs-pers-empty-icon" aria-hidden="true">✦</div>
+                <p className="stgs-pers-empty-title">Your feed isn&apos;t personalised yet</p>
+                <p className="stgs-pers-empty-sub">
+                  Tell us your interests and we&apos;ll surface the most relevant content for you.
+                </p>
+                <button
+                  className="stgs-pers-start"
+                  type="button"
+                  onClick={() => setShowPersonalisationPopup(true)}
+                >
+                  Personalise my feed ✦
+                </button>
+              </div>
+            )}
+          </section>
+        ) : null}
+
         {/* Appearance */}
         <section className="page-card stgs-card">
           <div className="stgs-section-head">
@@ -389,6 +451,18 @@ export default function SettingsPage() {
           </section>
         ) : null}
       </div>
+
+      {/* Re-personalisation popup */}
+      {showPersonalisationPopup && (
+        <PersonalisationPopup
+          isLinkedInLogin={isLinkedInLogin}
+          onComplete={(keywords) => {
+            setInterests(keywords);
+            setShowPersonalisationPopup(false);
+            pushToast({ tone: "success", message: "Feed personalisation updated!" });
+          }}
+        />
+      )}
 
       {isLoggedIn && deleteOpen ? (
         <div

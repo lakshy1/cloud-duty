@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { Footer } from "./Footer";
 import { MobileDrawer } from "./MobileDrawer";
@@ -13,6 +13,7 @@ import { useUIState } from "../state/ui-state";
 import { CreatePostModal } from "./CreatePostModal";
 import { LoginPromptModal } from "./LoginPromptModal";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
+import { prefetchQueueIfNeeded } from "../lib/queue-cache";
 
 export function AppShell({
   children,
@@ -41,6 +42,11 @@ export function AppShell({
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
+  }, []);
+
+  // Prefetch queue data once per fresh session so it's available offline
+  useEffect(() => {
+    prefetchQueueIfNeeded();
   }, []);
 
   // Hide Capacitor native splash screen once app shell mounts

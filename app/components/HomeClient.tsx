@@ -8,11 +8,13 @@ import { PaletteRow } from "./PaletteRow";
 import { PopupModal, PopupInteractions } from "./PopupModal";
 import { ReportModal } from "./ReportModal";
 import { Skeleton } from "./Skeleton";
+import PersonalisationPopup from "./PersonalisationPopup";
 import type { CardData } from "../data/card-data";
 import { cardData } from "../data/card-data";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 import { getCache, setCache } from "../lib/client-cache";
 import { setReaderMode, shouldUseReadingMode, isReaderModeActive } from "../lib/reading-mode";
+import { refreshQueueCache } from "../lib/queue-cache";
 import { useUIState } from "../state/ui-state";
 
 type PopupState = {
@@ -67,6 +69,7 @@ export default function HomeClient() {
     createdPost,
     setCreatedPost,
     searchQuery,
+    feedMode,
   } = useUIState();
   const [cards, setCards] = useState<CardData[]>([]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
@@ -77,6 +80,7 @@ export default function HomeClient() {
     typeof window === "undefined" ? true : window.navigator.onLine
   );
   const [offlineReady, setOfflineReady] = useState(false);
+  const [offlineDismissed, setOfflineDismissed] = useState(false);
   const [popupInteractions, setPopupInteractions] = useState<PopupInteractions>(
     initialPopupInteractions
   );
@@ -104,7 +108,9 @@ export default function HomeClient() {
 
   useEffect(() => {
     const syncOnline = () => {
-      setIsOnline(window.navigator.onLine);
+      const online = window.navigator.onLine;
+      setIsOnline(online);
+      if (!online) setOfflineDismissed(false); // re-show when going offline
     };
     window.addEventListener("online", syncOnline);
     window.addEventListener("offline", syncOnline);
@@ -114,22 +120,102 @@ export default function HomeClient() {
     };
   }, []);
 
+  /* ── personalisation state ─────────────────────────────────── */
+  const [showPersonalisation, setShowPersonalisation] = useState(false);
+  const [isLinkedInLogin, setIsLinkedInLogin] = useState(false);
+  const [userKeywords, setUserKeywords] = useState<string[]>([]);
+
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setUserId(data.session?.user.id ?? null);
+
+    // applyPersonalisationCheck uses getUser() — a live server call — so we
+    // always read the freshest user_metadata instead of a stale cached JWT.
+    const applyPersonalisationCheck = async (userId: string | null) => {
+      if (!userId) {
+        setAuthChecked(true);
+        return;
+      }
+
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user ?? null;
+
+      if (!user) {
+        setAuthChecked(true);
+        return;
+      }
+
+      const meta = user.user_metadata ?? {};
+      const appMeta = user.app_metadata ?? {};
+      const serverComplete = meta.personalisation_complete === true;
+      // localStorage acts as a fast guard so a quick reload never re-shows the popup
+      const localComplete = localStorage.getItem(`cd_pers_done_${user.id}`) === "1";
+      const complete = serverComplete || localComplete;
+      const interests: string[] = Array.isArray(meta.interests) ? meta.interests : [];
+
+      if (complete && interests.length > 0) {
+        setUserKeywords(interests);
+      } else if (!complete) {
+        const provider = appMeta.provider ?? "";
+        setIsLinkedInLogin(provider === "linkedin_oidc");
+        setShowPersonalisation(true);
+      }
+
+      // All personalisation state is set — safe to reveal UI now.
       setAuthChecked(true);
     };
-    checkSession();
+
+    // Listen for auth state changes (covers OAuth redirects and token refreshes)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        const uid = session?.user?.id ?? null;
+        setUserId(uid);
+        // Only run the check on actual sign-in events, not every token refresh
+        if (_event === "SIGNED_IN" || _event === "INITIAL_SESSION") {
+          applyPersonalisationCheck(uid);
+        } else if (_event === "SIGNED_OUT") {
+          setShowPersonalisation(false);
+          setUserKeywords([]);
+          setAuthChecked(true);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
-
+  const handlePersonalisationComplete = (keywords: string[]) => {
+    setUserKeywords(keywords);
+    setShowPersonalisation(false);
+  };
 
   const popupData = popupIndex !== null ? cards[popupIndex] : null;
   const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  // keyword filter — only applied when user has interests set
+  const keywordFiltered =
+    userKeywords.length > 0
+      ? (() => {
+          const matched = cards.filter((card) => {
+            const haystack = [
+              card.title,
+              card.summary,
+              card.details,
+              card.tag,
+              card.author,
+            ]
+              .join(" ")
+              .toLowerCase();
+            return userKeywords.some((kw) => haystack.includes(kw.toLowerCase()));
+          });
+          // fallback to all cards if nothing matches (e.g. sparse data)
+          return matched.length > 0 ? matched : cards;
+        })()
+      : cards;
+
+  const feedCards = feedMode === "general" ? cards : keywordFiltered;
+
   const filteredCards = normalizedQuery
-    ? cards.filter((card) => {
+    ? feedCards.filter((card) => {
         const title = (card.title ?? "").toLowerCase();
         const summary = (card.summary ?? "").toLowerCase();
         const details = (card.details ?? "").toLowerCase();
@@ -145,7 +231,7 @@ export default function HomeClient() {
           tag.includes(normalizedQuery)
         );
       })
-    : cards;
+    : feedCards;
 
   const getTargetRect = useCallback(() => {
     const vw = window.innerWidth;
@@ -430,15 +516,19 @@ export default function HomeClient() {
         : await supabase.from("saved_posts").insert({ post_id: postId, user_id: activeUserId });
       if (error) {
         setSavedIds(savedIds);
-      } else if (targetCard?.userId && targetCard.userId !== activeUserId) {
-        await supabase.from("notifications").insert({
-          user_id: targetCard.userId,
-          actor_id: activeUserId,
-          type: wasSaved ? "unsave" : "save",
-          entity_type: "post",
-          entity_id: postId,
-          message: wasSaved ? "removed your post from saved" : "saved your post",
-        });
+      } else {
+        // Keep offline queue cache in sync after every save/unsave
+        refreshQueueCache(activeUserId);
+        if (targetCard?.userId && targetCard.userId !== activeUserId) {
+          await supabase.from("notifications").insert({
+            user_id: targetCard.userId,
+            actor_id: activeUserId,
+            type: wasSaved ? "unsave" : "save",
+            entity_type: "post",
+            entity_id: postId,
+            message: wasSaved ? "removed your post from saved" : "saved your post",
+          });
+        }
       }
     },
     [savedIds, userId]
@@ -946,10 +1036,28 @@ export default function HomeClient() {
 
   return (
     <>
+      {/* Personalisation popup — shown after first login */}
+      {showPersonalisation && (
+        <PersonalisationPopup
+          isLinkedInLogin={isLinkedInLogin}
+          onComplete={handlePersonalisationComplete}
+        />
+      )}
+
       <AppShell>
         <PaletteRow />
-        {!isOnline || offlineReady ? (
+        {(!isOnline || offlineReady) && !offlineDismissed ? (
           <section className="offline-banner" role="status" aria-live="polite">
+            <button
+              className="offline-banner-dismiss"
+              type="button"
+              aria-label="Dismiss"
+              onClick={() => setOfflineDismissed(true)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
             <div className="offline-banner-copy">
               <div className="offline-banner-title">No connection, no problem.</div>
               <p>Go to your reading queue. Available offline as well.</p>

@@ -13,6 +13,8 @@ import { usePathname } from "next/navigation";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 import { Capacitor } from "@capacitor/core";
 
+export type FeedMode = "personalised" | "general";
+
 export type Toast = {
   id: string;
   title?: string;
@@ -31,6 +33,7 @@ type UIState = {
   createOpen: boolean;
   createdPost: import("../data/card-data").CardData | null;
   searchQuery: string;
+  feedMode: FeedMode;
   toasts: Toast[];
   isLoggedIn: boolean | null;
   loginPromptOpen: boolean;
@@ -44,6 +47,7 @@ type UIState = {
   setCreateOpen: (open: boolean) => void;
   setCreatedPost: (post: import("../data/card-data").CardData | null) => void;
   setSearchQuery: (value: string) => void;
+  setFeedMode: (value: FeedMode) => void;
   pushToast: (toast: Omit<Toast, "id"> & { id?: string }) => void;
   removeToast: (id: string) => void;
   setIsLoggedIn: (v: boolean | null) => void;
@@ -65,6 +69,15 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [createdPost, setCreatedPost] = useState<import("../data/card-data").CardData | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [feedMode, setFeedMode] = useState<FeedMode>(() => {
+    if (typeof window === "undefined") return "personalised";
+    try {
+      const stored = window.localStorage.getItem("cd_feed_mode");
+      return stored === "general" ? "general" : "personalised";
+    } catch {
+      return "personalised";
+    }
+  });
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [loginPromptOpen, setLoginPromptOpen] = useState(false);
@@ -187,6 +200,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       createOpen,
       createdPost,
       searchQuery,
+      feedMode,
       toasts,
       isLoggedIn,
       loginPromptOpen,
@@ -200,6 +214,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       setCreateOpen,
       setCreatedPost,
       setSearchQuery,
+      setFeedMode,
       pushToast,
       removeToast,
       setIsLoggedIn,
@@ -216,6 +231,7 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       createOpen,
       createdPost,
       searchQuery,
+      feedMode,
       toasts,
       isLoggedIn,
       loginPromptOpen,
@@ -225,6 +241,14 @@ export function UIStateProvider({ children }: { children: React.ReactNode }) {
       removeToast,
     ]
   );
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("cd_feed_mode", feedMode);
+    } catch {
+      // ignore cache errors
+    }
+  }, [feedMode]);
 
   useEffect(() => {
     notificationsActiveRef.current = notificationsActive;

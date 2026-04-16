@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { Provider, User } from "@supabase/supabase-js";
@@ -8,9 +9,18 @@ import { PrivacyPolicyModal } from "../components/PrivacyPolicyModal";
 import { TermsOfServiceModal } from "../components/TermsOfServiceModal";
 
 type AuthMode = "login" | "signup";
-type LoginMode = "password" | "phone";
+type AuthStep =
+  | "select"
+  | "email-login"
+  | "email-signup"
+  | "email-signup-otp"
+  | "phone"
+  | "reset"
+  | "reset-sent"
+  | "reset-phone-otp"
+  | "reset-new-password";
 
-const providers: Array<{ label: string; provider: Provider; icon: "google" | "linkedin" | "apple" }> = [
+const OAUTH_PROVIDERS: Array<{ label: string; provider: Provider; icon: "google" | "linkedin" | "apple" }> = [
   { label: "Google", provider: "google", icon: "google" },
   { label: "LinkedIn", provider: "linkedin_oidc", icon: "linkedin" },
   { label: "Apple", provider: "apple", icon: "apple" },
@@ -47,35 +57,15 @@ function formatE164(countryCode: string, local: string): string {
   return `${dial}${digits}`;
 }
 
-const passwordRules = [
-  {
-    id: "length",
-    label: "At least 10 characters",
-    test: (value: string) => value.length >= 10,
-  },
-  {
-    id: "upper",
-    label: "One uppercase letter",
-    test: (value: string) => /[A-Z]/.test(value),
-  },
-  {
-    id: "lower",
-    label: "One lowercase letter",
-    test: (value: string) => /[a-z]/.test(value),
-  },
-  {
-    id: "number",
-    label: "One number",
-    test: (value: string) => /\d/.test(value),
-  },
-  {
-    id: "symbol",
-    label: "One symbol",
-    test: (value: string) => /[^A-Za-z0-9]/.test(value),
-  },
+const PASSWORD_RULES = [
+  { id: "length", label: "At least 10 characters", test: (v: string) => v.length >= 10 },
+  { id: "upper",  label: "One uppercase letter",   test: (v: string) => /[A-Z]/.test(v) },
+  { id: "lower",  label: "One lowercase letter",   test: (v: string) => /[a-z]/.test(v) },
+  { id: "number", label: "One number",             test: (v: string) => /\d/.test(v) },
+  { id: "symbol", label: "One symbol",             test: (v: string) => /[^A-Za-z0-9]/.test(v) },
 ];
 
-function PasswordEyeIcon({ visible }: { visible: boolean }) {
+function EyeIcon({ visible }: { visible: boolean }) {
   if (visible) {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -84,7 +74,6 @@ function PasswordEyeIcon({ visible }: { visible: boolean }) {
       </svg>
     );
   }
-
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M3 3l18 18" />
@@ -95,884 +84,797 @@ function PasswordEyeIcon({ visible }: { visible: boolean }) {
   );
 }
 
-export default function AuthClient() {
-  const searchParams = useSearchParams();
-  const supabase = getSupabaseBrowserClient();
-  const fallbackBase = "https://readingqueue.vercel.app";
-  const siteUrl =
-    process.env.NEXT_PUBLIC_PROJECT_URL ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    (typeof window !== "undefined" ? window.location.origin : fallbackBase);
-  const redirectBase = siteUrl.includes("netlify.app") ? fallbackBase : siteUrl || fallbackBase;
-  const paramMode = searchParams?.get("mode") === "signup" ? "signup" : "login";
-  const [authMode, setAuthMode] = useState<AuthMode>(paramMode);
-  const [privacyOpen, setPrivacyOpen] = useState(false);
-  const [termsOpen, setTermsOpen] = useState(false);
-
-  useEffect(() => {
-    setAuthMode(paramMode);
-  }, [paramMode]);
-
-  useEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    const prevHtmlOverflow = html.style.overflow;
-    const prevBodyOverflow = body.style.overflow;
-    html.style.overflow = "auto";
-    body.style.overflow = "auto";
-    return () => {
-      html.style.overflow = prevHtmlOverflow;
-      body.style.overflow = prevBodyOverflow;
-    };
-  }, []);
-
-  const [loginMode, setLoginMode] = useState<LoginMode>("password");
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [showLoginPassword, setShowLoginPassword] = useState(false);
-  const [loginPhone, setLoginPhone] = useState("");
-  const [loginCountry, setLoginCountry] = useState("US");
-  const [loginOtp, setLoginOtp] = useState("");
-  const [loginOtpSent, setLoginOtpSent] = useState(false);
-  const [loginLoading, setLoginLoading] = useState(false);
-  const [loginMessage, setLoginMessage] = useState<string | null>(null);
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [showReset, setShowReset] = useState(false);
-
-  const canSubmitPassword = useMemo(
-    () => loginEmail && loginPassword,
-    [loginEmail, loginPassword]
-  );
-
-  const handleOAuthLogin = async (provider: Provider) => {
-    setLoginError(null);
-    await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${redirectBase}/auth/callback?next=/auth?mode=login`,
-      },
-    });
-  };
-
-  const handlePasswordLogin = async () => {
-    if (!canSubmitPassword) return;
-    setLoginLoading(true);
-    setLoginError(null);
-    setLoginMessage(null);
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password: loginPassword,
-    });
-    setLoginLoading(false);
-    if (signInError) {
-      setLoginError(signInError.message);
-      return;
-    }
-    setLoginMessage("Signed in successfully. Redirecting...");
-    window.location.href = "/";
-  };
-
-  const handlePasswordReset = async () => {
-    if (!loginEmail) {
-      setLoginError("Enter your account email to receive a reset link.");
-      return;
-    }
-    setLoginLoading(true);
-    setLoginError(null);
-    setLoginMessage(null);
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-      loginEmail,
-      {
-        redirectTo: `${redirectBase}/auth/callback?next=/reset-password`,
-      }
+function OAuthIcon({ icon }: { icon: "google" | "linkedin" | "apple" }) {
+  if (icon === "google") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+        <path d="M12.24 10.285v3.43h5.01c-.2 1.29-1.51 3.78-5.01 3.78-3.01 0-5.47-2.49-5.47-5.56 0-3.07 2.46-5.56 5.47-5.56 1.71 0 2.86.73 3.52 1.36l2.39-2.3C16.7 3.6 14.7 2.5 12.24 2.5 7.96 2.5 4.5 5.98 4.5 10.25c0 4.27 3.46 7.75 7.74 7.75 4.47 0 7.43-3.14 7.43-7.56 0-.51-.06-.9-.12-1.29H12.24z" fill="currentColor" />
+      </svg>
     );
-    setLoginLoading(false);
-    if (resetError) {
-      if (resetError.message.toLowerCase().includes('rate limit') ||
-          resetError.message.toLowerCase().includes('too many requests')) {
-        setLoginError("Too many password reset attempts. Please wait a few minutes before trying again.");
-      } else {
-        setLoginError(resetError.message);
-      }
-      return;
-    }
-    setShowReset(false);
-    setLoginMessage("Password reset link sent. Check your inbox.");
-  };
-
-  const handleSendOtp = async () => {
-    if (!loginPhone) return;
-    setLoginLoading(true);
-    setLoginError(null);
-    setLoginMessage(null);
-    const fullPhone = formatE164(loginCountry, loginPhone);
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      phone: fullPhone,
-      options: { shouldCreateUser: false },
-    });
-    setLoginLoading(false);
-    if (otpError) {
-      setLoginError(otpError.message);
-      return;
-    }
-    setLoginOtpSent(true);
-    setLoginMessage("SMS code sent. Enter it below to continue.");
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!loginPhone || !loginOtp) return;
-    setLoginLoading(true);
-    setLoginError(null);
-    setLoginMessage(null);
-    const fullPhone = formatE164(loginCountry, loginPhone);
-    const { error: verifyError } = await supabase.auth.verifyOtp({
-      phone: fullPhone,
-      token: loginOtp,
-      type: "sms",
-    });
-    setLoginLoading(false);
-    if (verifyError) {
-      setLoginError(verifyError.message);
-      return;
-    }
-    setLoginMessage("Signed in successfully. Redirecting...");
-    window.location.href = "/";
-  };
-
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [signupEmail, setSignupEmail] = useState("");
-  const [signupPhone, setSignupPhone] = useState("");
-  const [signupCountry, setSignupCountry] = useState("US");
-  const [signupPassword, setSignupPassword] = useState("");
-  const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
-  const [showSignupPassword, setShowSignupPassword] = useState(false);
-  const [showSignupConfirm, setShowSignupConfirm] = useState(false);
-  const [passwordFocus, setPasswordFocus] = useState(false);
-  const [dismissedRules, setDismissedRules] = useState<Set<string>>(new Set());
-  const ruleTimersRef = useRef<Map<string, number>>(new Map());
-  const [showStrength, setShowStrength] = useState(false);
-  const [signupLoading, setSignupLoading] = useState(false);
-  const [signupMessage, setSignupMessage] = useState<string | null>(null);
-  const [signupError, setSignupError] = useState<string | null>(null);
-
-  const [profileUser, setProfileUser] = useState<User | null>(null);
-  const [profileFirstName, setProfileFirstName] = useState("");
-  const [profileLastName, setProfileLastName] = useState("");
-  const [profilePhone, setProfilePhone] = useState("");
-  const [profileCountry, setProfileCountry] = useState("US");
-
-  useEffect(() => {
-    const loadUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) return;
-      const meta = data.user.user_metadata ?? {};
-      const needsProfile = !meta.first_name || !meta.last_name || !meta.phone;
-      if (needsProfile) {
-        setProfileUser(data.user);
-        setProfileFirstName(meta.first_name ?? "");
-        setProfileLastName(meta.last_name ?? "");
-        setProfilePhone(meta.phone ?? "");
-      }
-    };
-    loadUser();
-  }, [supabase]);
-
-  const passwordStatus = useMemo(
-    () =>
-      passwordRules.map((rule) => ({
-        ...rule,
-        met: rule.test(signupPassword),
-      })),
-    [signupPassword]
-  );
-  const isPasswordStrong = passwordStatus.every((rule) => rule.met);
-  const shouldShowStrength = (passwordFocus || signupPassword.length > 0) && !isPasswordStrong;
-
-  useEffect(() => {
-    let hideTimer: number | undefined;
-
-    if (shouldShowStrength) {
-      setShowStrength(true);
-    } else {
-      hideTimer = window.setTimeout(() => {
-        setShowStrength(false);
-      }, 1000);
-    }
-
-    return () => {
-      if (hideTimer) {
-        window.clearTimeout(hideTimer);
-      }
-    };
-  }, [shouldShowStrength]);
-
-  useEffect(() => {
-    passwordStatus.forEach((rule) => {
-      if (rule.met) {
-        if (!dismissedRules.has(rule.id) && !ruleTimersRef.current.has(rule.id)) {
-          const timer = window.setTimeout(() => {
-            setDismissedRules((prev) => new Set([...prev, rule.id]));
-            ruleTimersRef.current.delete(rule.id);
-          }, 1200);
-          ruleTimersRef.current.set(rule.id, timer);
-        }
-      } else {
-        if (ruleTimersRef.current.has(rule.id)) {
-          window.clearTimeout(ruleTimersRef.current.get(rule.id));
-          ruleTimersRef.current.delete(rule.id);
-        }
-        if (dismissedRules.has(rule.id)) {
-          setDismissedRules((prev) => {
-            const next = new Set(prev);
-            next.delete(rule.id);
-            return next;
-          });
-        }
-      }
-    });
-    return () => {
-      ruleTimersRef.current.forEach((timer) => window.clearTimeout(timer));
-      ruleTimersRef.current.clear();
-    };
-  }, [dismissedRules, passwordStatus]);
-
-  const passwordsMatch =
-    signupConfirmPassword === "" || signupPassword === signupConfirmPassword;
-  const confirmMet = signupConfirmPassword !== "" && signupPassword === signupConfirmPassword;
-
-  const handleOAuthSignup = async (provider: Provider) => {
-    setSignupError(null);
-    await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${redirectBase}/auth/callback?next=/auth?mode=signup`,
-      },
-    });
-  };
-
-  const handleSignup = async () => {
-    if (!firstName || !lastName || !signupEmail || !signupPhone) {
-      setSignupError("Please fill in all required fields.");
-      return;
-    }
-    if (!isPasswordStrong) {
-      setSignupError("Please create a stronger password.");
-      return;
-    }
-    if (signupPassword !== signupConfirmPassword) {
-      setSignupError("Passwords do not match. Please re-enter your password.");
-      return;
-    }
-    setSignupLoading(true);
-    setSignupError(null);
-    setSignupMessage(null);
-    const fullPhone = formatE164(signupCountry, signupPhone);
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: signupEmail,
-      password: signupPassword,
-      options: {
-        emailRedirectTo: `${redirectBase}/auth/callback?next=/email-confirmed`,
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-          phone: fullPhone,
-          provider: "email",
-        },
-      },
-    });
-    setSignupLoading(false);
-    const signUpErrorMessage = signUpError?.message.toLowerCase() ?? "";
-    if (signUpError) {
-      if (signUpErrorMessage.includes("rate limit") || signUpErrorMessage.includes("too many requests")) {
-        setSignupError("Too many signup attempts. Please wait a few minutes before trying again.");
-      } else if (
-        signUpErrorMessage.includes("already") ||
-        signUpErrorMessage.includes("registered") ||
-        signUpErrorMessage.includes("exists")
-      ) {
-        setSignupError("You already have an account. Please log in.");
-      } else {
-        setSignupError(signUpError.message);
-      }
-      return;
-    }
-
-    const existingUserWithoutIdentity =
-      !!signUpData?.user &&
-      Array.isArray(signUpData.user.identities) &&
-      signUpData.user.identities.length === 0;
-
-    if (existingUserWithoutIdentity) {
-      setSignupError("You already have an account. Please log in.");
-      return;
-    }
-    setSignupMessage("Check your email to confirm your account, then sign in.");
-  };
-
-  const handleCompleteProfile = async () => {
-    if (!profileUser) return;
-    setSignupLoading(true);
-    setSignupError(null);
-    setSignupMessage(null);
-    const provider = profileUser.app_metadata?.provider ?? "oauth";
-    const fullPhone = formatE164(profileCountry, profilePhone);
-    const { error: updateError } = await supabase.auth.updateUser({
-      data: {
-        first_name: profileFirstName,
-        last_name: profileLastName,
-        phone: fullPhone,
-        provider,
-      },
-    });
-    setSignupLoading(false);
-    if (updateError) {
-      setSignupError(updateError.message);
-      return;
-    }
-    setProfileUser(null);
-    setSignupMessage("Profile completed. Redirecting...");
-    window.location.href = "/";
-  };
-
+  }
+  if (icon === "linkedin") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+        <path d="M6.94 8.5H4.2v11h2.74v-11zM5.57 7.4A1.59 1.59 0 1 0 5.57 4.2a1.59 1.59 0 0 0 0 3.2zM20.5 13.2c0-3.3-1.77-4.84-4.14-4.84-1.9 0-2.75 1.04-3.22 1.77V8.5H10.4c.04 1.07 0 11 0 11h2.74v-6.14c0-.33.02-.66.12-.9.26-.66.86-1.34 1.86-1.34 1.31 0 1.84 1 1.84 2.46v5.92h2.74v-6.3z" fill="currentColor" />
+      </svg>
+    );
+  }
   return (
-    <div className="auth-page auth-page--duo">
-      <div className={`auth-dual ${authMode === "signup" ? "is-signup" : "is-login"}`}>
-                <section className="auth-dual__panel auth-dual__panel--signin">
-          <div className="auth-dual__panel-inner">
-            <div className="auth-form-head">
-              <div className="auth-head-row">
-                <div>
-                  <h2 className="auth-title">Login</h2>
-                </div>
-              </div>
-            </div>
-
-            <div className="auth-socials auth-socials--pro">
-              {providers.map(({ label, provider, icon }) => (
-                <button
-                  key={provider}
-                  className={`auth-social auth-social--${label.toLowerCase()}`}
-                  type="button"
-                  aria-label={`Continue with ${label}`}
-                  onClick={() => handleOAuthLogin(provider)}
-                >
-                  <span className="auth-social-icon">
-                    {icon === "google" ? (
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path
-                          d="M12.24 10.285v3.43h5.01c-.2 1.29-1.51 3.78-5.01 3.78-3.01 0-5.47-2.49-5.47-5.56 0-3.07 2.46-5.56 5.47-5.56 1.71 0 2.86.73 3.52 1.36l2.39-2.3C16.7 3.6 14.7 2.5 12.24 2.5 7.96 2.5 4.5 5.98 4.5 10.25c0 4.27 3.46 7.75 7.74 7.75 4.47 0 7.43-3.14 7.43-7.56 0-.51-.06-.9-.12-1.29H12.24z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                    ) : icon === "linkedin" ? (
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path
-                          d="M6.94 8.5H4.2v11h2.74v-11zM5.57 7.4A1.59 1.59 0 1 0 5.57 4.2a1.59 1.59 0 0 0 0 3.2zM20.5 13.2c0-3.3-1.77-4.84-4.14-4.84-1.9 0-2.75 1.04-3.22 1.77V8.5H10.4c.04 1.07 0 11 0 11h2.74v-6.14c0-.33.02-.66.12-.9.26-.66.86-1.34 1.86-1.34 1.31 0 1.84 1 1.84 2.46v5.92h2.74v-6.3z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path
-                          d="M17.56 12.38c-.03-2.08 1.7-3.07 1.78-3.12-0.97-1.42-2.48-1.61-3.01-1.63-1.28-.13-2.5.75-3.15.75-.65 0-1.66-.73-2.73-.71-1.4.02-2.7.82-3.42 2.08-1.46 2.52-.37 6.27 1.05 8.31.7.99 1.53 2.1 2.62 2.06 1.05-.04 1.45-.68 2.72-.68 1.27 0 1.63.68 2.73.66 1.13-.02 1.84-1.02 2.54-2.01.8-1.17 1.13-2.31 1.15-2.36-.02-.01-2.22-.85-2.24-3.35zM15.5 6.6c.58-.7.97-1.67.86-2.65-.83.03-1.83.55-2.43 1.25-.54.62-.99 1.61-.87 2.56.92.07 1.86-.47 2.44-1.16z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                    )}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className="auth-divider auth-divider--pro">OR</div>
-
-            <div className="auth-tabs">
-              <button
-                className={`auth-tab${loginMode === "password" ? " active" : ""}`}
-                type="button"
-                onClick={() => setLoginMode("password")}
-              >
-                Email
-              </button>
-              <button
-                className={`auth-tab${loginMode === "phone" ? " active" : ""}`}
-                type="button"
-                onClick={() => setLoginMode("phone")}
-              >
-                Phone
-              </button>
-            </div>
-
-            <form
-              className="auth-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (loginMode === "password") {
-                  handlePasswordLogin();
-                } else if (loginOtpSent) {
-                  handleVerifyOtp();
-                } else {
-                  handleSendOtp();
-                }
-              }}
-            >
-              {loginMode === "password" ? (
-                <>
-                  <label className="auth-label">
-                    Email address
-                    <input
-                      className="auth-input"
-                      type="email"
-                      placeholder="you@company.com"
-                      value={loginEmail}
-                      onChange={(event) => setLoginEmail(event.target.value)}
-                      required
-                    />
-                  </label>
-                  <label className="auth-label">
-                    Password
-                    <div className="auth-input-wrap">
-                      <input
-                        className="auth-input"
-                        type={showLoginPassword ? "text" : "password"}
-                        placeholder="Enter your password"
-                        value={loginPassword}
-                        onChange={(event) => setLoginPassword(event.target.value)}
-                        required
-                      />
-                      <button
-                        type="button"
-                        className={`auth-eye${showLoginPassword ? " active" : ""}`}
-                        aria-label={showLoginPassword ? "Hide password" : "Show password"}
-                        onClick={() => setShowLoginPassword((prev) => !prev)}
-                      >
-                        <PasswordEyeIcon visible={showLoginPassword} />
-                      </button>
-                    </div>
-                  </label>
-                  <div className="auth-row">
-                    <button
-                      className="auth-link"
-                      type="button"
-                      onClick={() => {
-                        setShowReset((prev) => !prev);
-                        setLoginMessage(null);
-                        setLoginError(null);
-                      }}
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
-                  {showReset ? (
-                    <div className="auth-row">
-                      <button
-                        className="auth-ghost"
-                        type="button"
-                        onClick={handlePasswordReset}
-                        disabled={loginLoading}
-                      >
-                        {loginLoading ? "Sending..." : "Send reset link"}
-                      </button>
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  <label className="auth-label">
-                    Phone number
-                    <div className="auth-phone-group">
-                      <select
-                        className="auth-dial-select"
-                        value={loginCountry}
-                        onChange={(event) => setLoginCountry(event.target.value)}
-                        aria-label="Country code"
-                      >
-                        {COUNTRY_CODES.map((c) => (
-                          <option key={c.code} value={c.code}>
-                            {c.dial} ({c.code})
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        className="auth-input"
-                        type="tel"
-                        placeholder="555 123 4567"
-                        value={loginPhone}
-                        onChange={(event) => setLoginPhone(event.target.value)}
-                        required
-                      />
-                    </div>
-                  </label>
-                  {loginOtpSent ? (
-                    <label className="auth-label">
-                      Verification code
-                      <input
-                        className="auth-input"
-                        type="text"
-                        placeholder="6-digit code"
-                        value={loginOtp}
-                        onChange={(event) => setLoginOtp(event.target.value)}
-                        required
-                      />
-                    </label>
-                  ) : null}
-                </>
-              )}
-
-              {loginMessage ? <p className="auth-message">{loginMessage}</p> : null}
-              {loginError ? <p className="auth-error">{loginError}</p> : null}
-
-              <button className="auth-primary" type="submit" disabled={loginLoading}>
-                {loginLoading
-                  ? loginMode === "password"
-                    ? "Signing in..."
-                    : "Sending..."
-                  : loginMode === "password"
-                  ? "Sign in"
-                  : loginOtpSent
-                  ? "Verify code"
-                  : "Send code"}
-              </button>
-            </form>
-          </div>
-        </section>
-
-        <section className="auth-dual__panel auth-dual__panel--signup">
-          <div className="auth-dual__panel-inner">
-            <div className="auth-form-head">
-              <div className="auth-head-row">
-                <div>
-                  <h2 className="auth-title">Signup</h2>
-                </div>
-              </div>
-            </div>
-
-            <div className="auth-socials auth-socials--pro">
-              {providers.map(({ label, provider, icon }) => (
-                <button
-                  key={provider}
-                  className={`auth-social auth-social--${label.toLowerCase()}`}
-                  type="button"
-                  aria-label={`Continue with ${label}`}
-                  onClick={() => handleOAuthSignup(provider)}
-                >
-                  <span className="auth-social-icon">
-                    {icon === "google" ? (
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path
-                          d="M12.24 10.285v3.43h5.01c-.2 1.29-1.51 3.78-5.01 3.78-3.01 0-5.47-2.49-5.47-5.56 0-3.07 2.46-5.56 5.47-5.56 1.71 0 2.86.73 3.52 1.36l2.39-2.3C16.7 3.6 14.7 2.5 12.24 2.5 7.96 2.5 4.5 5.98 4.5 10.25c0 4.27 3.46 7.75 7.74 7.75 4.47 0 7.43-3.14 7.43-7.56 0-.51-.06-.9-.12-1.29H12.24z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                    ) : icon === "linkedin" ? (
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path
-                          d="M6.94 8.5H4.2v11h2.74v-11zM5.57 7.4A1.59 1.59 0 1 0 5.57 4.2a1.59 1.59 0 0 0 0 3.2zM20.5 13.2c0-3.3-1.77-4.84-4.14-4.84-1.9 0-2.75 1.04-3.22 1.77V8.5H10.4c.04 1.07 0 11 0 11h2.74v-6.14c0-.33.02-.66.12-.9.26-.66.86-1.34 1.86-1.34 1.31 0 1.84 1 1.84 2.46v5.92h2.74v-6.3z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path
-                          d="M17.56 12.38c-.03-2.08 1.7-3.07 1.78-3.12-0.97-1.42-2.48-1.61-3.01-1.63-1.28-.13-2.5.75-3.15.75-.65 0-1.66-.73-2.73-.71-1.4.02-2.7.82-3.42 2.08-1.46 2.52-.37 6.27 1.05 8.31.7.99 1.53 2.1 2.62 2.06 1.05-.04 1.45-.68 2.72-.68 1.27 0 1.63.68 2.73.66 1.13-.02 1.84-1.02 2.54-2.01.8-1.17 1.13-2.31 1.15-2.36-.02-.01-2.22-.85-2.24-3.35zM15.5 6.6c.58-.7.97-1.67.86-2.65-.83.03-1.83.55-2.43 1.25-.54.62-.99 1.61-.87 2.56.92.07 1.86-.47 2.44-1.16z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                    )}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className="auth-divider auth-divider--pro">OR</div>
-
-            {profileUser ? (
-              <form
-                className="auth-form"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  handleCompleteProfile();
-                }}
-              >
-                <div className="auth-grid auth-name-grid">
-                  <label className="auth-label">
-                    First name
-                    <input
-                      className="auth-input"
-                      type="text"
-                      placeholder="Jane"
-                      value={profileFirstName}
-                      onChange={(event) => setProfileFirstName(event.target.value)}
-                      required
-                    />
-                  </label>
-                  <label className="auth-label">
-                    Last name
-                    <input
-                      className="auth-input"
-                      type="text"
-                      placeholder="Doe"
-                      value={profileLastName}
-                      onChange={(event) => setProfileLastName(event.target.value)}
-                      required
-                    />
-                  </label>
-                </div>
-                <label className="auth-label">
-                  Phone number
-                  <div className="auth-phone-group">
-                    <select
-                      className="auth-dial-select"
-                      value={profileCountry}
-                      onChange={(event) => setProfileCountry(event.target.value)}
-                      aria-label="Country code"
-                    >
-                      {COUNTRY_CODES.map((c) => (
-                        <option key={c.code} value={c.code}>
-                          {c.dial} ({c.code})
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      className="auth-input"
-                      type="tel"
-                      placeholder="555 123 4567"
-                      value={profilePhone}
-                      onChange={(event) => setProfilePhone(event.target.value)}
-                      required
-                    />
-                  </div>
-                </label>
-
-                <button className="auth-primary" type="submit" disabled={signupLoading}>
-                  {signupLoading ? "Saving..." : "Finish setup"}
-                </button>
-              </form>
-            ) : (
-              <form
-                className="auth-form"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  handleSignup();
-                }}
-              >
-                <div className="auth-grid auth-name-grid">
-                  <label className="auth-label">
-                    First name
-                    <input
-                      className="auth-input"
-                      type="text"
-                      placeholder="Jane"
-                      value={firstName}
-                      onChange={(event) => setFirstName(event.target.value)}
-                      required
-                    />
-                  </label>
-                  <label className="auth-label">
-                    Last name
-                    <input
-                      className="auth-input"
-                      type="text"
-                      placeholder="Doe"
-                      value={lastName}
-                      onChange={(event) => setLastName(event.target.value)}
-                      required
-                    />
-                  </label>
-                </div>
-                <label className="auth-label">
-                  Email address
-                  <input
-                    className="auth-input"
-                    type="email"
-                    placeholder="you@company.com"
-                    value={signupEmail}
-                    onChange={(event) => setSignupEmail(event.target.value)}
-                    required
-                  />
-                </label>
-                <label className="auth-label">
-                  Phone number
-                  <div className="auth-phone-group">
-                    <select
-                      className="auth-dial-select"
-                      value={signupCountry}
-                      onChange={(event) => setSignupCountry(event.target.value)}
-                      aria-label="Country code"
-                    >
-                      {COUNTRY_CODES.map((c) => (
-                        <option key={c.code} value={c.code}>
-                          {c.dial} ({c.code})
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      className="auth-input"
-                      type="tel"
-                      placeholder="555 123 4567"
-                      value={signupPhone}
-                      onChange={(event) => setSignupPhone(event.target.value)}
-                      required
-                    />
-                  </div>
-                </label>
-                <div className="auth-pass-stack">
-                  <label className="auth-label">
-                    Password
-                    <div className="auth-input-wrap">
-                      <input
-                        className="auth-input"
-                        type={showSignupPassword ? "text" : "password"}
-                        placeholder="Create a strong password"
-                        value={signupPassword}
-                        onChange={(event) => setSignupPassword(event.target.value)}
-                        onFocus={() => setPasswordFocus(true)}
-                        onBlur={() => setPasswordFocus(false)}
-                        required
-                      />
-                      <button
-                        type="button"
-                        className={`auth-eye${showSignupPassword ? " active" : ""}`}
-                        aria-label={showSignupPassword ? "Hide password" : "Show password"}
-                        onClick={() => setShowSignupPassword((prev) => !prev)}
-                      >
-                        <PasswordEyeIcon visible={showSignupPassword} />
-                      </button>
-                    </div>
-                  </label>
-                  <div
-                    className={`auth-strength auth-strength--float${showStrength ? " visible" : ""}`}
-                    aria-live="polite"
-                    aria-hidden={!showStrength}
-                  >
-                    <div className="auth-strength-label">Password strength</div>
-                    <ul className="auth-strength-list">
-                      {passwordStatus.map((rule) => (
-                        <li
-                          key={rule.id}
-                          className={`auth-strength-item${rule.met ? " met" : ""}${dismissedRules.has(rule.id) ? " dismissed" : ""}`}
-                        >
-                          <span className={`auth-strength-icon${rule.met ? " met" : ""}`} aria-hidden="true" />
-                          <span className="auth-strength-text">{rule.label}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-                <label className="auth-label auth-label--hint-pop">
-                  Re-enter password
-                  <div className="auth-input-wrap">
-                    <input
-                      className={`auth-input${signupConfirmPassword && !passwordsMatch ? " auth-input--error" : confirmMet ? " auth-input--ok" : ""}`}
-                      type={showSignupConfirm ? "text" : "password"}
-                      placeholder="Confirm your password"
-                      value={signupConfirmPassword}
-                      onChange={(event) => setSignupConfirmPassword(event.target.value)}
-                      required
-                    />
-                    <button
-                      type="button"
-                      className={`auth-eye${showSignupConfirm ? " active" : ""}`}
-                      aria-label={showSignupConfirm ? "Hide password" : "Show password"}
-                      onClick={() => setShowSignupConfirm((prev) => !prev)}
-                    >
-                      <PasswordEyeIcon visible={showSignupConfirm} />
-                    </button>
-                  </div>
-                  <div className="auth-field-hint-slot" aria-live="polite">
-                    {signupConfirmPassword && !passwordsMatch ? (
-                      <span className="auth-field-hint auth-field-hint--error">Passwords do not match</span>
-                    ) : confirmMet ? (
-                      <span className="auth-field-hint auth-field-hint--ok">Passwords match</span>
-                    ) : (
-                      <span
-                        className="auth-field-hint auth-field-hint--placeholder"
-                        aria-hidden="true"
-                      >
-                        &nbsp;
-                      </span>
-                    )}
-                  </div>
-                </label>
-                <button
-                  className="auth-primary"
-                  type="submit"
-                  disabled={signupLoading || (signupConfirmPassword !== "" && !passwordsMatch)}
-                >
-                  {signupLoading ? "Creating..." : "Create account"}
-                </button>
-              </form>
-            )}
-
-            {signupMessage ? <p className="auth-message">{signupMessage}</p> : null}
-            {signupError ? <p className="auth-error">{signupError}</p> : null}
-
-            <p className="auth-hint">
-              By continuing you agree to Reading Queue&apos;s{" "}
-              <button className="auth-hint-link" type="button" onClick={() => setTermsOpen(true)}>
-                Terms of Service
-              </button>{" "}
-              and{" "}
-              <button className="auth-hint-link" type="button" onClick={() => setPrivacyOpen(true)}>
-                Privacy Policy
-              </button>
-              .
-            </p>
-            {termsOpen && <TermsOfServiceModal onClose={() => setTermsOpen(false)} />}
-            {privacyOpen && <PrivacyPolicyModal onClose={() => setPrivacyOpen(false)} />}
-          </div>
-        </section>
-
-        <div className="auth-dual__overlay">
-          <div className="auth-dual__overlay-inner">
-            <div className="auth-dual__overlay-panel auth-dual__overlay-left">
-              <p className="auth-brand">Reading Queue</p>
-              <h2 className="auth-slide-title">Welcome back.</h2>
-              <p className="auth-slide-text">To keep connected, sign in with your personal info.</p>
-              <button
-                className="auth-ghost"
-                type="button"
-                onClick={() => setAuthMode("login")}
-              >
-                Sign in
-              </button>
-            </div>
-            <div className="auth-dual__overlay-panel auth-dual__overlay-right">
-              <p className="auth-brand">Reading Queue</p>
-              <h2 className="auth-slide-title">Start your workspace.</h2>
-              <p className="auth-slide-text">Create your account and launch in minutes.</p>
-              <button
-                className="auth-ghost"
-                type="button"
-                onClick={() => setAuthMode("signup")}
-              >
-                Create account
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="auth-dual__switch">
-          <button
-            className={`auth-tab${authMode === "login" ? " active" : ""}`}
-            type="button"
-            onClick={() => setAuthMode("login")}
-          >
-            Sign in
-          </button>
-          <button
-            className={`auth-tab${authMode === "signup" ? " active" : ""}`}
-            type="button"
-            onClick={() => setAuthMode("signup")}
-          >
-            Create account
-          </button>
-        </div>
-      </div>
-    </div>
+    <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+      <path d="M17.56 12.38c-.03-2.08 1.7-3.07 1.78-3.12-.97-1.42-2.48-1.61-3.01-1.63-1.28-.13-2.5.75-3.15.75-.65 0-1.66-.73-2.73-.71-1.4.02-2.7.82-3.42 2.08-1.46 2.52-.37 6.27 1.05 8.31.7.99 1.53 2.1 2.62 2.06 1.05-.04 1.45-.68 2.72-.68 1.27 0 1.63.68 2.73.66 1.13-.02 1.84-1.02 2.54-2.01.8-1.17 1.13-2.31 1.15-2.36-.02-.01-2.22-.85-2.24-3.35zM15.5 6.6c.58-.7.97-1.67.86-2.65-.83.03-1.83.55-2.43 1.25-.54.62-.99 1.61-.87 2.56.92.07 1.86-.47 2.44-1.16z" fill="currentColor" />
+    </svg>
   );
 }
 
+/* ─── Phone field (shared) ─────────────────────────────────────── */
+function PhoneField({
+  country, setCountry, phone, setPhone, label = "Phone number",
+}: {
+  country: string; setCountry: (v: string) => void;
+  phone: string; setPhone: (v: string) => void;
+  label?: string;
+}) {
+  return (
+    <label className="auth-label">
+      {label}
+      <div className="auth-phone-group">
+        <select className="auth-dial-select" value={country} onChange={(e) => setCountry(e.target.value)} aria-label="Country code">
+          {COUNTRY_CODES.map((c) => (
+            <option key={c.code} value={c.code}>{c.flag} {c.dial}</option>
+          ))}
+        </select>
+        <input className="auth-input" type="tel" placeholder="555 123 4567" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+      </div>
+    </label>
+  );
+}
 
+/* ─── OTP input ────────────────────────────────────────────────── */
+function OtpField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="auth-label">
+      Verification code
+      <input
+        className="auth-input auth-input--otp"
+        type="text"
+        inputMode="numeric"
+        placeholder="6-digit code"
+        maxLength={6}
+        value={value}
+        onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 6))}
+        required
+      />
+    </label>
+  );
+}
 
+/* ═══════════════════════════════════════════════════════════════ */
+export default function AuthClient() {
+  const searchParams = useSearchParams();
+  const supabase = getSupabaseBrowserClient();
+
+  const fallbackBase = "https://readingqueue.vercel.app";
+  const siteUrl = process.env.NEXT_PUBLIC_PROJECT_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? (typeof window !== "undefined" ? window.location.origin : fallbackBase);
+  const redirectBase = siteUrl.includes("netlify.app") ? fallbackBase : siteUrl || fallbackBase;
+
+  const paramMode = searchParams?.get("mode") === "signup" ? "signup" : "login";
+  const [mode, setMode] = useState<AuthMode>(paramMode);
+  const [step, setStep] = useState<AuthStep>("select");
+
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
+
+  /* fix body scroll on auth page */
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const ph = html.style.overflow;
+    const pb = body.style.overflow;
+    html.style.overflow = "auto";
+    body.style.overflow = "auto";
+    return () => { html.style.overflow = ph; body.style.overflow = pb; };
+  }, []);
+
+  useEffect(() => { setMode(paramMode); }, [paramMode]);
+
+  /* ── OAuth phone verification overlay (non-dismissible) ──────── */
+  const [oauthUser, setOauthUser] = useState<User | null>(null);
+  const [oauthPhoneStep, setOauthPhoneStep] = useState<"entry" | "otp">("entry");
+  const [oauthPhone, setOauthPhone] = useState("");
+  const [oauthCountry, setOauthCountry] = useState("US");
+  const [oauthOtp, setOauthOtp] = useState("");
+  const [oauthLoading, setOauthLoading] = useState(false);
+  const [oauthError, setOauthError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkOAuthUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) return;
+      const provider = data.user.app_metadata?.provider ?? "email";
+      const isOAuth = provider !== "email";
+      const phoneVerified = data.user.user_metadata?.phone_verified === true;
+      if (isOAuth && !phoneVerified) setOauthUser(data.user);
+    };
+    checkOAuthUser();
+  }, [supabase]);
+
+  const handleOauthSendOtp = async () => {
+    if (!oauthPhone) return;
+    setOauthLoading(true);
+    setOauthError(null);
+    const full = formatE164(oauthCountry, oauthPhone);
+    const { error } = await supabase.auth.updateUser({ phone: full });
+    setOauthLoading(false);
+    if (error) { setOauthError(error.message); return; }
+    setOauthPhoneStep("otp");
+  };
+
+  const handleOauthVerifyOtp = async () => {
+    if (!oauthOtp) return;
+    setOauthLoading(true);
+    setOauthError(null);
+    const full = formatE164(oauthCountry, oauthPhone);
+    const { error } = await supabase.auth.verifyOtp({ phone: full, token: oauthOtp, type: "phone_change" });
+    if (error) { setOauthError(error.message); setOauthLoading(false); return; }
+    await supabase.auth.updateUser({ data: { phone: full, phone_verified: true } });
+    setOauthLoading(false);
+    window.location.href = "/";
+  };
+
+  /* ── Email login ─────────────────────────────────────────────── */
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [showLoginPw, setShowLoginPw] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginMsg, setLoginMsg] = useState<string | null>(null);
+  const [loginErr, setLoginErr] = useState<string | null>(null);
+
+  const handleEmailLogin = async () => {
+    if (!loginEmail || !loginPassword) return;
+    setLoginLoading(true); setLoginErr(null); setLoginMsg(null);
+    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword });
+    setLoginLoading(false);
+    if (error) { setLoginErr(error.message); return; }
+    setLoginMsg("Signed in. Redirecting…");
+    window.location.href = "/";
+  };
+
+  /* ── Password reset ──────────────────────────────────────────── */
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetPhone, setResetPhone] = useState("");
+  const [resetCountry, setResetCountry] = useState("US");
+  const [resetOtp, setResetOtp] = useState("");
+  const [resetNewPw, setResetNewPw] = useState("");
+  const [resetConfirmPw, setResetConfirmPw] = useState("");
+  const [showResetPw, setShowResetPw] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMsg, setResetMsg] = useState<string | null>(null);
+  const [resetErr, setResetErr] = useState<string | null>(null);
+
+  const handleResetEmail = async () => {
+    if (!resetEmail) { setResetErr("Enter your email address."); return; }
+    setResetLoading(true); setResetErr(null); setResetMsg(null);
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: `${redirectBase}/auth/callback?next=/reset-password`,
+    });
+    setResetLoading(false);
+    if (error) {
+      setResetErr(error.message.toLowerCase().includes("rate limit") ? "Too many attempts. Please wait a few minutes." : error.message);
+      return;
+    }
+    setStep("reset-sent");
+  };
+
+  const handleResetSendOtp = async () => {
+    if (!resetPhone) return;
+    setResetLoading(true); setResetErr(null); setResetMsg(null);
+    const full = formatE164(resetCountry, resetPhone);
+    const { error } = await supabase.auth.signInWithOtp({ phone: full, options: { shouldCreateUser: false } });
+    setResetLoading(false);
+    if (error) { setResetErr(error.message); return; }
+    setStep("reset-phone-otp");
+    setResetMsg("Code sent. Enter it below.");
+  };
+
+  const handleResetVerifyOtp = async () => {
+    if (!resetPhone || !resetOtp) return;
+    setResetLoading(true); setResetErr(null); setResetMsg(null);
+    const full = formatE164(resetCountry, resetPhone);
+    const { error } = await supabase.auth.verifyOtp({ phone: full, token: resetOtp, type: "sms" });
+    setResetLoading(false);
+    if (error) { setResetErr(error.message); return; }
+    setStep("reset-new-password");
+  };
+
+  const handleSetNewPassword = async () => {
+    if (!resetNewPw || !resetConfirmPw) { setResetErr("Please fill both fields."); return; }
+    if (resetNewPw !== resetConfirmPw) { setResetErr("Passwords do not match."); return; }
+    setResetLoading(true); setResetErr(null); setResetMsg(null);
+    const { error } = await supabase.auth.updateUser({ password: resetNewPw });
+    setResetLoading(false);
+    if (error) { setResetErr(error.message); return; }
+    setResetMsg("Password updated. Redirecting…");
+    setTimeout(() => { window.location.href = "/"; }, 1500);
+  };
+
+  /* ── Email signup ────────────────────────────────────────────── */
+  const [sgFirst, setSgFirst] = useState("");
+  const [sgLast, setSgLast] = useState("");
+  const [sgEmail, setSgEmail] = useState("");
+  const [sgPhone, setSgPhone] = useState("");
+  const [sgCountry, setSgCountry] = useState("US");
+  const [sgPassword, setSgPassword] = useState("");
+  const [sgConfirm, setSgConfirm] = useState("");
+  const [showSgPw, setShowSgPw] = useState(false);
+  const [showSgConfirm, setShowSgConfirm] = useState(false);
+  const [pwFocus, setPwFocus] = useState(false);
+  const [dismissedRules, setDismissedRules] = useState<Set<string>>(new Set());
+  const ruleTimers = useRef<Map<string, number>>(new Map());
+  const [showStrength, setShowStrength] = useState(false);
+  const [sgOtp, setSgOtp] = useState("");
+  const [sgLoading, setSgLoading] = useState(false);
+  const [sgMsg, setSgMsg] = useState<string | null>(null);
+  const [sgErr, setSgErr] = useState<string | null>(null);
+
+  const pwStatus = useMemo(() => PASSWORD_RULES.map((r) => ({ ...r, met: r.test(sgPassword) })), [sgPassword]);
+  const isPwStrong = pwStatus.every((r) => r.met);
+  const shouldShowStrength = (pwFocus || sgPassword.length > 0) && !isPwStrong;
+
+  useEffect(() => {
+    let t: number | undefined;
+    if (shouldShowStrength) { setShowStrength(true); }
+    else { t = window.setTimeout(() => setShowStrength(false), 1000); }
+    return () => { if (t) window.clearTimeout(t); };
+  }, [shouldShowStrength]);
+
+  useEffect(() => {
+    pwStatus.forEach((rule) => {
+      if (rule.met) {
+        if (!dismissedRules.has(rule.id) && !ruleTimers.current.has(rule.id)) {
+          const t = window.setTimeout(() => {
+            setDismissedRules((prev) => new Set([...prev, rule.id]));
+            ruleTimers.current.delete(rule.id);
+          }, 1200);
+          ruleTimers.current.set(rule.id, t);
+        }
+      } else {
+        if (ruleTimers.current.has(rule.id)) { window.clearTimeout(ruleTimers.current.get(rule.id)!); ruleTimers.current.delete(rule.id); }
+        if (dismissedRules.has(rule.id)) { setDismissedRules((prev) => { const n = new Set(prev); n.delete(rule.id); return n; }); }
+      }
+    });
+    return () => { ruleTimers.current.forEach((t) => window.clearTimeout(t)); ruleTimers.current.clear(); };
+  }, [dismissedRules, pwStatus]);
+
+  const pwsMatch = sgConfirm === "" || sgPassword === sgConfirm;
+  const confirmMet = sgConfirm !== "" && sgPassword === sgConfirm;
+
+  const handleEmailSignup = async () => {
+    if (!sgFirst || !sgLast || !sgEmail || !sgPhone) { setSgErr("Please fill in all required fields."); return; }
+    if (!isPwStrong) { setSgErr("Please create a stronger password."); return; }
+    if (sgPassword !== sgConfirm) { setSgErr("Passwords do not match."); return; }
+    setSgLoading(true); setSgErr(null); setSgMsg(null);
+    const fullPhone = formatE164(sgCountry, sgPhone);
+    const { data, error } = await supabase.auth.signUp({
+      email: sgEmail,
+      password: sgPassword,
+      options: {
+        emailRedirectTo: `${redirectBase}/auth/callback?next=/email-confirmed`,
+        data: { first_name: sgFirst, last_name: sgLast, phone: fullPhone, provider: "email" },
+      },
+    });
+    if (error) {
+      const msg = error.message.toLowerCase();
+      setSgErr(
+        msg.includes("rate limit") ? "Too many signup attempts. Please wait a moment." :
+        (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) ? "An account with this email already exists. Please log in." :
+        error.message
+      );
+      setSgLoading(false);
+      return;
+    }
+    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      setSgErr("An account with this email already exists. Please log in.");
+      setSgLoading(false);
+      return;
+    }
+    /* send phone OTP */
+    const { error: phoneErr } = await supabase.auth.updateUser({ phone: fullPhone });
+    setSgLoading(false);
+    if (phoneErr) {
+      setSgMsg("Account created! A verification email was sent. Phone OTP failed — you can verify later.");
+      setTimeout(() => { window.location.href = "/"; }, 2500);
+      return;
+    }
+    setSgMsg("Account created! A verification email was sent. Now verify your phone.");
+    setStep("email-signup-otp");
+  };
+
+  const handleSignupVerifyOtp = async () => {
+    if (!sgOtp) return;
+    setSgLoading(true); setSgErr(null); setSgMsg(null);
+    const fullPhone = formatE164(sgCountry, sgPhone);
+    const { error } = await supabase.auth.verifyOtp({ phone: fullPhone, token: sgOtp, type: "phone_change" });
+    if (error) { setSgErr(error.message); setSgLoading(false); return; }
+    await supabase.auth.updateUser({ data: { phone_verified: true } });
+    setSgLoading(false);
+    window.location.href = "/";
+  };
+
+  /* ── Phone login / signup ────────────────────────────────────── */
+  const [phPhone, setPhPhone] = useState("");
+  const [phCountry, setPhCountry] = useState("US");
+  const [phOtp, setPhOtp] = useState("");
+  const [phOtpSent, setPhOtpSent] = useState(false);
+  const [phLoading, setPhLoading] = useState(false);
+  const [phMsg, setPhMsg] = useState<string | null>(null);
+  const [phErr, setPhErr] = useState<string | null>(null);
+
+  const handlePhoneSend = async () => {
+    if (!phPhone) return;
+    setPhLoading(true); setPhErr(null); setPhMsg(null);
+    const full = formatE164(phCountry, phPhone);
+    const { error } = await supabase.auth.signInWithOtp({ phone: full, options: { shouldCreateUser: mode === "signup" } });
+    setPhLoading(false);
+    if (error) { setPhErr(error.message); return; }
+    setPhOtpSent(true);
+    setPhMsg("Code sent. Enter it below.");
+  };
+
+  const handlePhoneVerify = async () => {
+    if (!phPhone || !phOtp) return;
+    setPhLoading(true); setPhErr(null); setPhMsg(null);
+    const full = formatE164(phCountry, phPhone);
+    const { error } = await supabase.auth.verifyOtp({ phone: full, token: phOtp, type: "sms" });
+    setPhLoading(false);
+    if (error) { setPhErr(error.message); return; }
+    window.location.href = "/";
+  };
+
+  /* ── OAuth ───────────────────────────────────────────────────── */
+  const handleOAuth = async (provider: Provider) => {
+    await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${redirectBase}/auth/callback?next=/auth?mode=${mode}` },
+    });
+  };
+
+  /* ── Back button helper ──────────────────────────────────────── */
+  const goBack = () => {
+    setSgErr(null); setSgMsg(null);
+    setLoginErr(null); setLoginMsg(null);
+    setPhErr(null); setPhMsg(null);
+    setResetErr(null); setResetMsg(null);
+    setPhOtpSent(false);
+    if (step === "email-signup-otp") { setStep("email-signup"); return; }
+    if (step === "reset" || step === "reset-sent" || step === "reset-phone-otp" || step === "reset-new-password") {
+      setStep("email-login"); return;
+    }
+    setStep("select");
+  };
+
+  /* ── Inline email state (used on select step, pre-fills form) ── */
+  const [selectEmail, setSelectEmail] = useState("");
+
+  const handleContinueWithEmail = () => {
+    if (!selectEmail) return;
+    if (mode === "login") {
+      setLoginEmail(selectEmail);
+      setStep("email-login");
+    } else {
+      setSgEmail(selectEmail);
+      setStep("email-signup");
+    }
+  };
+
+  /* ── Derived ─────────────────────────────────────────────────── */
+  const hasBack = step !== "select";
+  const stepTitle: Record<AuthStep, string> = {
+    select:              mode === "login" ? "Log in to Cloudduty" : "Create your account",
+    "email-login":       "Log in with email",
+    "email-signup":      "Create your account",
+    "email-signup-otp":  "Verify your phone",
+    phone:               mode === "login" ? "Log in with phone" : "Sign up with phone",
+    reset:               "Reset your password",
+    "reset-sent":        "Check your inbox",
+    "reset-phone-otp":   "Verify your phone",
+    "reset-new-password":"Set new password",
+  };
+
+  /* ══════════════════════════════════════════════════════════════ */
+  return (
+    <>
+      {/* Non-dismissible OAuth phone verification overlay */}
+      {oauthUser && (
+        <div className="av2-overlay" role="dialog" aria-modal="true" aria-label="Phone verification required">
+          <div className="av2-overlay-card">
+            <div className="av2-overlay-lock" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </div>
+            <h2 className="av2-overlay-title">Security verification required</h2>
+            <p className="av2-overlay-text">
+              To protect your account, verify your phone number before continuing. This cannot be skipped.
+            </p>
+            {oauthPhoneStep === "entry" ? (
+              <form className="auth-form" onSubmit={(e) => { e.preventDefault(); handleOauthSendOtp(); }}>
+                <PhoneField country={oauthCountry} setCountry={setOauthCountry} phone={oauthPhone} setPhone={setOauthPhone} />
+                {oauthError && <p className="auth-error">{oauthError}</p>}
+                <button className="auth-primary" type="submit" disabled={oauthLoading || !oauthPhone}>
+                  {oauthLoading ? "Sending…" : "Send verification code"}
+                </button>
+              </form>
+            ) : (
+              <form className="auth-form" onSubmit={(e) => { e.preventDefault(); handleOauthVerifyOtp(); }}>
+                <p className="av2-overlay-hint">Code sent to {formatE164(oauthCountry, oauthPhone)}</p>
+                <OtpField value={oauthOtp} onChange={setOauthOtp} />
+                {oauthError && <p className="auth-error">{oauthError}</p>}
+                <button className="auth-primary" type="submit" disabled={oauthLoading || oauthOtp.length < 6}>
+                  {oauthLoading ? "Verifying…" : "Verify & continue"}
+                </button>
+                <button className="av2-resend" type="button" onClick={() => { setOauthPhoneStep("entry"); setOauthOtp(""); setOauthError(null); }}>
+                  Change phone number
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Fixed top nav — logo left, Sign Up / Log in right */}
+      <nav className="av2-topnav">
+        <a className="av2-topnav-logo" href="/">
+          <Image src="/logo.png" alt="Cloudduty" width={28} height={28} style={{ background: "transparent" }} />
+          <span className="av2-topnav-logo-name">Cloudduty</span>
+        </a>
+        {step === "select" && (
+          mode === "login"
+            ? <button className="av2-topnav-cta" type="button" onClick={() => setMode("signup")}>Sign Up</button>
+            : <button className="av2-topnav-cta" type="button" onClick={() => setMode("login")}>Log In</button>
+        )}
+      </nav>
+
+      {/* Main auth page */}
+      <div className="auth-page av2-page">
+        <div className="av2-card">
+
+          {/* Back button */}
+          {hasBack && (
+            <button className="av2-back" type="button" onClick={goBack} aria-label="Go back">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M19 12H5M12 5l-7 7 7 7" />
+              </svg>
+              Back
+            </button>
+          )}
+
+          {/* Step title */}
+          <h1 className="av2-title">{stepTitle[step]}</h1>
+
+          {/* ── SELECT ─────────────────────────────────────────── */}
+          {step === "select" && (
+            <>
+              {/* Email input + primary CTA — exactly like Vercel */}
+              <form className="av2-email-block" onSubmit={(e) => { e.preventDefault(); handleContinueWithEmail(); }}>
+                <input
+                  className="av2-email-input"
+                  type="email"
+                  placeholder="Email Address"
+                  value={selectEmail}
+                  onChange={(e) => setSelectEmail(e.target.value)}
+                  autoComplete="email"
+                  required
+                />
+                <button className="av2-email-btn" type="submit" disabled={!selectEmail}>
+                  Continue with Email
+                </button>
+              </form>
+
+              <div className="av2-divider" />
+
+              {/* OAuth + Phone options */}
+              <div className="av2-opts">
+                {OAUTH_PROVIDERS.map(({ label, provider, icon }) => (
+                  <button key={provider} className="av2-opt" type="button" onClick={() => handleOAuth(provider)}>
+                    <span className="av2-opt-icon"><OAuthIcon icon={icon} /></span>
+                    <span className="av2-opt-label">Continue with {label}</span>
+                  </button>
+                ))}
+
+                <button className="av2-opt" type="button" onClick={() => setStep("phone")}>
+                  <span className="av2-opt-icon">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.98a16 16 0 0 0 6.12 6.12l.97-.97a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                    </svg>
+                  </span>
+                  <span className="av2-opt-label">Continue with Phone</span>
+                </button>
+              </div>
+
+              <p className="av2-legal">
+                By continuing you agree to Cloudduty&apos;s{" "}
+                <button className="auth-hint-link" type="button" onClick={() => setTermsOpen(true)}>Terms of Service</button>
+                {" "}and{" "}
+                <button className="auth-hint-link" type="button" onClick={() => setPrivacyOpen(true)}>Privacy Policy</button>.
+              </p>
+              {mode === "login" ? (
+                <p className="av2-switch">Don&apos;t have an account?{" "}<button className="auth-hint-link" type="button" onClick={() => setMode("signup")}>Sign Up</button></p>
+              ) : (
+                <p className="av2-switch">Already have an account?{" "}<button className="auth-hint-link" type="button" onClick={() => setMode("login")}>Log In</button></p>
+              )}
+            </>
+          )}
+
+          {/* ── EMAIL LOGIN ─────────────────────────────────────── */}
+          {step === "email-login" && (
+            <form className="auth-form av2-form" onSubmit={(e) => { e.preventDefault(); handleEmailLogin(); }}>
+              <label className="auth-label">
+                Email address
+                <input className="auth-input" type="email" placeholder="you@company.com" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
+              </label>
+              <label className="auth-label">
+                Password
+                <div className="auth-input-wrap">
+                  <input className="auth-input" type={showLoginPw ? "text" : "password"} placeholder="Your password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
+                  <button type="button" className={`auth-eye${showLoginPw ? " active" : ""}`} aria-label={showLoginPw ? "Hide" : "Show"} onClick={() => setShowLoginPw((p) => !p)}>
+                    <EyeIcon visible={showLoginPw} />
+                  </button>
+                </div>
+              </label>
+              <button className="auth-link av2-forgot" type="button" onClick={() => { setResetEmail(loginEmail); setStep("reset"); }}>
+                Forgot password?
+              </button>
+              {loginMsg && <p className="auth-message">{loginMsg}</p>}
+              {loginErr && <p className="auth-error">{loginErr}</p>}
+              <button className="auth-primary" type="submit" disabled={loginLoading || !loginEmail || !loginPassword}>
+                {loginLoading ? "Signing in…" : "Sign in"}
+              </button>
+              <p className="av2-switch">Don&apos;t have an account?{" "}<button className="auth-hint-link" type="button" onClick={() => { setMode("signup"); setStep("email-signup"); }}>Sign up</button></p>
+            </form>
+          )}
+
+          {/* ── EMAIL SIGNUP ────────────────────────────────────── */}
+          {step === "email-signup" && (
+            <form className="auth-form av2-form" onSubmit={(e) => { e.preventDefault(); handleEmailSignup(); }}>
+              <div className="auth-grid auth-name-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <label className="auth-label">
+                  First name
+                  <input className="auth-input" type="text" placeholder="Jane" value={sgFirst} onChange={(e) => setSgFirst(e.target.value)} required />
+                </label>
+                <label className="auth-label">
+                  Last name
+                  <input className="auth-input" type="text" placeholder="Doe" value={sgLast} onChange={(e) => setSgLast(e.target.value)} required />
+                </label>
+              </div>
+              <label className="auth-label">
+                Email address
+                <input className="auth-input" type="email" placeholder="you@company.com" value={sgEmail} onChange={(e) => setSgEmail(e.target.value)} required />
+              </label>
+              <PhoneField country={sgCountry} setCountry={setSgCountry} phone={sgPhone} setPhone={setSgPhone} label="Phone number (required)" />
+              <div className="auth-pass-stack">
+                <label className="auth-label">
+                  Password
+                  <div className="auth-input-wrap">
+                    <input
+                      className="auth-input"
+                      type={showSgPw ? "text" : "password"}
+                      placeholder="Create a strong password"
+                      value={sgPassword}
+                      onChange={(e) => setSgPassword(e.target.value)}
+                      onFocus={() => setPwFocus(true)}
+                      onBlur={() => setPwFocus(false)}
+                      required
+                    />
+                    <button type="button" className={`auth-eye${showSgPw ? " active" : ""}`} aria-label={showSgPw ? "Hide" : "Show"} onClick={() => setShowSgPw((p) => !p)}>
+                      <EyeIcon visible={showSgPw} />
+                    </button>
+                  </div>
+                </label>
+                <div className={`auth-strength auth-strength--float${showStrength ? " visible" : ""}`} aria-live="polite" aria-hidden={!showStrength}>
+                  <div className="auth-strength-label">Password strength</div>
+                  <ul className="auth-strength-list">
+                    {pwStatus.map((rule) => (
+                      <li key={rule.id} className={`auth-strength-item${rule.met ? " met" : ""}${dismissedRules.has(rule.id) ? " dismissed" : ""}`}>
+                        <span className={`auth-strength-icon${rule.met ? " met" : ""}`} aria-hidden="true" />
+                        <span className="auth-strength-text">{rule.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <label className="auth-label auth-label--hint-pop">
+                Re-enter password
+                <div className="auth-input-wrap">
+                  <input
+                    className={`auth-input${sgConfirm && !pwsMatch ? " auth-input--error" : confirmMet ? " auth-input--ok" : ""}`}
+                    type={showSgConfirm ? "text" : "password"}
+                    placeholder="Confirm your password"
+                    value={sgConfirm}
+                    onChange={(e) => setSgConfirm(e.target.value)}
+                    required
+                  />
+                  <button type="button" className={`auth-eye${showSgConfirm ? " active" : ""}`} aria-label={showSgConfirm ? "Hide" : "Show"} onClick={() => setShowSgConfirm((p) => !p)}>
+                    <EyeIcon visible={showSgConfirm} />
+                  </button>
+                </div>
+                <div className="auth-field-hint-slot" aria-live="polite">
+                  {sgConfirm && !pwsMatch ? (
+                    <span className="auth-field-hint auth-field-hint--error">Passwords do not match</span>
+                  ) : confirmMet ? (
+                    <span className="auth-field-hint auth-field-hint--ok">Passwords match</span>
+                  ) : (
+                    <span className="auth-field-hint auth-field-hint--placeholder" aria-hidden="true">&nbsp;</span>
+                  )}
+                </div>
+              </label>
+              {sgMsg && <p className="auth-message">{sgMsg}</p>}
+              {sgErr && <p className="auth-error">{sgErr}</p>}
+              <button className="auth-primary" type="submit" disabled={sgLoading || (sgConfirm !== "" && !pwsMatch)}>
+                {sgLoading ? "Creating account…" : "Create account"}
+              </button>
+              <p className="av2-switch">Already have an account?{" "}<button className="auth-hint-link" type="button" onClick={() => { setMode("login"); setStep("email-login"); }}>Log in</button></p>
+            </form>
+          )}
+
+          {/* ── EMAIL SIGNUP — PHONE OTP ─────────────────────────── */}
+          {step === "email-signup-otp" && (
+            <form className="auth-form av2-form" onSubmit={(e) => { e.preventDefault(); handleSignupVerifyOtp(); }}>
+              <p className="av2-otp-hint">
+                A verification code was sent to{" "}
+                <strong>{formatE164(sgCountry, sgPhone)}</strong>.
+                {" "}A confirmation email was also sent to <strong>{sgEmail}</strong>.
+              </p>
+              <OtpField value={sgOtp} onChange={setSgOtp} />
+              {sgMsg && <p className="auth-message">{sgMsg}</p>}
+              {sgErr && <p className="auth-error">{sgErr}</p>}
+              <button className="auth-primary" type="submit" disabled={sgLoading || sgOtp.length < 6}>
+                {sgLoading ? "Verifying…" : "Verify & continue"}
+              </button>
+            </form>
+          )}
+
+          {/* ── PHONE ───────────────────────────────────────────── */}
+          {step === "phone" && (
+            <form
+              className="auth-form av2-form"
+              onSubmit={(e) => { e.preventDefault(); phOtpSent ? handlePhoneVerify() : handlePhoneSend(); }}
+            >
+              {!phOtpSent ? (
+                <PhoneField country={phCountry} setCountry={setPhCountry} phone={phPhone} setPhone={setPhPhone} />
+              ) : (
+                <>
+                  <p className="av2-otp-hint">Code sent to <strong>{formatE164(phCountry, phPhone)}</strong>.</p>
+                  <OtpField value={phOtp} onChange={setPhOtp} />
+                </>
+              )}
+              {phMsg && <p className="auth-message">{phMsg}</p>}
+              {phErr && <p className="auth-error">{phErr}</p>}
+              <button className="auth-primary" type="submit" disabled={phLoading || (!phOtpSent && !phPhone) || (phOtpSent && phOtp.length < 6)}>
+                {phLoading ? (phOtpSent ? "Verifying…" : "Sending…") : phOtpSent ? "Verify code" : "Send code"}
+              </button>
+              {phOtpSent && (
+                <button className="auth-link av2-resend" type="button" onClick={() => { setPhOtpSent(false); setPhOtp(""); setPhErr(null); setPhMsg(null); }}>
+                  Resend or change number
+                </button>
+              )}
+            </form>
+          )}
+
+          {/* ── RESET OPTIONS ───────────────────────────────────── */}
+          {step === "reset" && (
+            <div className="av2-form">
+              <p className="av2-otp-hint">How would you like to reset your password?</p>
+              <div className="av2-opts">
+                <button className="av2-opt" type="button" onClick={() => {}}>
+                  <span className="av2-opt-icon">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <rect x="2" y="4" width="20" height="16" rx="2" />
+                      <path d="m2 7 10 7 10-7" />
+                    </svg>
+                  </span>
+                  <span className="av2-opt-label av2-opt-label--stacked">
+                    <span>Reset via email</span>
+                    <span className="av2-opt-sub">Receive a reset link by email</span>
+                  </span>
+                </button>
+              </div>
+              <form className="auth-form" style={{ marginTop: "0" }} onSubmit={(e) => { e.preventDefault(); handleResetEmail(); }}>
+                <label className="auth-label">
+                  Your email address
+                  <input className="auth-input" type="email" placeholder="you@company.com" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} required />
+                </label>
+                {resetErr && <p className="auth-error">{resetErr}</p>}
+                <button className="auth-primary" type="submit" disabled={resetLoading || !resetEmail}>
+                  {resetLoading ? "Sending…" : "Send reset link"}
+                </button>
+              </form>
+
+              <div className="av2-divider" style={{ margin: "16px 0" }}><span>or</span></div>
+
+              <div className="av2-opts">
+                <button className="av2-opt" type="button" onClick={() => {}}>
+                  <span className="av2-opt-icon">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.98a16 16 0 0 0 6.12 6.12l.97-.97a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                    </svg>
+                  </span>
+                  <span className="av2-opt-label av2-opt-label--stacked">
+                    <span>Reset via phone</span>
+                    <span className="av2-opt-sub">Verify with SMS code, then set new password</span>
+                  </span>
+                </button>
+              </div>
+              <form className="auth-form" style={{ marginTop: "0" }} onSubmit={(e) => { e.preventDefault(); handleResetSendOtp(); }}>
+                <PhoneField country={resetCountry} setCountry={setResetCountry} phone={resetPhone} setPhone={setResetPhone} />
+                {resetErr && <p className="auth-error">{resetErr}</p>}
+                <button className="auth-primary" type="submit" disabled={resetLoading || !resetPhone}>
+                  {resetLoading ? "Sending…" : "Send SMS code"}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* ── RESET SENT ──────────────────────────────────────── */}
+          {step === "reset-sent" && (
+            <div className="av2-form">
+              <div className="av2-success-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              </div>
+              <p className="av2-otp-hint" style={{ textAlign: "center" }}>
+                A password reset link was sent to <strong>{resetEmail}</strong>. Check your inbox and click the link to set a new password.
+              </p>
+              <button className="auth-primary" type="button" onClick={() => { setStep("select"); setMode("login"); }}>
+                Back to log in
+              </button>
+            </div>
+          )}
+
+          {/* ── RESET PHONE OTP ─────────────────────────────────── */}
+          {step === "reset-phone-otp" && (
+            <form className="auth-form av2-form" onSubmit={(e) => { e.preventDefault(); handleResetVerifyOtp(); }}>
+              <p className="av2-otp-hint">Code sent to <strong>{formatE164(resetCountry, resetPhone)}</strong>.</p>
+              <OtpField value={resetOtp} onChange={setResetOtp} />
+              {resetMsg && <p className="auth-message">{resetMsg}</p>}
+              {resetErr && <p className="auth-error">{resetErr}</p>}
+              <button className="auth-primary" type="submit" disabled={resetLoading || resetOtp.length < 6}>
+                {resetLoading ? "Verifying…" : "Verify code"}
+              </button>
+            </form>
+          )}
+
+          {/* ── RESET NEW PASSWORD ──────────────────────────────── */}
+          {step === "reset-new-password" && (
+            <form className="auth-form av2-form" onSubmit={(e) => { e.preventDefault(); handleSetNewPassword(); }}>
+              <p className="av2-otp-hint">Phone verified. Set a new password for your account.</p>
+              <label className="auth-label">
+                New password
+                <div className="auth-input-wrap">
+                  <input className="auth-input" type={showResetPw ? "text" : "password"} placeholder="Create a strong password" value={resetNewPw} onChange={(e) => setResetNewPw(e.target.value)} required />
+                  <button type="button" className={`auth-eye${showResetPw ? " active" : ""}`} aria-label={showResetPw ? "Hide" : "Show"} onClick={() => setShowResetPw((p) => !p)}>
+                    <EyeIcon visible={showResetPw} />
+                  </button>
+                </div>
+              </label>
+              <label className="auth-label">
+                Confirm new password
+                <input className="auth-input" type="password" placeholder="Re-enter password" value={resetConfirmPw} onChange={(e) => setResetConfirmPw(e.target.value)} required />
+              </label>
+              {resetMsg && <p className="auth-message">{resetMsg}</p>}
+              {resetErr && <p className="auth-error">{resetErr}</p>}
+              <button className="auth-primary" type="submit" disabled={resetLoading}>
+                {resetLoading ? "Saving…" : "Update password"}
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+
+      {termsOpen && <TermsOfServiceModal onClose={() => setTermsOpen(false)} />}
+      {privacyOpen && <PrivacyPolicyModal onClose={() => setPrivacyOpen(false)} />}
+    </>
+  );
+}

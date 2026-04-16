@@ -25,6 +25,10 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
+
+  // Only handle http/https — skip chrome-extension://, data:, etc.
+  if (!request.url.startsWith("http")) return;
+
   const url = new URL(request.url);
 
   // Never intercept Supabase, API routes, or non-GET
@@ -36,6 +40,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Helper: only cache complete (non-partial) responses
+  const safePut = (cache, req, res) => {
+    // status 206 = partial content (video/audio range request) — not cacheable
+    if (res.status === 206) return;
+    cache.put(req, res);
+  };
+
   // Next.js immutable static assets — cache first forever
   if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(
@@ -44,7 +55,7 @@ self.addEventListener("fetch", (event) => {
           cached ||
           fetch(request).then((res) => {
             const clone = res.clone();
-            caches.open(CACHE).then((c) => c.put(request, clone));
+            caches.open(CACHE).then((c) => safePut(c, request, clone));
             return res;
           })
       )
@@ -58,12 +69,12 @@ self.addEventListener("fetch", (event) => {
       fetch(request)
         .then((res) => {
           const clone = res.clone();
-          caches.open(CACHE).then((c) => c.put(request, clone));
+          caches.open(CACHE).then((c) => safePut(c, request, clone));
           return res;
         })
         .catch(() =>
           caches.match(request).then(
-            (cached) => cached || caches.match("/") // fall back to root shell
+            (cached) => cached || caches.match("/")
           )
         )
     );
@@ -76,7 +87,7 @@ self.addEventListener("fetch", (event) => {
       .then((res) => {
         if (res.ok) {
           const clone = res.clone();
-          caches.open(CACHE).then((c) => c.put(request, clone));
+          caches.open(CACHE).then((c) => safePut(c, request, clone));
         }
         return res;
       })
