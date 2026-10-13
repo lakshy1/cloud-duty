@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en" data-theme="minimal">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CloudDuty — Sign in / Sign up (Unified)</title>
+
+  <!-- Fonts (same as Index) -->
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+  /* --------------------------------------------------
+     THEME TOKENS (kept consistent with your Index page)
+     Default theme: minimal
+     -------------------------------------------------- */
+  :root{
+    --sb-w:72px;
+    --card-w:480px;
+    --radius:16px;
+    --gap:18px;
+
+    /* Minimal (default) */
+    --bg: #f5f2ee;
+    --sb-bg: #ffffff;
+    --hdr-bg: rgba(255,255,255,.97);
+    --card-back: #faf8f5;
+    --text: #1a1410;
+    --muted: #9b8b7c;
+    --accent: #b08d6a;
+    --accent-600: #a57a50;
+    --btn-bg: linear-gradient(135deg,#1a1410,#1a1410);
+    --btn-fg: #faf8f5;
+    --btn-glow: rgba(0,0,0,.08);
+    --card-sh: 0 8px 24px rgba(17,17,17,.06);
+    --border: rgba(0,0,0,.07);
+    --surface: rgba(0,0,0,.03);
+    --focus: rgba(176,141,106,.18);
+  }
+
+  /* Vibrant */
+  [data-theme="vibrant"]{
+    --bg:#0a0a14; --sb-bg:#0d0d1c; --hdr-bg:rgba(10,10,20,.97);
+    --card-back:linear-gradient(145deg,#16103a,#0f0f2a);
+    --text:#e2d9f3; --muted:rgba(210,200,240,.45);
+    --accent:#c084fc; --accent-600:#a66be8;
+    --btn-bg:linear-gradient(135deg,#c084fc,#e879f9); --btn-fg:#fff;
+    --btn-glow: rgba(192,132,252,.18); --card-sh: 0 10px 36px rgba(0,0,0,.6);
+    --border: rgba(192,132,252,.12); --surface: rgba(255,255,255,.03); --focus: rgba(192,132,252,.14);
+  }
+
+  /* Neon */
+  [data-theme="neon"]{
+    --bg:#020d0a; --sb-bg:#021210; --hdr-bg:rgba(2,13,10,.97);
+    --card-back:linear-gradient(145deg,#021a13,#021510);
+    --text:#b8ffec; --muted:rgba(150,240,210,.42);
+    --accent:#00ffaa; --accent-600:#00d4ff;
+    --btn-bg:linear-gradient(135deg,#00ffaa,#00d4ff); --btn-fg:#001a12;
+    --btn-glow: rgba(0,255,170,.08); --card-sh: 0 10px 36px rgba(0,0,0,.72);
+    --border: rgba(0,255,170,.08); --surface: rgba(0,255,170,.03); --focus: rgba(0,255,170,.12);
+  }
+
+  /* Obsidian */
+  [data-theme="obsidian"]{
+    --bg:#0e0e10; --sb-bg:#111113; --hdr-bg:rgba(14,14,16,.98);
+    --card-back:linear-gradient(160deg,#171715,#121210);
+    --text:#e8e6e1; --muted:rgba(220,215,200,.38);
+    --accent:#c9a96e; --accent-600:#b08e4a;
+    --btn-bg:linear-gradient(135deg,#c9a96e,#e8c97a); --btn-fg:#0e0e10;
+    --btn-glow: rgba(201,169,110,.12); --card-sh: 0 12px 44px rgba(0,0,0,.7);
+    --border: rgba(255,255,255,.06); --surface: rgba(255,255,255,.04); --focus: rgba(201,169,110,.12);
+  }
+
+  /* --------------------------------------------------
+     Base layout — mirrors Index.html's spacing & sidebar
+     -------------------------------------------------- */
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  button{font-family:inherit}
+
+  /* full app frame so the auth screens look like the Index page */
+  .app-frame{display:grid;grid-template-columns:var(--sb-w) 1fr;min-height:100vh}
+  @media (max-width:780px){ .app-frame{grid-template-columns:0 1fr} }
+
+  /* Sidebar (minimal icons to match Index) */
+  .sidebar{
+    background:var(--sb-bg);border-right:1px solid var(--border);padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;
+  }
+  .sb-logo{width:46px;height:46px;border-radius:13px;background:var(--btn-bg);display:grid;place-items:center;color:var(--btn-fg);box-shadow:0 6px 24px var(--btn-glow);font-weight:800}
+  .sb-btn{width:52px;height:52px;border-radius:13px;background:transparent;border:none;color:var(--muted);display:grid;place-items:center;cursor:pointer}
+  .sb-btn.active{background:var(--surface);color:var(--text)}
+
+  /* Canvas area (centered content) */
+  .canvas{padding:28px;display:flex;justify-content:center;align-items:center}
+
+  /* auth container matches Index card shape & shadow */
+  .auth-wrap{
+    width:100%;max-width:1100px;display:grid;grid-template-columns:1fr var(--card-w);gap:28px;align-items:start;
+  }
+  @media (max-width:980px){ .auth-wrap{grid-template-columns:1fr; padding:0 12px } }
+
+  /* left hero (like index left) */
+  .left-hero{
+    background:transparent;display:flex;flex-direction:column;gap:16px;
+  }
+  .hero-card{background:var(--card-back);border-radius:18px;padding:26px;border:1px solid var(--border);box-shadow:var(--card-sh)}
+  .hero-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:6px}
+  .hero-desc{color:var(--muted);line-height:1.5}
+
+  /* right card — the actual auth forms — identical dimensions to cards in index */
+  .auth-card{background:var(--card-back);border-radius:20px;padding:20px;border:1px solid var(--border);box-shadow:var(--card-sh);width:100%;max-width:var(--card-w)}
+  .auth-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .auth-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800}
+  .tab-row{display:flex;gap:8px}
+  .tab{padding:8px 12px;border-radius:10px;border:1px solid transparent;background:transparent;color:var(--muted);font-weight:800;cursor:pointer}
+  .tab[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:var(--card-sh)}
+
+  /* form fields: exact look & feel as index (rounded, subtle border) */
+  form{display:flex;flex-direction:column;gap:12px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  input, select{
+    padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text);outline:none;font-size:14px;
+  }
+  input::placeholder{color:var(--muted)}
+  input:focus{box-shadow:0 10px 30px var(--btn-glow);border-color:var(--focus)}
+
+  .row{display:flex;gap:12px}
+  .col{flex:1}
+
+  /* Buttons — professional, theme-aware, visually uniform across themes */
+  .btn-row{display:flex;gap:12px;align-items:center}
+  .btn{
+    display:inline-flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;border:none;cursor:pointer;font-weight:800;
+    transition:transform .12s ease,box-shadow .12s ease;
+  }
+  .btn:focus{outline:3px solid var(--focus);outline-offset:2px}
+  .btn-primary{
+    background:var(--btn-bg);color:var(--btn-fg);box-shadow:0 14px 40px rgba(0,0,0,.08);
+  }
+  .btn-primary:hover{transform:translateY(-3px)}
+  .btn-secondary{
+    background:transparent;border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:10px;font-weight:800;
+  }
+
+  /* OAuth buttons — brand-aware but theme-friendly (stroke + subtle bg) */
+  .oauth-row{display:flex;gap:10px;margin-top:6px}
+  .oauth-btn{flex:1;display:inline-flex;align-items:center;gap:10px;justify-content:center;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-weight:800}
+  .oauth-icon{width:18px;height:18px;display:inline-grid;place-items:center}
+
+  /* brand variants (ensure readable in any theme) */
+  .oauth-google{background:linear-gradient(180deg,#fff,#f7f7f7);color:#111}
+  [data-theme="vibrant"] .oauth-google{background:rgba(255,255,255,.03);color:var(--text)}
+  .oauth-linkedin{background:linear-gradient(180deg,#0e76a8,#0b5f8b);color:#fff}
+  .oauth-apple{background:linear-gradient(180deg,#111,#333);color:#fff}
+  .oauth-phone{background:linear-gradient(180deg,#eef2ff,#eef2ff);color:#111}
+
+  /* password meter & hints */
+  .pw-meter{height:8px;border-radius:8px;background:linear-gradient(90deg,rgba(0,0,0,.03),rgba(0,0,0,.03));overflow:hidden;border:1px solid var(--border)}
+  .pw-meter > i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--accent-600),var(--accent));transition:width .24s ease}
+
+  /* feedback & small text */
+  .muted{color:var(--muted);font-size:13px}
+  .error{color:#e05c4b;font-weight:800;font-size:13px}
+  .success{color:#34c759;font-weight:800;font-size:13px}
+
+  /* small helpers for symmetry */
+  .foot-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;color:var(--muted);font-size:13px}
+  .link{color:var(--accent);font-weight:800;cursor:pointer}
+
+  /* responsive */
+  @media (max-width:720px){
+    .auth-wrap{grid-template-columns:1fr;gap:18px}
+    .auth-card{max-width:100%}
+  }
+  </style>
+</head>
+<body>
+  <div class="app-frame" role="application">
+    <!-- Sidebar (keeps Index look & feel) -->
+    <aside class="sidebar" aria-hidden="false">
+      <div class="sb-logo" title="CloudDuty">CD</div>
+      <button class="sb-btn" aria-label="Home">🏠</button>
+      <button class="sb-btn" aria-label="Explore">🔍</button>
+      <div style="flex:1"></div>
+      <button class="sb-btn" aria-label="Profile">👤</button>
+    </aside>
+
+    <!-- Main canvas -->
+    <main class="canvas" role="main">
+      <div class="auth-wrap" aria-live="polite">
+        <!-- LEFT: hero (like Index left column) -->
+        <div class="left-hero">
+          <div class="hero-card">
+            <div class="hero-title">Welcome to CloudDuty</div>
+            <div class="hero-desc">A single, consistent design system — now your authentication screens match the app look precisely. Select a theme and try the forms; every button and control is theme-aware for consistent visual weight.</div>
+            <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+              <div class="muted">Theme:</div>
+              <button class="tab theme-switch" data-theme="minimal" aria-pressed="true">Minimal</button>
+              <button class="tab theme-switch" data-theme="vibrant" aria-pressed="false">Vibrant</button>
+              <button class="tab theme-switch" data-theme="neon" aria-pressed="false">Neon</button>
+              <button class="tab theme-switch" data-theme="obsidian" aria-pressed="false">Obsidian</button>
+            </div>
+          </div>
+
+          <div class="hero-card" style="margin-top:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="font-weight:800">Security</div>
+              <div class="muted">Best practices</div>
+            </div>
+            <div class="muted" style="margin-top:8px">Strong password enforcement, email confirmation, and phone-based OTP are supported. Profiles are stored in the `profiles` table matching auth.user ids.</div>
+          </div>
+        </div>
+
+        <!-- RIGHT: auth card -->
+        <section class="auth-card" aria-labelledby="auth-heading">
+          <div class="auth-top">
+            <div>
+              <div id="auth-heading" class="auth-title">Sign in</div>
+              <div class="muted">Secure access to your CloudDuty account</div>
+            </div>
+
+            <div class="tab-row" role="tablist" aria-label="Auth tabs">
+              <button id="tabSignIn" class="tab" aria-pressed="true">Sign in</button>
+              <button id="tabSignUp" class="tab" aria-pressed="false">Sign up</button>
+            </div>
+          </div>
+
+          <!-- Sign In Panel -->
+          <div id="panelSignIn" aria-hidden="false">
+            <form id="formSignIn" autocomplete="on" novalidate>
+              <div class="field">
+                <label for="si_email">Email</label>
+                <input id="si_email" type="email" name="email" autocomplete="email" placeholder="you@company.com" required>
+              </div>
+
+              <div class="field">
+                <label for="si_password">Password</label>
+                <input id="si_password" type="password" name="password" autocomplete="current-password" placeholder="Your secure password" required>
+              </div>
+
+              <div class="btn-row">
+                <button type="submit" id="btnSignIn" class="btn btn-primary"><span id="siLabel">Sign in</span></button>
+                <button type="button" id="btnSignInPhone" class="btn btn-secondary"><span>Sign in with SMS</span></button>
+              </div>
+
+              <div class="hr" aria-hidden="true"></div>
+
+              <div class="oauth-row" role="group" aria-label="Third party sign in">
+                <button type="button" class="oauth-btn oauth-google" data-provider="google"><span class="oauth-icon">G</span> Google</button>
+                <button type="button" class="oauth-btn oauth-linkedin" data-provider="linkedin"><span class="oauth-icon">in</span> LinkedIn</button>
+                <button type="button" class="oauth-btn oauth-apple" data-provider="apple"><span class="oauth-icon"></span> Apple</button>
+              </div>
+
+              <div id="siFeedback" class="muted" style="margin-top:8px" role="status"></div>
+
+              <div class="foot-row">
+                <a class="link" id="toSignUp">Create account</a>
+                <a class="link" id="forgotPw">Forgot password?</a>
+              </div>
+            </form>
+          </div>
+
+          <!-- Sign Up Panel -->
+          <div id="panelSignUp" aria-hidden="true" style="display:none">
+            <form id="formSignUp" autocomplete="on" novalidate>
+              <div class="row">
+                <div class="col field">
+                  <label for="su_first">First name</label>
+                  <input id="su_first" type="text" name="first" autocomplete="given-name" placeholder="First" required>
+                </div>
+                <div class="col field">
+                  <label for="su_last">Last name</label>
+                  <input id="su_last" type="text" name="last" autocomplete="family-name" placeholder="Last" required>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="su_email">Email</label>
+                <input id="su_email" type="email" name="email" autocomplete="email" placeholder="you@company.com" required>
+              </div>
+
+              <div class="field">
+                <label for="su_phone">Phone (US)</label>
+                <input id="su_phone" type="tel" name="phone" inputmode="tel" placeholder="+1XXXXXXXXXX" required>
+              </div>
+
+              <div class="field">
+                <label for="su_password">Password</label>
+                <input id="su_password" type="password" name="password" autocomplete="new-password" placeholder="Create a strong password" required>
+                <div class="pw-meter" aria-hidden="true"><i id="pwFill"></i></div>
+                <div class="muted" id="pwHint">8+ chars, uppercase, lowercase, number & special char</div>
+              </div>
+
+              <div class="btn-row">
+                <button type="submit" id="btnSignUp" class="btn btn-primary"><span id="suLabel">Create account</span></button>
+                <button type="button" id="btnSignUpPhone" class="btn btn-secondary">Sign up with SMS</button>
+              </div>
+
+              <div class="hr" aria-hidden="true"></div>
+
+              <div class="oauth-row" role="group" aria-label="Third party sign up">
+                <button type="button" class="oauth-btn oauth-google" data-provider="google">Google</button>
+                <button type="button" class="oauth-btn oauth-linkedin" data-provider="linkedin">LinkedIn</button>
+                <button type="button" class="oauth-btn oauth-apple" data-provider="apple">Apple</button>
+              </div>
+
+              <div id="suFeedback" class="muted" style="margin-top:8px" role="status"></div>
+
+              <div class="foot-row">
+                <div class="muted">By continuing you agree to our <a href="#" onclick="return false" class="link">Terms</a></div>
+                <a class="link" id="toSignIn">Sign in</a>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Supabase integration (replace with your keys) -->
+  <script type="module">
+    // ------------------ REPLACE these ------------------
+    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+    // --------------------------------------------------
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Simple helpers
+    const $ = (s) => document.querySelector(s);
+    const $$ = (s) => Array.from(document.querySelectorAll(s));
+    const show = el => { if(!el) return; el.style.display=''; }
+    const hide = el => { if(!el) return; el.style.display='none'; }
+
+    // Theme toggles (left hero)
+    $$('.theme-switch').forEach(btn=>{
+      btn.addEventListener('click', () => {
+        const t = btn.dataset.theme;
+        document.documentElement.setAttribute('data-theme', t);
+        $$('.theme-switch').forEach(b => b.setAttribute('aria-pressed', b===btn ? 'true' : 'false'));
+      });
+    });
+
+    // Tab switching (Sign in / Sign up) - symmetric layout
+    $('#tabSignIn').addEventListener('click', ()=> {
+      $('#panelSignIn').style.display='block';
+      $('#panelSignUp').style.display='none';
+      $('#tabSignIn').setAttribute('aria-pressed','true');
+      $('#tabSignUp').setAttribute('aria-pressed','false');
+      $('#auth-heading').textContent = 'Sign in';
+      clearFeedback();
+    });
+    $('#tabSignUp').addEventListener('click', ()=> {
+      $('#panelSignIn').style.display='none';
+      $('#panelSignUp').style.display='block';
+      $('#tabSignIn').setAttribute('aria-pressed','false');
+      $('#tabSignUp').setAttribute('aria-pressed','true');
+      $('#auth-heading').textContent = 'Sign up';
+      clearFeedback();
+    });
+    $('#toSignUp').addEventListener('click', ()=> $('#tabSignUp').click());
+    $('#toSignIn').addEventListener('click', ()=> $('#tabSignIn').click());
+
+    // Password strength meter
+    const pw = $('#su_password'), pwFill = $('#pwFill');
+    function scorePassword(p){
+      let s = 0;
+      if(p.length >= 8) s++;
+      if(/[a-z]/.test(p)) s++;
+      if(/[A-Z]/.test(p)) s++;
+      if(/\d/.test(p)) s++;
+      if(/[^A-Za-z0-9]/.test(p)) s++;
+      return s; // 0..5
+    }
+    function updatePwMeter(){
+      if(!pw) return;
+      const s = scorePassword(pw.value || '');
+      const pct = Math.round((s/5)*100);
+      pwFill.style.width = pct + '%';
+      if(s<=2) pwFill.style.background = 'linear-gradient(90deg,#ff6b6b,#ff8a6b)';
+      else if(s===3) pwFill.style.background = 'linear-gradient(90deg,#f6c84c,#f2912a)';
+      else pwFill.style.background = 'linear-gradient(90deg,var(--accent-600),var(--accent))';
+    }
+    pw && pw.addEventListener('input', updatePwMeter);
+
+    // Phone normalization (US)
+    function normalizeUSPhone(v){
+      if(!v) return null;
+      const digits = v.replace(/\D/g,'');
+      if(digits.length === 10) return '+1' + digits;
+      if(digits.length === 11 && digits.startsWith('1')) return '+' + digits;
+      return null;
+    }
+
+    // Clear feedback
+    function clearFeedback(){
+      $('#siFeedback').textContent = '';
+      $('#suFeedback').textContent = '';
+    }
+
+    // Minimal UX helpers
+    function setFeedback(selector, message, type='muted'){
+      const el = $(selector);
+      el.className = type === 'muted' ? 'muted' : (type === 'error' ? 'error' : 'success');
+      el.textContent = message;
+    }
+
+    // Upsert profile helper
+    async function upsertProfile(profile){
+      try {
+        await supabase.from('profiles').upsert(profile, { onConflict: 'id' });
+      } catch(e){
+        console.warn('upsert profile failed', e);
+      }
+    }
+
+    // Sign up (email)
+    $('#formSignUp').addEventListener('submit', async (ev)=>{
+      ev.preventDefault();
+      clearFeedback();
+      const first = $('#su_first').value.trim();
+      const last = $('#su_last').value.trim();
+      const email = $('#su_email').value.trim();
+      const phoneRaw = $('#su_phone').value.trim();
+      const password = $('#su_password').value;
+
+      if(!first || !last || !email || !phoneRaw || !password){
+        setFeedback('#suFeedback','Please fill all required fields','error'); return;
+      }
+      if(scorePassword(password) < 4){
+        setFeedback('#suFeedback','Password is weak — please follow the guidance', 'error'); return;
+      }
+      const phone = normalizeUSPhone(phoneRaw);
+      if(!phone){ setFeedback('#suFeedback','Phone number invalid; use +1XXXXXXXXXX or 10 digits','error'); return; }
+
+      // create account
+      try {
+        setFeedback('#suFeedback','Creating account...','muted');
+        const { data, error } = await supabase.auth.signUp({
+          email, password,
+          options: { data: { provider: 'email' } }
+        });
+        if(error) throw error;
+
+        // try to get the user object (may be null if email confirmation required)
+        const userRes = await supabase.auth.getUser();
+        const user = userRes?.data?.user ?? data?.user ?? null;
+        if(user){
+          await upsertProfile({
+            id: user.id,
+            first_name: first,
+            last_name: last,
+            phone,
+            email,
+            provider: user.app_metadata?.provider ?? 'email',
+            created_at: new Date()
+          });
+        } else {
+          // rely on DB trigger / server to create profile after confirmation
+        }
+
+        setFeedback('#suFeedback','Signup started. Check email to confirm if required.','success');
+        // switch to sign in view after small delay
+        setTimeout(()=> $('#tabSignIn').click(), 900);
+      } catch(err){
+        setFeedback('#suFeedback', err?.message || String(err), 'error');
+      }
+    });
+
+    // Sign in (email)
+    $('#formSignIn').addEventListener('submit', async (ev)=>{
+      ev.preventDefault();
+      clearFeedback();
+      const email = $('#si_email').value.trim();
+      const password = $('#si_password').value;
+      if(!email || !password){ setFeedback('#siFeedback','Enter both email and password','error'); return; }
+
+      try{
+        setFeedback('#siFeedback','Signing in...','muted');
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if(error) throw error;
+        setFeedback('#siFeedback','Signed in successfully','success');
+        // onAuthStateChange will ensure profile exists
+      }catch(err){
+        setFeedback('#siFeedback', err?.message || String(err), 'error');
+      }
+    });
+
+    // Phone OTP flow (send)
+    async function phoneOTP(){
+      const phoneRaw = prompt('Enter your US phone (10-digit or +1XXXXXXXXXX):');
+      if(!phoneRaw) return;
+      const phone = normalizeUSPhone(phoneRaw);
+      if(!phone){ alert('Invalid phone.'); return; }
+      try{
+        const { data, error } = await supabase.auth.signInWithOtp({ phone });
+        if(error) throw error;
+        alert('OTP sent. Follow the SMS instructions to sign in.');
+      }catch(err){ alert('OTP error: ' + (err?.message || err)); }
+    }
+    $('#btnSignInPhone').addEventListener('click', phoneOTP);
+    $('#btnSignUpPhone').addEventListener('click', phoneOTP);
+
+    // OAuth buttons
+    $$('[data-provider]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const provider = btn.dataset.provider;
+        try{
+          const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: window.location.origin } });
+          if(error) throw error;
+        }catch(err){ alert('OAuth error: ' + (err?.message || err)); }
+      });
+    });
+
+    // Forgot password
+    $('#forgotPw').addEventListener('click', async ()=>{
+      const email = prompt('Enter your account email for password reset:');
+      if(!email) return;
+      try{
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/reset-password' });
+        if(error) throw error;
+        alert('Password reset email sent.');
+      }catch(err){ alert('Reset error: ' + (err?.message || err)); }
+    });
+
+    // Auth state sync to create profile post-OAuth/signup
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if(event === 'SIGNED_IN'){
+        try{
+          const user = session?.user;
+          if(!user) return;
+          const { data } = await supabase.from('profiles').select('id').eq('id', user.id).limit(1);
+          if(!data || data.length === 0){
+            const meta = user.user_metadata || {};
+            await upsertProfile({
+              id: user.id,
+              first_name: meta.first_name || meta.given_name || '',
+              last_name: meta.last_name || meta.family_name || '',
+              phone: user.phone || (meta.phone || null),
+              email: user.email || null,
+              provider: user.app_metadata?.provider || 'oauth',
+              created_at: new Date()
+            });
+          }
+        }catch(e){
+          console.warn('profile upsert after sign-in failed', e);
+        }
+      }
+    });
+
+    // Initialize UI
+    (function init(){
+      // ensure default set to minimal (already set in html data-theme)
+      const activeTheme = document.documentElement.getAttribute('data-theme') || 'minimal';
+      // reflect theme buttons
+      $$('.theme-switch').forEach(b => b.setAttribute('aria-pressed', b.dataset.theme === activeTheme ? 'true' : 'false'));
+      $('#tabSignIn').click();
+    })();
+  </script>
+</body>
+</html>
